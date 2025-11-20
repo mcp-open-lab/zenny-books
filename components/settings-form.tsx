@@ -242,6 +242,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           </p>
           <div className="space-y-3">
             {[
+              { name: "taxAmount", label: "Tax Amount" },
+              { name: "category", label: "Category" },
               { name: "tipAmount", label: "Tip Amount" },
               { name: "discountAmount", label: "Discount Amount" },
               { name: "description", label: "Description" },
@@ -345,8 +347,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 "date",
                 "totalAmount",
               ].includes(field.key);
+              // Field is visible if it's core OR explicitly set to true in visibleFields
               const isVisible =
-                isCoreField || visibleFields[field.key] !== false;
+                isCoreField || visibleFields[field.key] === true;
               const isBusinessField =
                 field.key === "businessPurpose" ||
                 field.key === "isBusinessExpense";
@@ -368,14 +371,25 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                     <FormItem className="flex items-center justify-between rounded-lg p-3 shadow-sm border">
                       <div className="space-y-0.5">
                         <FormLabel>{field.label}</FormLabel>
+                        {isCoreField && (
+                          <p className="text-xs text-muted-foreground">
+                            Always required
+                          </p>
+                        )}
                       </div>
                       <FormControl>
                         <Switch
-                          checked={Boolean(formField.value)}
+                          checked={
+                            isCoreField ? true : Boolean(formField.value)
+                          }
+                          disabled={isCoreField}
                           onCheckedChange={(checked) => {
+                            if (isCoreField) {
+                              return; // Core fields cannot be toggled
+                            }
                             // Auto-disable if field becomes hidden
                             const isVisible =
-                              isCoreField || visibleFields[field.key] !== false;
+                              isCoreField || visibleFields[field.key] === true;
                             if (!isVisible && checked) {
                               return; // Can't require hidden field
                             }

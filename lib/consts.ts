@@ -98,6 +98,8 @@ export function getDefaultVisibleFields(
   usageType: "personal" | "business" | "mixed"
 ): Record<string, boolean> {
   const baseFields = {
+    taxAmount: true,
+    category: true,
     tipAmount: true,
     discountAmount: true,
     description: true,
@@ -156,7 +158,8 @@ export function syncRequiredWithVisible(
   for (const [field, isRequired] of Object.entries(requiredFields)) {
     // Only keep required if field is visible (or if it's a core field that's always visible)
     const isCoreField = ["merchantName", "date", "totalAmount"].includes(field);
-    const isVisible = visibleFields[field] !== false || isCoreField;
+    // Field is visible if it's core OR explicitly set to true in visibleFields
+    const isVisible = isCoreField || visibleFields[field] === true;
 
     if (isVisible) {
       synced[field] = isRequired;
