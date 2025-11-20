@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { Timeline } from "@/components/timeline";
 import { AddToHomeScreenButton } from "@/components/add-to-home";
 import { QuickActions } from "@/components/quick-actions";
+import { AppNav } from "@/components/app-nav";
 import { groupItemsByMonth } from "@/lib/utils/timeline";
 
 export default async function Dashboard() {
@@ -24,18 +25,21 @@ export default async function Dashboard() {
   const timelineGroups = groupItemsByMonth(data);
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Turbo Timeline</h1>
-        <UserButton />
-      </div>
+    <div className="min-h-screen flex flex-col">
+      <AppNav />
+      <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Timeline</h1>
+          <UserButton />
+        </div>
 
-      <div className="flex mb-4">
-        <AddToHomeScreenButton />
-      </div>
+        <div className="flex mb-4">
+          <AddToHomeScreenButton />
+        </div>
 
-      <Timeline receipts={data} timelineGroups={timelineGroups} />
-      <QuickActions />
+        <Timeline receipts={data} timelineGroups={timelineGroups} />
+        <QuickActions />
+      </div>
     </div>
   );
 }

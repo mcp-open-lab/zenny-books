@@ -43,10 +43,12 @@ Required JSON format:
   "merchantName": "string or null",
   "date": "ISO 8601 date string (YYYY-MM-DD) or null",
   "totalAmount": number or null,
+  "taxAmount": number or null,
   "category": "Food" | "Transport" | "Utilities" | "Supplies" | "Other" or null
 }
 
-If you cannot determine a value, use null. Be precise with the total amount as a number.`;
+Extract the tax amount separately if shown on the receipt. If tax is included in the total but not shown separately, use null for taxAmount.
+If you cannot determine a value, use null. Be precise with amounts as numbers.`;
 
     const result = await model.generateContent([
       prompt,
@@ -72,6 +74,7 @@ If you cannot determine a value, use null. Be precise with the total amount as a
       merchantName: data.merchantName || null,
       date: data.date ? new Date(data.date) : null,
       totalAmount: data.totalAmount ? data.totalAmount.toString() : null,
+      taxAmount: data.taxAmount ? data.taxAmount.toString() : null,
       category: data.category || null,
       status: 'needs_review'
     });

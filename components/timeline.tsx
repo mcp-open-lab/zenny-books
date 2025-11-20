@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ export function Timeline({
     merchantName: "",
     date: "",
     totalAmount: "",
+    taxAmount: "",
     category: "",
     status: "needs_review",
   });
@@ -109,6 +111,7 @@ export function Timeline({
           ? new Date(selected.date).toISOString().split("T")[0]
           : "",
         totalAmount: selected.totalAmount ?? "",
+        taxAmount: selected.taxAmount ?? "",
         category: selected.category ?? "",
         status: selected.status ?? "needs_review",
       });
@@ -124,6 +127,7 @@ export function Timeline({
           merchantName: formState.merchantName || null,
           date: formState.date || null,
           totalAmount: formState.totalAmount || null,
+          taxAmount: formState.taxAmount || null,
           category: formState.category || null,
           status: formState.status,
         });
@@ -381,6 +385,9 @@ export function Timeline({
                 return "Edit Receipt";
               })()}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Edit receipt or invoice details
+            </DialogDescription>
           </DialogHeader>
           {selected && (
             <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
@@ -454,6 +461,24 @@ export function Timeline({
                         }))
                       }
                       className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1.5">
+                      Tax Amount
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formState.taxAmount}
+                      onChange={(e) =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          taxAmount: e.target.value,
+                        }))
+                      }
+                      className="w-full"
+                      placeholder="Optional"
                     />
                   </div>
                   <div>

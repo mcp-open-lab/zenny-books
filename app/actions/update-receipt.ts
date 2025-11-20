@@ -11,6 +11,7 @@ type UpdateReceiptInput = {
   merchantName?: string | null;
   date?: string | null;
   totalAmount?: string | null;
+  taxAmount?: string | null;
   category?: string | null;
   status?: string;
 };
@@ -37,6 +38,10 @@ export async function updateReceipt(data: UpdateReceiptInput) {
     updateData.totalAmount = data.totalAmount;
   } else {
     updateData.totalAmount = null;
+  }
+
+  if (data.taxAmount !== undefined) {
+    updateData.taxAmount = data.taxAmount || null;
   }
 
   await db
