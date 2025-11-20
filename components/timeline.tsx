@@ -27,6 +27,11 @@ type UserSettings = {
   requiredFields?: Record<string, boolean> | null;
   country?: string | null;
   usageType?: string | null;
+  defaultValues?: {
+    isBusinessExpense?: boolean | null;
+    businessPurpose?: string | null;
+    paymentMethod?: "cash" | "card" | "check" | "other" | null;
+  } | null;
 };
 
 type TimelineProps = {

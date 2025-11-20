@@ -49,6 +49,11 @@ type UserSettings = {
   requiredFields?: Record<string, boolean> | null;
   country?: string | null;
   usageType?: string | null;
+  defaultValues?: {
+    isBusinessExpense?: boolean | null;
+    businessPurpose?: string | null;
+    paymentMethod?: "cash" | "card" | "check" | "other" | null;
+  } | null;
 };
 
 type EditReceiptDialogProps = {
@@ -61,8 +66,11 @@ type EditReceiptDialogProps = {
 const categories = RECEIPT_CATEGORIES;
 const statuses = RECEIPT_STATUSES;
 
-// Helper to get default values from receipt
-function getDefaultValues(receipt: Receipt | null): EditReceiptFormValues {
+// Helper to get default values from receipt, using user defaults when fields are empty
+function getDefaultValues(
+  receipt: Receipt | null,
+  userDefaults?: UserSettings["defaultValues"]
+): EditReceiptFormValues {
   if (!receipt) {
     return {
       id: "",
@@ -71,13 +79,17 @@ function getDefaultValues(receipt: Receipt | null): EditReceiptFormValues {
       totalAmount: "",
       taxAmount: "",
       description: "",
-      paymentMethod: "",
+      paymentMethod: userDefaults?.paymentMethod ?? "",
       tipAmount: "",
       discountAmount: "",
       category: "",
       status: "needs_review",
     };
   }
+
+  // Use receipt value if present, otherwise fall back to user default
+  const paymentMethod =
+    receipt.paymentMethod || userDefaults?.paymentMethod || "";
 
   return {
     id: receipt.id,
@@ -88,7 +100,7 @@ function getDefaultValues(receipt: Receipt | null): EditReceiptFormValues {
     totalAmount: receipt.totalAmount ?? "",
     taxAmount: receipt.taxAmount ?? "",
     description: receipt.description ?? "",
-    paymentMethod: receipt.paymentMethod ?? "",
+    paymentMethod,
     tipAmount: receipt.tipAmount ?? "",
     discountAmount: receipt.discountAmount ?? "",
     category: receipt.category ?? "",
@@ -435,7 +447,10 @@ export function EditReceiptDialog({
   );
 
   // Memoize default values to avoid recreating on every render
-  const defaultValues = useMemo(() => getDefaultValues(receipt), [receipt]);
+  const defaultValues = useMemo(
+    () => getDefaultValues(receipt, userSettings?.defaultValues),
+    [receipt, userSettings?.defaultValues]
+  );
 
   // Key to force form remount when receipt changes - eliminates useEffect
   const formKey = receipt?.id || "new";

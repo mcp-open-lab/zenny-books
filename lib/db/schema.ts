@@ -62,6 +62,7 @@ export const userSettings = pgTable("user_settings", {
   currency: text("currency").default("USD"), // 'USD' | 'CAD'
   visibleFields: text("visible_fields"), // JSON string of field visibility preferences
   requiredFields: text("required_fields"), // JSON string of required field preferences
+  defaultValues: text("default_values"), // JSON string of default field values (isBusinessExpense, businessPurpose, paymentMethod)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

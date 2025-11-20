@@ -186,3 +186,19 @@ export const RECEIPT_FIELDS = [
   { key: "businessPurpose", label: "Business Purpose" },
   { key: "isBusinessExpense", label: "Is Business Expense" },
 ] as const;
+
+// Default values type
+export type DefaultValues = {
+  isBusinessExpense?: boolean | null;
+  businessPurpose?: string | null;
+  paymentMethod?: "cash" | "card" | "check" | "other" | null;
+};
+
+// Get default default values (empty - user must set them)
+export function getDefaultDefaultValues(): DefaultValues {
+  return {
+    isBusinessExpense: null,
+    businessPurpose: null,
+    paymentMethod: null,
+  };
+}

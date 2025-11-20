@@ -2,13 +2,13 @@ import { db } from "@/lib/db";
 import { receipts } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import { Timeline } from "@/components/timeline";
 import { AddToHomeScreenButton } from "@/components/add-to-home";
 import { QuickActions } from "@/components/quick-actions";
 import { getUserSettings } from "@/app/actions/user-settings";
 import { groupItemsByMonth } from "@/lib/utils/timeline";
+import { PageHeader } from "@/components/page-header";
 
 export default async function Dashboard() {
   const { userId } = await auth();
@@ -32,10 +32,7 @@ export default async function Dashboard() {
 
   return (
     <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Timeline</h1>
-        <UserButton />
-      </div>
+      <PageHeader title="Timeline" />
 
       <div className="flex mb-4">
         <AddToHomeScreenButton />
@@ -51,11 +48,11 @@ export default async function Dashboard() {
                 requiredFields: settings.requiredFields || {},
                 country: settings.country || undefined,
                 usageType: settings.usageType || undefined,
+                defaultValues: settings.defaultValues || null,
               }
             : null
         }
       />
-      <QuickActions />
     </div>
   );
 }

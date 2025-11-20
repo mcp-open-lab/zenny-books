@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { saveUserSettings } from "@/app/actions/user-settings";
 import { useForm } from "react-hook-form";
@@ -32,6 +33,8 @@ import {
   getDefaultVisibleFields,
   getDefaultRequiredFields,
   syncRequiredWithVisible,
+  PAYMENT_METHODS,
+  getDefaultDefaultValues,
 } from "@/lib/consts";
 
 type SettingsFormProps = {
@@ -43,6 +46,11 @@ type SettingsFormProps = {
     currency: string | null;
     visibleFields: Record<string, boolean> | null;
     requiredFields: Record<string, boolean> | null;
+    defaultValues?: {
+      isBusinessExpense?: boolean | null;
+      businessPurpose?: string | null;
+      paymentMethod?: "cash" | "card" | "check" | "other" | null;
+    } | null;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -64,10 +72,13 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       currency: initialSettings.currency || "USD",
       visibleFields:
         initialSettings.visibleFields ||
-        getDefaultVisibleFields(initialUsageType),
+        getDefaultVisibleFields(initialUsageType) ||
+        {},
       requiredFields:
         initialSettings.requiredFields ||
-        getDefaultRequiredFields(initialUsageType),
+        getDefaultRequiredFields(initialUsageType) ||
+        {},
+      defaultValues: initialSettings.defaultValues || getDefaultDefaultValues(),
     },
   });
 
@@ -90,14 +101,38 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         toast.success("Settings saved!");
       } catch (error) {
         console.error("Failed to save settings:", error);
-        toast.error("Failed to save settings");
+        toast.error(
+          `Failed to save settings: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
     });
   };
 
+  const onError = (errors: unknown) => {
+    console.error("Form validation errors:", errors);
+    const errorObj = errors as Record<string, { message?: string }>;
+    const errorFields = Object.keys(errorObj);
+
+    if (errorFields.length > 0) {
+      const firstError = errorObj[errorFields[0]];
+      const fieldName = errorFields[0]
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (str) => str.toUpperCase())
+        .trim();
+      toast.error(firstError?.message || `${fieldName} is required`);
+    } else {
+      toast.error("Please fix the form errors before saving");
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, onError)}
+        className="space-y-6"
+      >
         <Card className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">Profile</h2>
           <div className="space-y-4">
@@ -184,9 +219,18 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                     <FormLabel>
                       {country === "US" ? "State" : "Province"}
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                    >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger
+                          className={
+                            form.formState.errors.province
+                              ? "border-destructive"
+                              : ""
+                          }
+                        >
                           <SelectValue
                             placeholder={`Select ${
                               country === "US" ? "state" : "province"
@@ -404,6 +448,106 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             })}
           </div>
         </Card>
+
+        {(usageType === "business" || usageType === "mixed") && (
+          <Card className="p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Default Values</h2>
+            <p className="text-sm text-muted-foreground">
+              Set default values that will be automatically filled when creating
+              or editing receipts. Leave empty to not use defaults.
+            </p>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="defaultValues.isBusinessExpense"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Business Expense</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(
+                          value === "none" ? null : value === "true"
+                        );
+                      }}
+                      value={
+                        field.value === null || field.value === undefined
+                          ? "none"
+                          : field.value
+                          ? "true"
+                          : "false"
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="No default" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No default</SelectItem>
+                        <SelectItem value="true">
+                          Yes (Business Expense)
+                        </SelectItem>
+                        <SelectItem value="false">
+                          No (Personal Expense)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="defaultValues.businessPurpose"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Business Purpose</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Client meeting, Office supplies"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="defaultValues.paymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Payment Method</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value === "none" ? null : value);
+                      }}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="No default" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No default</SelectItem>
+                        {PAYMENT_METHODS.map((method) => (
+                          <SelectItem key={method} value={method}>
+                            {method.charAt(0).toUpperCase() + method.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </Card>
+        )}
 
         <Button type="submit" disabled={isPending} className="w-full">
           {isPending ? "Saving..." : "Save Settings"}

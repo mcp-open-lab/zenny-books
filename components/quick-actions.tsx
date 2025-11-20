@@ -5,7 +5,19 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { scanReceipt } from "@/app/actions/scan-receipt";
-import { Camera, Upload, X } from "lucide-react";
+import {
+  Camera,
+  Upload,
+  X,
+  Grid3X3,
+  ArrowDownToLine,
+  ArrowUpToLine,
+  Wallet,
+  FileText,
+  Clock,
+  Settings,
+  Brain,
+} from "lucide-react";
 import { future_genUploader } from "uploadthing/client-future";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
 
@@ -75,6 +87,49 @@ export function QuickActions() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
+  const navItems = [
+    {
+      label: "Timeline",
+      href: "/app",
+      icon: Clock,
+      showAiIcon: false,
+    },
+    {
+      label: "Import",
+      href: "/app/import",
+      icon: ArrowDownToLine,
+      showAiIcon: false,
+    },
+    {
+      label: "Export",
+      href: "/app/export",
+      icon: ArrowUpToLine,
+      showAiIcon: false,
+    },
+    {
+      label: "Budgets",
+      href: "/app/budgets",
+      icon: Wallet,
+      showAiIcon: true,
+    },
+    {
+      label: "Invoices",
+      href: "/app/invoices",
+      icon: FileText,
+      showAiIcon: true,
+    },
+    {
+      label: "Settings",
+      href: "/app/settings",
+      icon: Settings,
+      showAiIcon: false,
+    },
+  ];
+
+  const handleNavigate = (href: string) => {
+    setIsOpen(false);
+    router.push(href);
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -191,25 +246,52 @@ export function QuickActions() {
       <div className="fixed bottom-4 right-4 z-50 quick-actions-menu">
         {/* Fan-out buttons */}
         {isOpen && (
-          <div className="absolute bottom-16 right-0 flex flex-col gap-3 mb-2">
-            {/* Camera Button */}
-            <Button
-              onClick={handleCameraClick}
-              disabled={isUploading}
-              className="rounded-full w-14 h-14 p-0 shadow-lg bg-primary text-primary-foreground animate-in fade-in slide-in-from-bottom-2"
-              style={{ animationDelay: "0ms" }}
-            >
-              <Camera className="w-6 h-6" />
-            </Button>
+          <div className="absolute bottom-20 right-0 flex flex-col gap-2 mb-3 w-48">
+            {navItems.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <Button
+                  key={item.href}
+                  variant="secondary"
+                  className="w-full justify-between gap-2 shadow-md"
+                  onClick={() => handleNavigate(item.href)}
+                  style={{ animationDelay: `${index * 40}ms` }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </div>
+                  {item.showAiIcon && (
+                    <Brain className="h-3.5 w-3.5 text-primary" />
+                  )}
+                </Button>
+              );
+            })}
 
-            {/* File Upload Button */}
+            <div className="h-px bg-border my-2" />
+
             <Button
               onClick={handleFileUploadClick}
               disabled={isUploading}
-              className="rounded-full w-14 h-14 p-0 shadow-lg bg-primary text-primary-foreground animate-in fade-in slide-in-from-bottom-2"
-              style={{ animationDelay: "50ms" }}
+              className="w-full justify-between gap-2 rounded-md shadow-md bg-primary text-primary-foreground"
             >
-              <Upload className="w-6 h-6" />
+              <div className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                File Upload
+              </div>
+              <Brain className="h-3.5 w-3.5" />
+            </Button>
+
+            <Button
+              onClick={handleCameraClick}
+              disabled={isUploading}
+              className="w-full justify-between gap-2 rounded-md shadow-md bg-primary text-primary-foreground"
+            >
+              <div className="flex items-center gap-2">
+                <Camera className="h-4 w-4" />
+                Camera
+              </div>
+              <Brain className="h-3.5 w-3.5" />
             </Button>
           </div>
         )}
@@ -224,7 +306,7 @@ export function QuickActions() {
               : "bg-primary hover:bg-primary/90"
           } text-primary-foreground`}
         >
-          {isOpen ? <X className="w-8 h-8" /> : <Camera className="w-8 h-8" />}
+          {isOpen ? <X className="w-8 h-8" /> : <Grid3X3 className="w-8 h-8" />}
         </Button>
       </div>
     </>

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_REQUIRED_FIELDS } from "./consts";
+import { DEFAULT_REQUIRED_FIELDS, type DefaultValues } from "./consts";
 
 // Create dynamic schema based on required fields
 export function createEditReceiptSchema(
@@ -46,8 +46,41 @@ export const SettingsSchema = z.object({
   country: z.enum(["US", "CA"]),
   province: z.string().min(1, "Province/State is required"),
   currency: z.string().min(1, "Currency is required"),
-  visibleFields: z.record(z.boolean()),
-  requiredFields: z.record(z.boolean()),
+  // visibleFields and requiredFields are Records of booleans.
+  // We use optional() + transform() because RHF may yield 'undefined' for untouched fields,
+  // but our application logic and DB expect strict booleans (false instead of undefined).
+  visibleFields: z
+    .record(z.boolean().optional())
+    .default({})
+    .transform((val) => {
+      const result: Record<string, boolean> = {};
+      for (const [key, value] of Object.entries(val)) {
+        result[key] = value ?? false;
+      }
+      return result;
+    }),
+  requiredFields: z
+    .record(z.boolean().optional())
+    .default({})
+    .transform((val) => {
+      const result: Record<string, boolean> = {};
+      for (const [key, value] of Object.entries(val)) {
+        result[key] = value ?? false;
+      }
+      return result;
+    }),
+  // Default values for fields that make sense to have defaults
+  defaultValues: z
+    .object({
+      isBusinessExpense: z.boolean().nullable().optional(),
+      businessPurpose: z.string().nullable().optional(),
+      paymentMethod: z
+        .enum(["cash", "card", "check", "other"])
+        .nullable()
+        .optional(),
+    })
+    .optional()
+    .default({}),
 });
 
 export const OnboardingSchema = z.object({

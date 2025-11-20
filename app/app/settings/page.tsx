@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getUserSettings, saveUserSettings } from "@/app/actions/user-settings";
 import { SettingsForm } from "@/components/settings-form";
+import { PageHeader } from "@/components/page-header";
 
 export default async function SettingsPage() {
   const { userId } = await auth();
@@ -16,7 +17,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <PageHeader title="Settings" />
       <SettingsForm initialSettings={settings} />
     </div>
   );

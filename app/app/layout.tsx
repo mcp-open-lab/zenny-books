@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { AppNav } from "@/components/app-nav";
+import { QuickActions } from "@/components/quick-actions";
 
 export default async function AppLayout({
   children,
@@ -13,10 +13,9 @@ export default async function AppLayout({
   }
 
   return (
-    <>
-      <AppNav />
+    <div className="min-h-screen bg-background">
       {children}
-    </>
+      <QuickActions />
+    </div>
   );
 }
-

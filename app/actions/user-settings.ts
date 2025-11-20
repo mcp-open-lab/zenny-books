@@ -29,6 +29,7 @@ export async function saveUserSettings(
   let currency: string;
   let visibleFieldsData: string | null = null;
   let requiredFieldsData: string | null = null;
+  let defaultValuesData: string | null = null;
 
   if ("visibleFields" in data) {
     const settingsData = SettingsSchema.parse(data);
@@ -51,6 +52,29 @@ export async function saveUserSettings(
       Object.keys(syncedRequiredFields).length > 0
         ? JSON.stringify(syncedRequiredFields)
         : null;
+
+    // Handle default values
+    const defaultValues = settingsData.defaultValues || {};
+    const hasDefaults =
+      defaultValues.isBusinessExpense !== null &&
+      defaultValues.isBusinessExpense !== undefined;
+    const hasBusinessPurpose =
+      defaultValues.businessPurpose !== null &&
+      defaultValues.businessPurpose !== undefined &&
+      defaultValues.businessPurpose.trim() !== "";
+    const hasPaymentMethod =
+      defaultValues.paymentMethod !== null &&
+      defaultValues.paymentMethod !== undefined;
+
+    if (hasDefaults || hasBusinessPurpose || hasPaymentMethod) {
+      defaultValuesData = JSON.stringify({
+        isBusinessExpense: hasDefaults ? defaultValues.isBusinessExpense : null,
+        businessPurpose: hasBusinessPurpose
+          ? defaultValues.businessPurpose
+          : null,
+        paymentMethod: hasPaymentMethod ? defaultValues.paymentMethod : null,
+      });
+    }
   } else {
     const onboardingData = OnboardingSchema.parse(data);
     validated = onboardingData;
@@ -66,6 +90,7 @@ export async function saveUserSettings(
 
     visibleFieldsData = JSON.stringify(defaultVisible);
     requiredFieldsData = JSON.stringify(syncedRequired);
+    // No default values set during onboarding
   }
 
   const settingsData = {
@@ -76,6 +101,7 @@ export async function saveUserSettings(
     currency,
     visibleFields: visibleFieldsData,
     requiredFields: requiredFieldsData,
+    defaultValues: defaultValuesData,
     updatedAt: new Date(),
   };
 
@@ -113,5 +139,12 @@ export async function getUserSettings() {
     requiredFields: setting.requiredFields
       ? JSON.parse(setting.requiredFields)
       : {},
+    defaultValues: setting.defaultValues
+      ? JSON.parse(setting.defaultValues)
+      : {
+          isBusinessExpense: null,
+          businessPurpose: null,
+          paymentMethod: null,
+        },
   };
 }
