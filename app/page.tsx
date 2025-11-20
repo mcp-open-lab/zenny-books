@@ -1,6 +1,12 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
 
 export default function MarketingPage() {
   return (
@@ -14,9 +20,9 @@ export default function MarketingPage() {
                 <SignInButton mode="modal">
                   <Button variant="ghost">Sign In</Button>
                 </SignInButton>
-                <Link href="/sign-up">
+                <SignUpButton mode="modal">
                   <Button>Get Started</Button>
-                </Link>
+                </SignUpButton>
               </SignedOut>
               <SignedIn>
                 <Link href="/app">
@@ -35,14 +41,14 @@ export default function MarketingPage() {
             AI-Powered Receipt Scanner
           </h1>
           <p className="mt-6 text-xl leading-8 text-gray-600 max-w-2xl mx-auto">
-            Upload receipts, extract data automatically with AI, and manage your expenses effortlessly.
-            No more manual data entry.
+            Upload receipts, extract data automatically with AI, and manage your
+            expenses effortlessly. No more manual data entry.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <SignedOut>
-              <Link href="/sign-up">
+              <SignUpButton mode="modal">
                 <Button size="lg">Get Started Free</Button>
-              </Link>
+              </SignUpButton>
             </SignedOut>
             <SignedIn>
               <Link href="/app">
@@ -59,19 +65,22 @@ export default function MarketingPage() {
           <div className="p-6 border rounded-lg">
             <h3 className="text-lg font-semibold mb-2">🤖 AI Extraction</h3>
             <p className="text-gray-600">
-              Powered by Google Gemini to automatically extract merchant, date, amount, and category from receipts.
+              Powered by Google Gemini to automatically extract merchant, date,
+              amount, and category from receipts.
             </p>
           </div>
           <div className="p-6 border rounded-lg">
             <h3 className="text-lg font-semibold mb-2">📸 Easy Upload</h3>
             <p className="text-gray-600">
-              Drag and drop or use your camera. Works on desktop and mobile seamlessly.
+              Drag and drop or use your camera. Works on desktop and mobile
+              seamlessly.
             </p>
           </div>
           <div className="p-6 border rounded-lg">
             <h3 className="text-lg font-semibold mb-2">📊 Export & Manage</h3>
             <p className="text-gray-600">
-              Review extracted data, make corrections, and export to CSV for your records.
+              Review extracted data, make corrections, and export to CSV for
+              your records.
             </p>
           </div>
         </div>

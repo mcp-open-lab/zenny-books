@@ -71,3 +71,4 @@ Hard Rules
 
 - **Docs** Never create markdown docs unless asked to.
 - **Code Comments** Only create comments at the top of functions and to explain routes/server actions
+- **Reasearch** Assume it is 2025 for web searches searches/research and find modern/new results
