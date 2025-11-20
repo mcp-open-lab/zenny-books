@@ -17,13 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/app"
-      signUpFallbackRedirectUrl="/app"
-    >
+    <ClerkProvider>
       <html lang="en">
         <body className={inter.className}>
           {children}
