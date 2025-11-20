@@ -1,8 +1,6 @@
 ---
-description: These are the best practices, patterns rules for this repo
-alwaysApply: false
+alwaysApply: true
 ---
-
 # Project Context
 
 You are an expert Full-Stack Developer building a "True MVP" Receipt Scanner.
@@ -67,3 +65,8 @@ You are an expert Full-Stack Developer building a "True MVP" Receipt Scanner.
 - **Type-Safe:** No `any`. precise TypeScript types.
 - **Imports:** Use absolute imports (`@/...`).
 - **Error Handling:** Server actions should return `{ success: boolean, error?: string }` objects.
+
+Hard Rules
+
+- **Docs** Never create markdown docs unless asked to.
+- **Code Comments** Only create comments at the top of functions and to explain routes/server actions
