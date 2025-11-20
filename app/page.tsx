@@ -38,51 +38,82 @@ export default function MarketingPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="text-center">
           <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-            AI-Powered Receipt Scanner
+            Accounting Augmented by AI.
+            <br />
+            <span className="text-primary">Tax Season, Solved.</span>
           </h1>
           <p className="mt-6 text-xl leading-8 text-gray-600 max-w-2xl mx-auto">
-            Upload receipts, extract data automatically with AI, and manage your
-            expenses effortlessly. No more manual data entry.
+            Stop wrestling with complex accounting software. Turbo Invoice uses
+            AI to instantly process receipts and generate invoices. It’s
+            automagic bookkeeping for the modern pro.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <SignedOut>
               <SignUpButton mode="modal">
-                <Button size="lg">Get Started Free</Button>
+                <Button size="lg" className="px-8 text-lg h-12 rounded-full">
+                  Start for Free
+                </Button>
               </SignUpButton>
             </SignedOut>
             <SignedIn>
               <Link href="/app">
-                <Button size="lg">Go to Dashboard</Button>
+                <Button size="lg" className="px-8 text-lg h-12 rounded-full">
+                  Go to Dashboard
+                </Button>
               </Link>
             </SignedIn>
-            <Button variant="outline" size="lg">
-              Learn More
-            </Button>
           </div>
         </div>
 
-        <div className="mt-24 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="p-6 border rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">🤖 AI Extraction</h3>
-            <p className="text-gray-600">
-              Powered by Google Gemini to automatically extract merchant, date,
-              amount, and category from receipts.
+        <div className="mt-32 grid grid-cols-1 gap-12 sm:grid-cols-3">
+          <div className="p-8 bg-white border rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
+              <span className="text-2xl">⚡️</span>
+            </div>
+            <h3 className="text-xl font-bold mb-3">Instant Receipt Capture</h3>
+            <p className="text-gray-600 leading-relaxed">
+              Snap a photo, and our AI extracts every detail (merchant, date,
+              totals) in seconds. No manual entry, ever.
             </p>
           </div>
-          <div className="p-6 border rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">📸 Easy Upload</h3>
-            <p className="text-gray-600">
-              Drag and drop or use your camera. Works on desktop and mobile
-              seamlessly.
+          <div className="p-8 bg-white border rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-6">
+              <span className="text-2xl">🧠</span>
+            </div>
+            <h3 className="text-xl font-bold mb-3">AI Invoice Creation</h3>
+            <p className="text-gray-600 leading-relaxed">
+              Describe your work in plain English, and let AI generate a
+              professional, itemized invoice ready to send.
             </p>
           </div>
-          <div className="p-6 border rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">📊 Export & Manage</h3>
-            <p className="text-gray-600">
-              Review extracted data, make corrections, and export to CSV for
-              your records.
+          <div className="p-8 bg-white border rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-6">
+              <span className="text-2xl">😌</span>
+            </div>
+            <h3 className="text-xl font-bold mb-3">Stress-Free Taxes</h3>
+            <p className="text-gray-600 leading-relaxed">
+              Everything is categorized and exportable. Hand your accountant a
+              perfect CSV, or file it yourself with confidence.
             </p>
           </div>
+        </div>
+
+        <div className="mt-32 bg-slate-50 rounded-3xl p-12 text-center">
+          <h2 className="text-3xl font-bold mb-6">
+            Too simple to be true? That’s the point.
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+            Traditional software is built for accountants, not you. We stripped
+            away the bloat and added intelligence to give you exactly what you
+            need: <strong>speed and clarity</strong>.
+          </p>
+          <SignedOut>
+            <SignUpButton mode="modal">
+              <Button variant="outline" size="lg">
+                Try the Simplicity
+              </Button>
+            </SignUpButton>
+          </SignedOut>
         </div>
       </main>
     </div>
