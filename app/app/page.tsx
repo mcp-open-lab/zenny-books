@@ -48,6 +48,7 @@ export default async function Dashboard() {
           settings
             ? {
                 visibleFields: settings.visibleFields || {},
+                requiredFields: settings.requiredFields || {},
                 country: settings.country || undefined,
                 usageType: settings.usageType || undefined,
               }

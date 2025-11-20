@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,40 +12,41 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { saveUserSettings, type UsageType, type Country } from "@/app/actions/user-settings";
-
-const US_STATES = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-];
-
-const CANADIAN_PROVINCES = [
-  "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT",
-];
+import { saveUserSettings } from "@/app/actions/user-settings";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { OnboardingSchema, type OnboardingFormValues } from "@/lib/schemas";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { US_STATES, CANADIAN_PROVINCES } from "@/lib/consts";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [usageType, setUsageType] = useState<UsageType>("personal");
-  const [country, setCountry] = useState<Country>("US");
-  const [province, setProvince] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
-  const handleSubmit = () => {
-    if (!province && (country === "US" || country === "CA")) {
-      toast.error("Please select your state/province");
-      return;
-    }
+  const form = useForm<OnboardingFormValues>({
+    resolver: zodResolver(OnboardingSchema),
+    defaultValues: {
+      usageType: "personal",
+      country: "US",
+      province: "",
+    },
+  });
 
+  const country = form.watch("country");
+
+  const onSubmit = (data: OnboardingFormValues) => {
     startTransition(async () => {
       try {
         await saveUserSettings({
-          usageType,
-          country,
-          province,
-          currency: country === "CA" ? "CAD" : "USD",
+          ...data,
+          currency: data.country === "CA" ? "CAD" : "USD",
         });
         toast.success("Settings saved!");
         router.push("/app");
@@ -67,79 +68,94 @@ export default function OnboardingPage() {
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              How do you use Turbo Invoice?
-            </label>
-            <Select
-              value={usageType}
-              onValueChange={(value) => setUsageType(value as UsageType)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="personal">Personal</SelectItem>
-                <SelectItem value="business">Business</SelectItem>
-                <SelectItem value="mixed">Both</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="usageType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>How do you use Turbo Invoice?</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="personal">Personal</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="mixed">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Where are you located?
-            </label>
-            <Select
-              value={country}
-              onValueChange={(value) => {
-                setCountry(value as Country);
-                setProvince("");
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="US">United States</SelectItem>
-                <SelectItem value="CA">Canada</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Where are you located?</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      form.setValue("province", "");
+                    }}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="US">United States</SelectItem>
+                      <SelectItem value="CA">Canada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {country && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                {country === "US" ? "State" : "Province"}
-              </label>
-              <Select value={province} onValueChange={setProvince}>
-                <SelectTrigger>
-                  <SelectValue placeholder={`Select ${country === "US" ? "state" : "province"}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(country === "US" ? US_STATES : CANADIAN_PROVINCES).map(
-                    (code) => (
-                      <SelectItem key={code} value={code}>
-                        {code}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            {country && (
+              <FormField
+                control={form.control}
+                name="province"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{country === "US" ? "State" : "Province"}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select ${country === "US" ? "state" : "province"}`} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(country === "US" ? US_STATES : CANADIAN_PROVINCES).map(
+                          (code) => (
+                            <SelectItem key={code} value={code}>
+                              {code}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
-          <Button
-            onClick={handleSubmit}
-            disabled={isPending || !province}
-            className="w-full"
-          >
-            {isPending ? "Saving..." : "Get Started"}
-          </Button>
-        </div>
+            <Button type="submit" disabled={isPending} className="w-full">
+              {isPending ? "Saving..." : "Get Started"}
+            </Button>
+          </form>
+        </Form>
       </Card>
     </div>
   );
 }
-

@@ -5,33 +5,77 @@ import { db } from "@/lib/db";
 import { userSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { SettingsSchema, OnboardingSchema } from "@/lib/schemas";
+import type { SettingsFormValues, OnboardingFormValues } from "@/lib/schemas";
+import {
+  getDefaultVisibleFields,
+  getDefaultRequiredFields,
+  syncRequiredWithVisible,
+} from "@/lib/consts";
 
 export type UsageType = "personal" | "business" | "mixed";
 export type Country = "US" | "CA";
 
-export type UserSettingsInput = {
-  usageType: UsageType;
-  country: Country;
-  province?: string;
-  currency?: string;
-  visibleFields?: Record<string, boolean>;
-};
-
-export async function saveUserSettings(data: UserSettingsInput) {
+export async function saveUserSettings(
+  data: SettingsFormValues | OnboardingFormValues
+) {
   const { userId } = await auth();
   if (!userId) {
     throw new Error("Unauthorized");
   }
 
+  // Validate with appropriate schema
+  let validated: SettingsFormValues | OnboardingFormValues;
+  let currency: string;
+  let visibleFieldsData: string | null = null;
+  let requiredFieldsData: string | null = null;
+
+  if ("visibleFields" in data) {
+    const settingsData = SettingsSchema.parse(data);
+    validated = settingsData;
+    currency = settingsData.currency;
+
+    // Sync required fields with visible fields
+    const visibleFields = settingsData.visibleFields || {};
+    const requiredFields = settingsData.requiredFields || {};
+    const syncedRequiredFields = syncRequiredWithVisible(
+      visibleFields,
+      requiredFields
+    );
+
+    visibleFieldsData =
+      Object.keys(visibleFields).length > 0
+        ? JSON.stringify(visibleFields)
+        : null;
+    requiredFieldsData =
+      Object.keys(syncedRequiredFields).length > 0
+        ? JSON.stringify(syncedRequiredFields)
+        : null;
+  } else {
+    const onboardingData = OnboardingSchema.parse(data);
+    validated = onboardingData;
+    currency = onboardingData.country === "CA" ? "CAD" : "USD";
+
+    // Set defaults based on usage type during onboarding
+    const defaultVisible = getDefaultVisibleFields(onboardingData.usageType);
+    const defaultRequired = getDefaultRequiredFields(onboardingData.usageType);
+    const syncedRequired = syncRequiredWithVisible(
+      defaultVisible,
+      defaultRequired
+    );
+
+    visibleFieldsData = JSON.stringify(defaultVisible);
+    requiredFieldsData = JSON.stringify(syncedRequired);
+  }
+
   const settingsData = {
     userId,
-    usageType: data.usageType,
-    country: data.country,
-    province: data.province || null,
-    currency: data.currency || (data.country === "CA" ? "CAD" : "USD"),
-    visibleFields: data.visibleFields
-      ? JSON.stringify(data.visibleFields)
-      : null,
+    usageType: validated.usageType,
+    country: validated.country,
+    province: validated.province || null,
+    currency,
+    visibleFields: visibleFieldsData,
+    requiredFields: requiredFieldsData,
     updatedAt: new Date(),
   };
 
@@ -65,6 +109,9 @@ export async function getUserSettings() {
     ...setting,
     visibleFields: setting.visibleFields
       ? JSON.parse(setting.visibleFields)
+      : {},
+    requiredFields: setting.requiredFields
+      ? JSON.parse(setting.requiredFields)
       : {},
   };
 }

@@ -61,6 +61,7 @@ export const userSettings = pgTable("user_settings", {
   province: text("province"), // State/Province code
   currency: text("currency").default("USD"), // 'USD' | 'CAD'
   visibleFields: text("visible_fields"), // JSON string of field visibility preferences
+  requiredFields: text("required_fields"), // JSON string of required field preferences
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

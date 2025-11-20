@@ -10,17 +10,21 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { SlidersHorizontal, X } from "lucide-react";
 import type { TimelineGroup, SortBy } from "@/lib/utils/timeline";
 import { useTimelineFilters } from "@/components/use-timeline-filters";
 import { EditReceiptDialog } from "@/components/edit-receipt-dialog";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
+import { RECEIPT_CATEGORIES, RECEIPT_STATUSES } from "@/lib/consts";
 
 type Receipt = typeof receipts.$inferSelect;
 
 type UserSettings = {
   visibleFields?: Record<string, boolean> | null;
+  requiredFields?: Record<string, boolean> | null;
   country?: string | null;
   usageType?: string | null;
 };
@@ -31,15 +35,10 @@ type TimelineProps = {
   userSettings?: UserSettings | null;
 };
 
-const categories = ["Food", "Transport", "Utilities", "Supplies", "Other"];
-const statuses = ["needs_review", "approved"];
+const categories = RECEIPT_CATEGORIES;
+const statuses = RECEIPT_STATUSES;
 
-import { useHydrated } from "@/lib/hooks/use-hydrated";
-
-export function Timeline({
-  receipts,
-  userSettings,
-}: TimelineProps) {
+export function Timeline({ receipts, userSettings }: TimelineProps) {
   const hydrated = useHydrated();
   const [selected, setSelected] = useState<Receipt | null>(null);
   const [open, setOpen] = useState(false);
@@ -69,7 +68,10 @@ export function Timeline({
         <div className="h-10 bg-muted/20 rounded-md animate-pulse mb-4" />
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-muted/20 rounded-md animate-pulse" />
+            <div
+              key={i}
+              className="h-24 bg-muted/20 rounded-md animate-pulse"
+            />
           ))}
         </div>
       </div>
@@ -116,6 +118,9 @@ export function Timeline({
           >
             <SheetHeader className="flex-shrink-0">
               <SheetTitle>Filter & Sort</SheetTitle>
+              <SheetDescription className="sr-only">
+                Filter and sort your timeline items
+              </SheetDescription>
             </SheetHeader>
             <div className="mt-6 space-y-6 flex-1 overflow-y-auto">
               <div>
@@ -149,7 +154,7 @@ export function Timeline({
                   {(availableCategories.length
                     ? availableCategories
                     : categories
-                  ).map((category) => (
+                  ).map((category: string) => (
                     <option key={category} value={category}>
                       {category}
                     </option>
@@ -167,7 +172,7 @@ export function Timeline({
                   {(availableStatuses.length
                     ? availableStatuses
                     : statuses
-                  ).map((status) => (
+                  ).map((status: string) => (
                     <option key={status} value={status}>
                       {status.replace("_", " ")}
                     </option>
@@ -178,13 +183,13 @@ export function Timeline({
                 <Button
                   variant="outline"
                   className="w-full"
-              onClick={() => {
-                resetFilters();
-                setFilterOpen(false);
-              }}
-            >
-              Clear Filters
-            </Button>
+                  onClick={() => {
+                    resetFilters();
+                    setFilterOpen(false);
+                  }}
+                >
+                  Clear Filters
+                </Button>
               )}
               <Button className="w-full" onClick={() => setFilterOpen(false)}>
                 Apply Filters
@@ -227,10 +232,7 @@ export function Timeline({
         {totalFilteredCount === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <p>No items match your filters.</p>
-            <Button
-              variant="link"
-              onClick={() => resetFilters()}
-            >
+            <Button variant="link" onClick={() => resetFilters()}>
               Clear all filters
             </Button>
           </div>

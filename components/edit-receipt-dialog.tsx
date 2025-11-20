@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useMemo } from "react";
 import Image from "next/image";
 import {
   Dialog,
@@ -14,12 +14,39 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { updateReceipt } from "@/app/actions/update-receipt";
 import { X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  createEditReceiptSchema,
+  type EditReceiptFormValues,
+} from "@/lib/schemas";
+import {
+  DEFAULT_REQUIRED_FIELDS,
+  RECEIPT_CATEGORIES,
+  RECEIPT_STATUSES,
+} from "@/lib/consts";
 import type { receipts } from "@/lib/db/schema";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Receipt = typeof receipts.$inferSelect;
 
 type UserSettings = {
   visibleFields?: Record<string, boolean> | null;
+  requiredFields?: Record<string, boolean> | null;
   country?: string | null;
   usageType?: string | null;
 };
@@ -31,72 +58,73 @@ type EditReceiptDialogProps = {
   userSettings?: UserSettings | null;
 };
 
-const categories = ["Food", "Transport", "Utilities", "Supplies", "Other"];
-const statuses = ["needs_review", "approved"];
+const categories = RECEIPT_CATEGORIES;
+const statuses = RECEIPT_STATUSES;
 
-export function EditReceiptDialog({
-  open,
-  onOpenChange,
+// Helper to get default values from receipt
+function getDefaultValues(receipt: Receipt | null): EditReceiptFormValues {
+  if (!receipt) {
+    return {
+      id: "",
+      merchantName: "",
+      date: "",
+      totalAmount: "",
+      taxAmount: "",
+      description: "",
+      paymentMethod: "",
+      tipAmount: "",
+      discountAmount: "",
+      category: "",
+      status: "needs_review",
+    };
+  }
+
+  return {
+    id: receipt.id,
+    merchantName: receipt.merchantName ?? "",
+    date: receipt.date
+      ? new Date(receipt.date).toISOString().split("T")[0]
+      : "",
+    totalAmount: receipt.totalAmount ?? "",
+    taxAmount: receipt.taxAmount ?? "",
+    description: receipt.description ?? "",
+    paymentMethod: receipt.paymentMethod ?? "",
+    tipAmount: receipt.tipAmount ?? "",
+    discountAmount: receipt.discountAmount ?? "",
+    category: receipt.category ?? "",
+    status: (receipt.status as "needs_review" | "approved") ?? "needs_review",
+  };
+}
+
+// Form component - extracted to allow key-based remounting (eliminates useEffect)
+type ReceiptFormProps = {
+  receipt: Receipt;
+  defaultValues: EditReceiptFormValues;
+  schema: ReturnType<typeof createEditReceiptSchema>;
+  requiredFields: Record<string, boolean>;
+  visibleFields: Record<string, boolean>;
+  onOpenChange: (open: boolean) => void;
+};
+
+function ReceiptForm({
   receipt,
-  userSettings,
-}: EditReceiptDialogProps) {
-  const [imageExpanded, setImageExpanded] = useState(false);
+  defaultValues,
+  schema,
+  requiredFields,
+  visibleFields,
+  onOpenChange,
+}: ReceiptFormProps) {
   const [isPending, startTransition] = useTransition();
-  
-  // Form state
-  const [formState, setFormState] = useState({
-    merchantName: "",
-    date: "",
-    totalAmount: "",
-    taxAmount: "",
-    description: "",
-    paymentMethod: "",
-    tipAmount: "",
-    discountAmount: "",
-    category: "",
-    status: "needs_review",
+
+  const form = useForm<EditReceiptFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues,
   });
 
-  // Reset form when receipt changes
-  // Using useEffect here is acceptable for resetting state based on prop change,
-  // but usually key={} on the parent is cleaner. However, since the Dialog stays mounted,
-  // we sync here.
-  useEffect(() => {
-    if (receipt) {
-      setFormState({
-        merchantName: receipt.merchantName ?? "",
-        date: receipt.date
-          ? new Date(receipt.date).toISOString().split("T")[0]
-          : "",
-        totalAmount: receipt.totalAmount ?? "",
-        taxAmount: receipt.taxAmount ?? "",
-        description: receipt.description ?? "",
-        paymentMethod: receipt.paymentMethod ?? "",
-        tipAmount: receipt.tipAmount ?? "",
-        discountAmount: receipt.discountAmount ?? "",
-        category: receipt.category ?? "",
-        status: receipt.status ?? "needs_review",
-      });
-    }
-  }, [receipt]);
-
-  const handleSave = () => {
-    if (!receipt) return;
+  const onSubmit = (data: EditReceiptFormValues) => {
     startTransition(async () => {
       try {
-        await updateReceipt({
-          id: receipt.id,
-          merchantName: formState.merchantName || null,
-          date: formState.date || null,
-          totalAmount: formState.totalAmount || null,
-          taxAmount: formState.taxAmount || null,
-          description: formState.description || null,
-          paymentMethod: formState.paymentMethod || null,
-          tipAmount: formState.tipAmount || null,
-          discountAmount: formState.discountAmount || null,
-          category: formState.category || null,
-          status: formState.status,
-        });
+        await updateReceipt(data);
         toast.success("Item updated");
         onOpenChange(false);
       } catch (error) {
@@ -105,6 +133,312 @@ export function EditReceiptDialog({
       }
     });
   };
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-3 md:space-y-4"
+      >
+        <FormField
+          control={form.control}
+          name="merchantName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Merchant
+                {requiredFields.merchantName && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
+              </FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value || ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Date
+                {requiredFields.date && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
+              </FormLabel>
+              <FormControl>
+                <Input type="date" {...field} value={field.value || ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="totalAmount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Total Amount
+                {requiredFields.totalAmount && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...field}
+                  value={field.value || ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="taxAmount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Tax Amount
+                {requiredFields.taxAmount && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Optional"
+                  {...field}
+                  value={field.value || ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {visibleFields.description !== false && (
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Description
+                  {requiredFields.description && (
+                    <span className="text-destructive ml-1">*</span>
+                  )}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Optional"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {visibleFields.paymentMethod !== false && (
+          <FormField
+            control={form.control}
+            name="paymentMethod"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Payment Method
+                  {requiredFields.paymentMethod && (
+                    <span className="text-destructive ml-1">*</span>
+                  )}
+                </FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value || ""}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="check">Check</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {visibleFields.tipAmount !== false && (
+          <FormField
+            control={form.control}
+            name="tipAmount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Tip Amount
+                  {requiredFields.tipAmount && (
+                    <span className="text-destructive ml-1">*</span>
+                  )}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Optional"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {visibleFields.discountAmount !== false && (
+          <FormField
+            control={form.control}
+            name="discountAmount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Discount Amount
+                  {requiredFields.discountAmount && (
+                    <span className="text-destructive ml-1">*</span>
+                  )}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Optional"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Category
+                {requiredFields.category && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
+              </FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ""}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status.replace("_", " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full sm:w-auto"
+          >
+            {isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+export function EditReceiptDialog({
+  open,
+  onOpenChange,
+  receipt,
+  userSettings,
+}: EditReceiptDialogProps) {
+  const [imageExpanded, setImageExpanded] = useState(false);
+
+  const requiredFields =
+    userSettings?.requiredFields || DEFAULT_REQUIRED_FIELDS;
+
+  // Recreate schema when requiredFields change
+  const schema = useMemo(
+    () => createEditReceiptSchema(requiredFields),
+    [requiredFields]
+  );
+
+  // Memoize default values to avoid recreating on every render
+  const defaultValues = useMemo(() => getDefaultValues(receipt), [receipt]);
+
+  // Key to force form remount when receipt changes - eliminates useEffect
+  const formKey = receipt?.id || "new";
 
   const visibleFields = userSettings?.visibleFields || {};
 
@@ -159,221 +493,18 @@ export function EditReceiptDialog({
                 </div>
 
                 {/* Form Section */}
-                <div className="space-y-3 md:space-y-4 order-1 md:order-2">
-                  <div>
-                    <label className="text-sm font-medium block mb-1.5">
-                      Merchant
-                    </label>
-                    <Input
-                      value={formState.merchantName}
-                      onChange={(e) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          merchantName: e.target.value,
-                        }))
-                      }
-                      className="w-full"
+                <div className="order-1 md:order-2">
+                  {receipt && (
+                    <ReceiptForm
+                      key={formKey}
+                      receipt={receipt}
+                      defaultValues={defaultValues}
+                      schema={schema}
+                      requiredFields={requiredFields}
+                      visibleFields={visibleFields}
+                      onOpenChange={onOpenChange}
                     />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium block mb-1.5">
-                      Date
-                    </label>
-                    <Input
-                      type="date"
-                      value={formState.date}
-                      onChange={(e) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          date: e.target.value,
-                        }))
-                      }
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium block mb-1.5">
-                      Total Amount
-                    </label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formState.totalAmount}
-                      onChange={(e) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          totalAmount: e.target.value,
-                        }))
-                      }
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Tax Amount - Always visible as it's core */}
-                  <div>
-                    <label className="text-sm font-medium block mb-1.5">
-                      Tax Amount
-                    </label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formState.taxAmount}
-                      onChange={(e) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          taxAmount: e.target.value,
-                        }))
-                      }
-                      className="w-full"
-                      placeholder="Optional"
-                    />
-                  </div>
-                  
-                  {/* Optional fields based on visibility settings */}
-                  {visibleFields.description !== false && (
-                    <div>
-                      <label className="text-sm font-medium block mb-1.5">
-                        Description
-                      </label>
-                      <Input
-                        value={formState.description || ""}
-                        onChange={(e) =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            description: e.target.value,
-                          }))
-                        }
-                        className="w-full"
-                        placeholder="Optional"
-                      />
-                    </div>
                   )}
-                  
-                  {visibleFields.paymentMethod !== false && (
-                    <div>
-                      <label className="text-sm font-medium block mb-1.5">
-                        Payment Method
-                      </label>
-                      <select
-                        className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                        value={formState.paymentMethod || ""}
-                        onChange={(e) =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            paymentMethod: e.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">Select payment method</option>
-                        <option value="cash">Cash</option>
-                        <option value="card">Card</option>
-                        <option value="check">Check</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                  )}
-                  
-                  {visibleFields.tipAmount !== false && (
-                    <div>
-                      <label className="text-sm font-medium block mb-1.5">
-                        Tip Amount
-                      </label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formState.tipAmount || ""}
-                        onChange={(e) =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            tipAmount: e.target.value,
-                          }))
-                        }
-                        className="w-full"
-                        placeholder="Optional"
-                      />
-                    </div>
-                  )}
-                  
-                  {visibleFields.discountAmount !== false && (
-                    <div>
-                      <label className="text-sm font-medium block mb-1.5">
-                        Discount Amount
-                      </label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formState.discountAmount || ""}
-                        onChange={(e) =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            discountAmount: e.target.value,
-                          }))
-                        }
-                        className="w-full"
-                        placeholder="Optional"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-sm font-medium block mb-1.5">
-                      Category
-                    </label>
-                    <select
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                      value={formState.category}
-                      onChange={(e) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          category: e.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">Select category</option>
-                      {categories.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium block mb-1.5">
-                      Status
-                    </label>
-                    <select
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                      value={formState.status}
-                      onChange={(e) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          status: e.target.value,
-                        }))
-                      }
-                    >
-                      {statuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status.replace("_", " ")}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => onOpenChange(false)}
-                      className="w-full sm:w-auto"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleSave}
-                      disabled={isPending}
-                      className="w-full sm:w-auto"
-                    >
-                      {isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -418,4 +549,3 @@ export function EditReceiptDialog({
     </>
   );
 }
-
