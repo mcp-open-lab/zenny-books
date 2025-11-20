@@ -41,6 +41,7 @@ export function Timeline({
 }: TimelineProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Receipt | null>(null);
+  const [imageExpanded, setImageExpanded] = useState(false);
   const [formState, setFormState] = useState({
     merchantName: "",
     date: "",
@@ -361,18 +362,34 @@ export function Timeline({
         open={open}
         onOpenChange={(value) => {
           setOpen(value);
-          if (!value) setSelected(null);
+          if (!value) {
+            setSelected(null);
+            setImageExpanded(false);
+          }
         }}
       >
         <DialogContent className="max-w-2xl max-h-[90vh] w-[calc(100vw-2rem)] md:w-full overflow-hidden flex flex-col p-0">
           <DialogHeader className="px-4 md:px-6 pt-4 md:pt-6 pb-3 flex-shrink-0">
-            <DialogTitle>Edit Receipt</DialogTitle>
+            <DialogTitle>
+              {(() => {
+                if (!selected) return "Edit Item";
+                if (selected.type === "invoice") {
+                  return `Edit Invoice (${
+                    selected.direction === "in" ? "Received" : "Sent"
+                  })`;
+                }
+                return "Edit Receipt";
+              })()}
+            </DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
               <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div className="order-2 md:order-1">
-                  <div className="relative w-full h-48 md:h-80 rounded-lg overflow-hidden border bg-muted">
+                  <div
+                    className="relative w-full h-48 md:h-80 rounded-lg overflow-hidden border bg-muted cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setImageExpanded(true)}
+                  >
                     <Image
                       src={selected.imageUrl}
                       alt={selected.merchantName ?? "Receipt image"}
@@ -380,6 +397,10 @@ export function Timeline({
                       sizes="(max-width: 768px) 100vw, 50vw"
                       className="object-contain"
                       priority
+                      unoptimized={selected.imageUrl.includes(".ufs.sh")}
+                      onError={(e) => {
+                        console.error("Image load error:", selected.imageUrl);
+                      }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2 break-all">
@@ -500,6 +521,47 @@ export function Timeline({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Expanded Image Overlay */}
+      {imageExpanded && selected && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
+          onClick={(e) => {
+            // Only close if clicking the background, not the image itself
+            if (e.target === e.currentTarget) {
+              setImageExpanded(false);
+            }
+          }}
+        >
+          <div
+            className="relative w-full h-full max-w-7xl max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={selected.imageUrl}
+              alt={selected.merchantName ?? "Receipt image"}
+              fill
+              sizes="100vw"
+              className="object-contain"
+              priority
+              unoptimized={selected.imageUrl.includes(".ufs.sh")}
+              onError={(e) => {
+                console.error("Image load error:", selected.imageUrl);
+              }}
+            />
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setImageExpanded(false);
+            }}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors p-2 z-10"
+            aria-label="Close expanded image"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+      )}
     </>
   );
 }
