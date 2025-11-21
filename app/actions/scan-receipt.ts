@@ -424,32 +424,6 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
           status: "completed",
         })
         .where(eq(importBatchItems.id, batchItem.id));
-
-      // Update batch counts
-      const batch = await db
-        .select()
-        .from(importBatches)
-        .where(eq(importBatches.id, finalBatchId))
-        .limit(1);
-
-      if (batch.length > 0) {
-        const newProcessedFiles = (batch[0].processedFiles || 0) + 1;
-        const newSuccessfulFiles = (batch[0].successfulFiles || 0) + 1;
-
-        await db
-          .update(importBatches)
-          .set({
-            processedFiles: newProcessedFiles,
-            successfulFiles: newSuccessfulFiles,
-            status:
-              newProcessedFiles >= batch[0].totalFiles
-                ? "completed"
-                : "processing",
-            completedAt:
-              newProcessedFiles >= batch[0].totalFiles ? new Date() : null,
-          })
-          .where(eq(importBatches.id, finalBatchId));
-      }
     }
 
     revalidatePath("/app");
@@ -472,26 +446,6 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
               error instanceof Error ? error.message : "Unknown error",
           })
           .where(eq(importBatchItems.id, batchItem.id));
-
-        // Update batch failed count
-        const batch = await db
-          .select()
-          .from(importBatches)
-          .where(eq(importBatches.id, finalBatchId))
-          .limit(1);
-
-        if (batch.length > 0) {
-          const newProcessedFiles = (batch[0].processedFiles || 0) + 1;
-          const newFailedFiles = (batch[0].failedFiles || 0) + 1;
-
-          await db
-            .update(importBatches)
-            .set({
-              processedFiles: newProcessedFiles,
-              failedFiles: newFailedFiles,
-            })
-            .where(eq(importBatches.id, finalBatchId));
-        }
       } catch (batchError) {
         // Log but don't fail on batch update error
         devLogger.error("Failed to update batch on receipt scan error", {

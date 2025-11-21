@@ -224,3 +224,50 @@ export async function listBatches(
   };
 }
 
+/**
+ * Recalculate and update batch statistics based on current item statuses.
+ * This is idempotent and self-healing.
+ */
+export async function updateBatchStats(batchId: string): Promise<void> {
+  // Fetch all items to get accurate counts
+  const items = await db
+    .select({ status: importBatchItems.status })
+    .from(importBatchItems)
+    .where(eq(importBatchItems.batchId, batchId));
+
+  const total = items.length;
+  const successful = items.filter((i) => i.status === "completed").length;
+  const failed = items.filter((i) => i.status === "failed").length;
+  const duplicates = items.filter((i) => i.status === "duplicate").length;
+  // Processed = anything in a final state
+  const processed = successful + failed + duplicates;
+
+  const isComplete = processed === total && total > 0;
+  // If we have processed any, or if any are currently processing (we can't see 'processing' status in the aggregates easily without checking items), set to processing.
+  // Actually, if processed > 0 and not complete, it is processing.
+  // Also check if any items are explicitly "processing" to set batch to "processing" even if 0 processed.
+  const hasProcessingItems = items.some((i) => i.status === "processing");
+  const isProcessing = (processed > 0 || hasProcessingItems) && !isComplete;
+
+  await db
+    .update(importBatches)
+    .set({
+      processedFiles: processed,
+      successfulFiles: successful,
+      failedFiles: failed,
+      duplicateFiles: duplicates,
+      status: isComplete
+        ? "completed"
+        : isProcessing
+        ? "processing"
+        : "pending",
+      completedAt: isComplete ? new Date() : null,
+      // Set startedAt if processing has begun and it wasn't set
+      startedAt: isProcessing
+        ? sql`COALESCE(${importBatches.startedAt}, NOW())`
+        : undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(importBatches.id, batchId));
+}
+

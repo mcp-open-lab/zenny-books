@@ -4,13 +4,17 @@
  */
 
 import { db } from "@/lib/db";
-import { importBatchItems, importBatches, documents } from "@/lib/db/schema";
+import { importBatchItems, documents } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 // Import the handler directly to avoid Server Action wrapper issues in queue context
 // We'll need to call the internal logic directly
 import { scanReceiptHandler } from "@/app/actions/scan-receipt";
-import type { ImportJobPayload, JobProcessingResult } from "@/lib/import/queue-types";
+import type {
+  ImportJobPayload,
+  JobProcessingResult,
+} from "@/lib/import/queue-types";
 import { devLogger } from "@/lib/dev-logger";
+import { updateBatchStats } from "@/lib/import/batch-tracker";
 
 /**
  * Process a single batch item based on import type
@@ -18,10 +22,10 @@ import { devLogger } from "@/lib/dev-logger";
 export async function processBatchItem(
   payload: ImportJobPayload
 ): Promise<JobProcessingResult> {
-  const { batchId, batchItemId, fileUrl, fileName, fileFormat, userId, importType } = payload;
+  const { batchId, batchItemId, fileUrl, userId, importType } = payload;
 
   try {
-    // Update batch item status to processing
+    // 1. Update batch item status to processing
     await db
       .update(importBatchItems)
       .set({
@@ -30,30 +34,16 @@ export async function processBatchItem(
       })
       .where(eq(importBatchItems.id, batchItemId));
 
-    // Update batch status to processing if not already
-    const batch = await db
-      .select()
-      .from(importBatches)
-      .where(eq(importBatches.id, batchId))
-      .limit(1);
+    // 2. Update batch stats (will set batch status to processing if needed)
+    await updateBatchStats(batchId);
 
-    if (batch.length > 0 && batch[0].status === "pending") {
-      await db
-        .update(importBatches)
-        .set({
-          status: "processing",
-          startedAt: new Date(),
-        })
-        .where(eq(importBatches.id, batchId));
-    }
-
-    // Process based on import type
+    // 3. Process based on import type
     let documentId: string | undefined;
 
     if (importType === "receipts") {
       // Call handler directly to avoid Server Action wrapper issues in queue context
       await scanReceiptHandler(fileUrl, batchId, userId);
-      
+
       // Find the created document
       const createdDoc = await db
         .select()
@@ -81,7 +71,7 @@ export async function processBatchItem(
       // Mixed - try to detect type from file
       // For now, treat as receipt
       await scanReceiptHandler(fileUrl, batchId, userId);
-      
+
       const createdDoc = await db
         .select()
         .from(documents)
@@ -100,7 +90,7 @@ export async function processBatchItem(
       }
     }
 
-    // Update batch item to completed
+    // 4. Update batch item to completed
     await db
       .update(importBatchItems)
       .set({
@@ -109,28 +99,8 @@ export async function processBatchItem(
       })
       .where(eq(importBatchItems.id, batchItemId));
 
-    // Update batch counts
-    const updatedBatch = await db
-      .select()
-      .from(importBatches)
-      .where(eq(importBatches.id, batchId))
-      .limit(1);
-
-    if (updatedBatch.length > 0) {
-      const newProcessedFiles = (updatedBatch[0].processedFiles || 0) + 1;
-      const newSuccessfulFiles = (updatedBatch[0].successfulFiles || 0) + 1;
-      const isComplete = newProcessedFiles >= updatedBatch[0].totalFiles;
-
-      await db
-        .update(importBatches)
-        .set({
-          processedFiles: newProcessedFiles,
-          successfulFiles: newSuccessfulFiles,
-          status: isComplete ? "completed" : "processing",
-          completedAt: isComplete ? new Date() : null,
-        })
-        .where(eq(importBatches.id, batchId));
-    }
+    // 5. Update batch counts (will handle completion check)
+    await updateBatchStats(batchId);
 
     return {
       success: true,
@@ -138,9 +108,10 @@ export async function processBatchItem(
       documentId,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    
-    // Update batch item to failed
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    // 4. Update batch item to failed
     await db
       .update(importBatchItems)
       .set({
@@ -150,28 +121,8 @@ export async function processBatchItem(
       })
       .where(eq(importBatchItems.id, batchItemId));
 
-    // Update batch counts
-    const updatedBatch = await db
-      .select()
-      .from(importBatches)
-      .where(eq(importBatches.id, batchId))
-      .limit(1);
-
-    if (updatedBatch.length > 0) {
-      const newProcessedFiles = (updatedBatch[0].processedFiles || 0) + 1;
-      const newFailedFiles = (updatedBatch[0].failedFiles || 0) + 1;
-      const isComplete = newProcessedFiles >= updatedBatch[0].totalFiles;
-
-      await db
-        .update(importBatches)
-        .set({
-          processedFiles: newProcessedFiles,
-          failedFiles: newFailedFiles,
-          status: isComplete ? "completed" : "processing",
-          completedAt: isComplete ? new Date() : null,
-        })
-        .where(eq(importBatches.id, batchId));
-    }
+    // 5. Update batch counts
+    await updateBatchStats(batchId);
 
     devLogger.error("Failed to process batch item", {
       batchItemId,
@@ -186,4 +137,3 @@ export async function processBatchItem(
     };
   }
 }
-

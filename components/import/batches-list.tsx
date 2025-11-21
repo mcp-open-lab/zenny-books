@@ -259,7 +259,9 @@ export function BatchesList({
 
   const getCompletionPercentage = (batch: ImportBatch) => {
     if (batch.totalFiles === 0) return 0;
-    return Math.round((batch.processedFiles / batch.totalFiles) * 100);
+    // Cap processedFiles at totalFiles to prevent display issues from retries
+    const processed = Math.min(batch.processedFiles, batch.totalFiles);
+    return Math.round((processed / batch.totalFiles) * 100);
   };
 
   return (
@@ -363,7 +365,7 @@ export function BatchesList({
                           className="h-2"
                         />
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{batch.processedFiles}/{batch.totalFiles}</span>
+                          <span>{Math.min(batch.processedFiles, batch.totalFiles)}/{batch.totalFiles}</span>
                           {batch.successfulFiles > 0 && (
                             <span className="text-green-600">
                               {batch.successfulFiles} ✓

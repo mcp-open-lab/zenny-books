@@ -13,7 +13,8 @@ export default async function ImportPage(props: {
   }
 
   // Consume searchParams to ensure dynamic rendering on param change
-  await props.searchParams;
+  const searchParams = await props.searchParams;
+  const initialTab = searchParams.tab || "import";
 
   const initialBatchesResult = await listBatches(userId, { limit: 20 });
 
@@ -29,6 +30,7 @@ export default async function ImportPage(props: {
         initialBatches={initialBatchesResult.batches}
         initialCursor={initialBatchesResult.nextCursor}
         initialHasMore={initialBatchesResult.hasMore}
+        initialTab={initialTab}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportUploadZone } from "@/components/import/import-upload-zone";
@@ -10,18 +11,28 @@ interface ImportTabsProps {
   initialBatches: ImportBatch[];
   initialCursor: string | null;
   initialHasMore: boolean;
+  initialTab?: string;
 }
 
 export function ImportTabs({
   initialBatches,
   initialCursor,
   initialHasMore,
+  initialTab = "import",
 }: ImportTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") || "import";
+  // Use initialTab for first render to match server, then sync with URL
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    // Sync with URL after hydration
+    const urlTab = searchParams.get("tab") || "import";
+    setActiveTab(urlTab);
+  }, [searchParams]);
 
   const handleTabChange = (value: string) => {
+    setActiveTab(value);
     const params = new URLSearchParams(searchParams.toString());
     if (value === "import") {
       params.delete("tab");
