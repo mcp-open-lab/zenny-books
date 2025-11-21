@@ -51,6 +51,8 @@ export const processImportJob = inngest.createFunction(
 );
 
 // Export the Inngest serve handler
+// The serve function will automatically detect the URL from the request
+// Make sure INNGEST_SERVE_URL is set in Vercel to https://turboinvoice.ai/api/inngest
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [processImportJob],
