@@ -38,6 +38,7 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import type { ImportBatch } from "@/lib/import/batch-types";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface BatchesListProps {
   initialBatches: ImportBatch[];
@@ -344,7 +345,11 @@ export function BatchesList({
               </TableHeader>
               <TableBody>
                 {batches.map((batch) => (
-                  <TableRow key={batch.id}>
+                  <TableRow 
+                    key={batch.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/app/import/batches/${batch.id}`)}
+                  >
                     <TableCell>{getStatusBadge(batch.status)}</TableCell>
                     <TableCell>
                       <div className="space-y-1">

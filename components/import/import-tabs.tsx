@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportUploadZone } from "@/components/import/import-upload-zone";
 import { BatchesList } from "@/components/import/batches-list";
+import { RecentBatches } from "@/components/import/recent-batches";
 import type { ImportBatch } from "@/lib/import/batch-types";
 
 interface ImportTabsProps {
@@ -48,8 +49,15 @@ export function ImportTabs({
         <TabsTrigger value="import">Import</TabsTrigger>
         <TabsTrigger value="jobs">View Jobs</TabsTrigger>
       </TabsList>
-      <TabsContent value="import" className="mt-6">
+      <TabsContent value="import" className="mt-6 space-y-8">
         <ImportUploadZone />
+        
+        {initialBatches.length > 0 && (
+          <RecentBatches 
+            batches={initialBatches} 
+            onViewAll={() => handleTabChange("jobs")} 
+          />
+        )}
       </TabsContent>
       <TabsContent value="jobs" className="mt-6">
         <BatchesList
