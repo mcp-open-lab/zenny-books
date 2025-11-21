@@ -42,3 +42,5 @@ next-env.d.ts
 # test receipts
 /receipts
 
+# docs
+/docs
