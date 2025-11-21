@@ -54,14 +54,14 @@ export default function TestLoggingPage() {
             </p>
           </div>
 
-          <div className="space-y-2">
+        <div className="space-y-2">
             <Button onClick={handleTestSuccess} className="w-full">
               Test Successful Action
-            </Button>
+          </Button>
             <p className="text-xs text-muted-foreground">
               Tests: action start, success, duration, correlation ID
             </p>
-          </div>
+        </div>
 
           <div className="space-y-2">
             <Button onClick={handleTestError} variant="destructive" className="w-full">
@@ -79,24 +79,24 @@ export default function TestLoggingPage() {
             <p className="text-xs text-muted-foreground">
               Tests: optional auth, public action logging
             </p>
-          </div>
+                </div>
 
           {status && (
             <div className="mt-4 p-3 bg-muted rounded-md">
               <p className="text-sm">{status}</p>
-            </div>
-          )}
+          </div>
+        )}
 
           <div className="mt-6 p-4 bg-muted rounded-md">
-            <h3 className="font-semibold mb-2">What to Check:</h3>
+          <h3 className="font-semibold mb-2">What to Check:</h3>
             <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
               <li>Browser console for client-side logs</li>
               <li>Server terminal for server action logs</li>
               <li>Correlation IDs match across start/success/error logs</li>
               <li>Safe serialization handles complex data</li>
               <li>TOON format vs JSON fallback for nested structures</li>
-            </ul>
-          </div>
+          </ul>
+        </div>
         </CardContent>
       </Card>
     </div>

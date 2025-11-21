@@ -169,7 +169,7 @@ export const receipts = pgTable("receipts", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => createId()),
-  documentId: text("document_id"), // FK to documents (null for legacy receipts)
+  documentId: text("document_id").notNull(), // FK to documents
   userId: text("user_id").notNull(),
 
   imageUrl: text("image_url").notNull(),

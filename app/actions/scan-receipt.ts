@@ -2,7 +2,8 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@/lib/db";
-import { receipts } from "@/lib/db/schema";
+import { receipts, documents } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { getUserSettings } from "./user-settings";
@@ -21,6 +22,33 @@ function getMimeType(url: string): string {
     gif: "image/gif",
   };
   return mimeTypes[extension || ""] || "image/jpeg";
+}
+
+function getFileFormat(url: string): string {
+  const extension = url.split(".").pop()?.toLowerCase() || "";
+  const formatMap: Record<string, string> = {
+    jpg: "jpg",
+    jpeg: "jpg",
+    png: "png",
+    webp: "webp",
+    gif: "gif",
+    pdf: "pdf",
+    csv: "csv",
+    xlsx: "xlsx",
+    xls: "xls",
+  };
+  return formatMap[extension] || "jpg";
+}
+
+function getFileName(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const fileName = pathname.split("/").pop();
+    return fileName || null;
+  } catch {
+    return null;
+  }
 }
 
 async function scanReceiptHandler(imageUrl: string, userId?: string) {
@@ -108,7 +136,6 @@ async function scanReceiptHandler(imageUrl: string, userId?: string) {
 
     const imageBuffer = await imageResp.arrayBuffer();
     const base64Image = Buffer.from(imageBuffer).toString("base64");
-    const mimeType = getMimeType(imageUrl);
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -200,9 +227,10 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
       currency,
     });
 
+    const imageMimeType = getMimeType(imageUrl);
     const result = await model.generateContent([
       prompt,
-      { inlineData: { data: base64Image, mimeType } },
+      { inlineData: { data: base64Image, mimeType: imageMimeType } },
     ]);
 
     let responseText = result.response.text().trim();
@@ -220,6 +248,25 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
     }
 
     const data = JSON.parse(responseText);
+
+    // Create document record first
+    const fileFormat = getFileFormat(imageUrl);
+    const fileName = getFileName(imageUrl);
+    const mimeType = getMimeType(imageUrl);
+
+    const [document] = await db
+      .insert(documents)
+      .values({
+        userId: finalUserId,
+        documentType: "receipt",
+        fileFormat,
+        fileName,
+        fileUrl: imageUrl,
+        mimeType,
+        status: "processing",
+        extractionMethod: "ai_gemini",
+      })
+      .returning();
 
     // Apply user defaults for fields we didn't extract (or if extraction returned null)
     const paymentMethod = fieldsToExtract.has("paymentMethod")
@@ -244,6 +291,7 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
 
     // Extract only fields we asked for, using defaults for others
     await db.insert(receipts).values({
+      documentId: document.id,
       userId: finalUserId,
       imageUrl,
       merchantName: fieldsToExtract.has("merchantName")
@@ -300,6 +348,15 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
       currency,
       status: "needs_review",
     });
+
+    // Update document status after successful extraction
+    await db
+      .update(documents)
+      .set({
+        status: "extracted",
+        extractedAt: new Date(),
+      })
+      .where(eq(documents.id, document.id));
 
     revalidatePath("/app");
     // Domain-specific logging - receipt scanning milestone (wrapper handles action-level logging)

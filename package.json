@@ -15,6 +15,7 @@
     "knip": "knip",
     "check-logging": "node scripts/check-logging-pattern.js",
     "test:logging": "tsx scripts/test-logging.ts",
+    "migrate:receipts": "dotenv -e .env.local -- tsx scripts/migrate-receipts-to-documents.ts",
     "prepare": "husky"
   },
   "dependencies": {
