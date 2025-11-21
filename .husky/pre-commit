@@ -1,2 +1,8 @@
-# Run knip to detect dead code
-npm run knip || echo "⚠️  Knip found unused code. Review and remove manually."
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run tests (unit/integration only, not E2E)
+npm test -- --run || exit 1
+
+# Run linting (continue on error for now)
+npm run lint || true

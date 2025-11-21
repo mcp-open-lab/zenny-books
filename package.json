@@ -16,6 +16,13 @@
     "check-logging": "node scripts/check-logging-pattern.js",
     "test:logging": "tsx scripts/test-logging.ts",
     "migrate:receipts": "dotenv -e .env.local -- tsx scripts/migrate-receipts-to-documents.ts",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
     "prepare": "husky"
   },
   "dependencies": {
@@ -73,10 +80,16 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.6",
     "@types/react-dom": "^19.0.2",
     "@vercel/postgres": "^0.9.0",
+    "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/ui": "^4.0.13",
     "autoprefixer": "^10.4.22",
     "class-variance-authority": "^0.7.1",
     "dotenv-cli": "^7.4.2",
@@ -84,12 +97,14 @@
     "eslint": "^9.17.0",
     "eslint-config-next": "^16.0.0",
     "husky": "^9.1.7",
+    "jsdom": "^27.2.0",
     "knip": "^5.70.1",
     "lint-staged": "^16.2.7",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.20.6",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.13"
   }
 }

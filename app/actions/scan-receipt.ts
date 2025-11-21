@@ -2,8 +2,13 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@/lib/db";
-import { receipts, documents } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  receipts,
+  documents,
+  importBatches,
+  importBatchItems,
+} from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { getUserSettings } from "./user-settings";
@@ -51,10 +56,19 @@ function getFileName(url: string): string | null {
   }
 }
 
-async function scanReceiptHandler(imageUrl: string, userId?: string) {
+async function scanReceiptHandler(
+  imageUrl: string,
+  batchId?: string,
+  userId?: string
+) {
   const authResult = userId ? { userId } : await auth();
   const finalUserId = userId || authResult.userId;
   if (!finalUserId) throw new Error("Unauthorized");
+
+  // Only use batches if batchId is explicitly provided (for batch imports)
+  // Single uploads (phone camera, quick actions) don't use batches
+  const finalBatchId = batchId;
+  let batchItem: { id: string } | undefined;
 
   // Get user settings for location context and field preferences
   const settings = await getUserSettings();
@@ -265,8 +279,51 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
         mimeType,
         status: "processing",
         extractionMethod: "ai_gemini",
+        importBatchId: finalBatchId || null,
       })
       .returning();
+
+    // Only create/update batch item if batchId is provided (batch import)
+    if (finalBatchId) {
+      const existingItem = await db
+        .select()
+        .from(importBatchItems)
+        .where(
+          and(
+            eq(importBatchItems.batchId, finalBatchId),
+            eq(importBatchItems.fileUrl, imageUrl)
+          )
+        )
+        .limit(1);
+
+      if (existingItem.length > 0) {
+        // Update existing item
+        const [updated] = await db
+          .update(importBatchItems)
+          .set({
+            documentId: document.id,
+            status: "processing",
+          })
+          .where(eq(importBatchItems.id, existingItem[0].id))
+          .returning();
+        batchItem = updated;
+      } else {
+        // Create new batch item
+        const [newItem] = await db
+          .insert(importBatchItems)
+          .values({
+            batchId: finalBatchId,
+            documentId: document.id,
+            fileName: fileName || "receipt",
+            fileUrl: imageUrl,
+            status: "processing",
+            order: 0,
+            retryCount: 0,
+          })
+          .returning();
+        batchItem = newItem;
+      }
+    }
 
     // Apply user defaults for fields we didn't extract (or if extraction returned null)
     const paymentMethod = fieldsToExtract.has("paymentMethod")
@@ -358,6 +415,43 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
       })
       .where(eq(documents.id, document.id));
 
+    // Only update batch tracking if this is part of a batch import
+    if (finalBatchId && batchItem) {
+      // Update batch item status
+      await db
+        .update(importBatchItems)
+        .set({
+          status: "completed",
+        })
+        .where(eq(importBatchItems.id, batchItem.id));
+
+      // Update batch counts
+      const batch = await db
+        .select()
+        .from(importBatches)
+        .where(eq(importBatches.id, finalBatchId))
+        .limit(1);
+
+      if (batch.length > 0) {
+        const newProcessedFiles = (batch[0].processedFiles || 0) + 1;
+        const newSuccessfulFiles = (batch[0].successfulFiles || 0) + 1;
+
+        await db
+          .update(importBatches)
+          .set({
+            processedFiles: newProcessedFiles,
+            successfulFiles: newSuccessfulFiles,
+            status:
+              newProcessedFiles >= batch[0].totalFiles
+                ? "completed"
+                : "processing",
+            completedAt:
+              newProcessedFiles >= batch[0].totalFiles ? new Date() : null,
+          })
+          .where(eq(importBatches.id, finalBatchId));
+      }
+    }
+
     revalidatePath("/app");
     // Domain-specific logging - receipt scanning milestone (wrapper handles action-level logging)
     devLogger.receipt("new", "scanned_successfully", {
@@ -367,6 +461,46 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
     });
     return { success: true };
   } catch (error) {
+    // Only update batch tracking if this is part of a batch import
+    if (finalBatchId && batchItem) {
+      try {
+        await db
+          .update(importBatchItems)
+          .set({
+            status: "failed",
+            errorMessage:
+              error instanceof Error ? error.message : "Unknown error",
+          })
+          .where(eq(importBatchItems.id, batchItem.id));
+
+        // Update batch failed count
+        const batch = await db
+          .select()
+          .from(importBatches)
+          .where(eq(importBatches.id, finalBatchId))
+          .limit(1);
+
+        if (batch.length > 0) {
+          const newProcessedFiles = (batch[0].processedFiles || 0) + 1;
+          const newFailedFiles = (batch[0].failedFiles || 0) + 1;
+
+          await db
+            .update(importBatches)
+            .set({
+              processedFiles: newProcessedFiles,
+              failedFiles: newFailedFiles,
+            })
+            .where(eq(importBatches.id, finalBatchId));
+        }
+      } catch (batchError) {
+        // Log but don't fail on batch update error
+        devLogger.error("Failed to update batch on receipt scan error", {
+          batchError,
+          originalError: error,
+        });
+      }
+    }
+
     // Error logging is handled by createSafeAction wrapper
     // Re-throw with user-friendly message
     throw new Error(

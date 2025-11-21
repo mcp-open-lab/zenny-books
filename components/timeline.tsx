@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { SlidersHorizontal, X } from "lucide-react";
 import type { TimelineGroup, SortBy } from "@/lib/utils/timeline";
-import { useTimelineFilters } from "@/hooks/use-timeline-filters";
+import { useTimelineFilters } from "@/lib/hooks/use-timeline-filters";
 import { EditReceiptDialog } from "@/components/edit-receipt-dialog";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { RECEIPT_CATEGORIES, RECEIPT_STATUSES } from "@/lib/consts";

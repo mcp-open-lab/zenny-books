@@ -4,73 +4,70 @@ alwaysApply: true
 
 # Project Context
 
-You are an expert Full-Stack Developer
-
 - **Goal:** Fast, simple receipt capture → AI extraction → CSV export.
-- **Philosophy:** Speed over complexity. Avoid over-engineering (no folders, no tags, no complex auth roles yet).
 - **Stack:** Next.js 16 (App Router), Drizzle ORM, Clerk Auth, UploadThing, Google Gemini 2.0 Flash.
 
 # Tech Stack & Best Practices
 
 ## Next.js 16 (App Router)
 
-- **Data Fetching:** Always use **Server Components (RSC)** and `await` DB calls directly.
-- **Mutations:** Always use **Server Actions** (`'use server'`) for form submissions and data updates.
-- **State:** Use `useActionState` (from `react`) for server action feedback. Use `zustand` for global/persistent client state (e.g. filters, user preferences). Use `useState` for local UI state (modals, inputs).
-- **Routing:** Use `next/navigation` (`redirect`, `useRouter`, `usePathname`).
-- **Images:** Always use `next/image` with `width` and `height` or `fill`.
-- **Forbidden:** Do NOT use `useEffect` for data fetching. Do NOT use `/app/api` routes unless strictly required for webhooks (Clerk/UploadThing).
+- **Data Fetching:** Server Components (RSC) with `await` DB calls.
+- **Mutations:** Server Actions (`'use server'`) for form submissions and data updates.
+- **State:** `useActionState` for server action feedback. `zustand` for global/persistent state. `useState` for local UI state.
+- **Routing:** `next/navigation` (`redirect`, `useRouter`, `usePathname`).
+- **Images:** `next/image` with `width`/`height` or `fill`.
+- **Forbidden:** No `useEffect` for data fetching. No `/app/api` routes except webhooks (Clerk/UploadThing).
 
 ## Drizzle ORM (Database)
 
-- **Schema:** Source of truth is `@/lib/db/schema.ts`.
+- **Schema:** Single source of truth is `@/lib/db/schema.ts`.
 - **Import:** Always import `db` from `@/lib/db`.
-- **Query Style:** Prefer the SQL-like syntax: `await db.select().from(receipts)...`.
-- **Mutations:** Use `await db.insert(receipts).values({...}).returning()`.
-- **Validation:** Use Zod schemas that match the Drizzle schema constraints.
-- **MVP Constraint:** Removed. We are now building a full-featured application. Relation tables and complex state management are allowed.
-- **Schema Changes:** After modifying `schema.ts`, run `npm run db:push` to sync changes to the database. This uses `dotenv-cli` to load `.env.local` automatically.
-- **Database Studio:** Run `npm run db:studio` to open Drizzle Studio for visual database inspection.
+- **Query Style:** SQL-like syntax: `await db.select().from(receipts)...`.
+- **Mutations:** `await db.insert(receipts).values({...}).returning()`.
+- **Type Inference:** Always use Drizzle's inferred types (`$inferSelect`, `$inferInsert`). Never manually define types that duplicate schema fields. Use `typeof tableName.$inferSelect` for SELECT queries and `typeof tableName.$inferInsert` for INSERT queries. Only define computed/derived types (e.g., UI-specific transformations).
+- **Validation:** Zod schemas matching Drizzle schema constraints.
+- **Schema Changes:** Run `npm run db:push` after modifying `schema.ts`.
+- **Database Studio:** `npm run db:studio` for visual inspection.
 
 ## AI Integration (Gemini)
 
-- **Model:** Use gemini-2.0-flash-exp.
-- **Pattern:** Direct-to-LLM. Send the image URL directly to Gemini's multimodal input.
-- **Prompting:** Always request **JSON** output. Use strict prompt engineering to prevent Markdown wrapping (e.g., "Return raw JSON only, no code blocks").
-- **Privacy:** Never log full base64 strings to the console.
+- **Model:** gemini-2.0-flash-exp.
+- **Pattern:** Direct-to-LLM with image URL.
+- **Prompting:** Always request JSON output. Prevent Markdown wrapping ("Return raw JSON only, no code blocks").
+- **Privacy:** Never log full base64 strings.
 
 ## UI & Styling (shadcn/ui + Tailwind)
 
-- **Components:** Use `npx shadcn@latest add [name]` pattern.
-- **Icons:** Use `lucide-react`.
-- **Responsiveness:** Mobile-first. Use `hidden md:block` for desktop-only features.
-- **Feedback:** Use `sonner` for toasts (`toast.success`, `toast.error`).
-- **Forms:** Use `react-hook-form` + `zod` + `shadcn/ui` Form components.
+- **Components:** `npx shadcn@latest add [name]`.
+- **Icons:** `lucide-react`.
+- **Responsiveness:** Mobile-first. `hidden md:block` for desktop-only.
+- **Feedback:** `sonner` for toasts (`toast.success`, `toast.error`).
+- **Forms:** `react-hook-form` + `zod` + `shadcn/ui` Form components.
 
 ## Authentication (Clerk)
 
-- **Server Side:** Use `auth()` from `@clerk/nextjs/server` to protect actions.
-- **Client Side:** Use `useUser()` for UI logic.
-- **Security:** Every DB query MUST filter by `.where(eq(receipts.userId, userId))`.
+- **Server Side:** `auth()` from `@clerk/nextjs/server` to protect actions.
+- **Client Side:** `useUser()` for UI logic.
+- **Security:** Every DB query MUST filter by `.where(eq(table.userId, userId))`.
 
-# File Structure Rules
+# File Structure
 
 - `app/actions/*`: Server Actions (mutations).
 - `components/ui/*`: Primitive shadcn components.
-- `components/[feature]/*`: Feature-specific components (e.g., `components/receipts/receipt-card.tsx`).
+- `components/[feature]/*`: Feature-specific components.
 - `lib/db/*`: Database configuration and schema.
 - `lib/ai/*`: AI utilities.
-- `types/*`: Shared TypeScript interfaces.
+- `lib/import/*`: Import/batch utilities and types.
 
 # Coding Behavior
 
-- **Concise:** Write code immediately. Do not explain basic concepts.
-- **Type-Safe:** No `any`. precise TypeScript types.
-- **Imports:** Use absolute imports (`@/...`).
-- **Error Handling:** Server actions should return `{ success: boolean, error?: string }` objects.
+- **Concise:** Write code immediately. No explanations of basic concepts.
+- **Type-Safe:** No `any`. Use precise TypeScript types.
+- **Imports:** Absolute imports (`@/...`).
+- **Error Handling:** Server actions return `{ success: boolean, error?: string }`.
 
-Hard Rules
+# Hard Rules
 
-- **Docs** Never create markdown docs unless asked to.
-- **Code Comments** Only create comments at the top of functions and to explain routes/server actions
-- **Reasearch** Assume it is 2025 for web searches searches/research and find modern/new results
+- **Docs:** Never create markdown docs unless asked.
+- **Code Comments:** Only at top of functions and to explain routes/server actions.
+- **Research:** Assume 2025 for web searches/research.
