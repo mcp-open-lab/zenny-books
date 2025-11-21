@@ -11,12 +11,14 @@ import {
   getDefaultVisibleFields,
   getDefaultRequiredFields,
   syncRequiredWithVisible,
+  getDefaultDefaultValues,
 } from "@/lib/consts";
+import { createSafeAction } from "@/lib/safe-action";
 
 export type UsageType = "personal" | "business" | "mixed";
 export type Country = "US" | "CA";
 
-export async function saveUserSettings(
+async function saveUserSettingsHandler(
   data: SettingsFormValues | OnboardingFormValues
 ) {
   const { userId } = await auth();
@@ -87,10 +89,16 @@ export async function saveUserSettings(
       defaultVisible,
       defaultRequired
     );
+    // Default values are null during onboarding - user sets them later
+    const defaultDefaults = {
+      isBusinessExpense: null,
+      businessPurpose: null,
+      paymentMethod: null,
+    };
 
     visibleFieldsData = JSON.stringify(defaultVisible);
     requiredFieldsData = JSON.stringify(syncedRequired);
-    // No default values set during onboarding
+    defaultValuesData = JSON.stringify(defaultDefaults);
   }
 
   const settingsData = {
@@ -113,6 +121,11 @@ export async function saveUserSettings(
   revalidatePath("/app");
   return { success: true };
 }
+
+export const saveUserSettings = createSafeAction(
+  "saveUserSettings",
+  saveUserSettingsHandler
+);
 
 export async function getUserSettings() {
   const { userId } = await auth();

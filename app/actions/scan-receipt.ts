@@ -6,6 +6,8 @@ import { receipts } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { getUserSettings } from "./user-settings";
+import { createSafeAction } from "@/lib/safe-action";
+import { devLogger } from "@/lib/dev-logger";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -21,7 +23,7 @@ function getMimeType(url: string): string {
   return mimeTypes[extension || ""] || "image/jpeg";
 }
 
-export async function scanReceipt(imageUrl: string, userId?: string) {
+async function scanReceiptHandler(imageUrl: string, userId?: string) {
   const authResult = userId ? { userId } : await auth();
   const finalUserId = userId || authResult.userId;
   if (!finalUserId) throw new Error("Unauthorized");
@@ -190,6 +192,14 @@ ${jsonFields.join(",\n")}
 Extract tax amounts separately if shown on the receipt. If tax is included in the total but not shown separately, use null for tax fields.
 If you cannot determine a value, use null. Be precise with amounts as numbers.`;
 
+    // Domain-specific logging - Gemini API call details (wrapper handles action-level logging)
+    devLogger.debug("Calling Gemini API for receipt extraction", {
+      userId: finalUserId,
+      fieldsToExtract: Array.from(fieldsToExtract),
+      country,
+      currency,
+    });
+
     const result = await model.generateContent([
       prompt,
       { inlineData: { data: base64Image, mimeType } },
@@ -292,9 +302,16 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
     });
 
     revalidatePath("/app");
+    // Domain-specific logging - receipt scanning milestone (wrapper handles action-level logging)
+    devLogger.receipt("new", "scanned_successfully", {
+      userId: finalUserId,
+      country,
+      currency,
+    });
     return { success: true };
   } catch (error) {
-    console.error("Error scanning receipt:", error);
+    // Error logging is handled by createSafeAction wrapper
+    // Re-throw with user-friendly message
     throw new Error(
       `Failed to scan receipt: ${
         error instanceof Error ? error.message : "Unknown error"
@@ -302,3 +319,6 @@ If you cannot determine a value, use null. Be precise with amounts as numbers.`;
     );
   }
 }
+
+// Wrap with automatic logging
+export const scanReceipt = createSafeAction("scanReceipt", scanReceiptHandler);

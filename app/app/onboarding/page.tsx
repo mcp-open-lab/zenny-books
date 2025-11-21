@@ -13,6 +13,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { saveUserSettings } from "@/app/actions/user-settings";
+import { devLogger } from "@/lib/dev-logger";
+import { logger } from "@/lib/logger";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { OnboardingSchema, type OnboardingFormValues } from "@/lib/schemas";
@@ -52,7 +54,15 @@ export default function OnboardingPage() {
         router.push("/app");
         router.refresh();
       } catch (error) {
-        console.error("Failed to save settings:", error);
+        // Production logging - errors only
+        logger.error("Failed to save settings", error, {
+          action: "saveUserSettings",
+          statusCode: 500,
+        });
+        // Dev logging - full context for debugging
+        devLogger.error("Failed to save settings", error, {
+          action: "saveUserSettings",
+        });
         toast.error("Failed to save settings");
       }
     });

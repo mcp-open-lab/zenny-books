@@ -1,4 +1,8 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "plugins": ["turbo-invoice"],
+  "rules": {
+    "turbo-invoice/no-direct-devlogger": "warn"
+  }
 }
 
