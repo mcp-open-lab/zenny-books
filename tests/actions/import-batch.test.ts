@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 import { importBatches } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
 import { getBatchStatusSummary } from "@/lib/import/batch-tracker";
-import { createMockInsert, createMockUpdate } from "../utils/db-mocks";
-import { createMockAuth } from "../utils/test-types";
+import { createMockInsert, createMockUpdate } from "@/tests/utils/db-mocks";
+import { createMockAuth } from "@/tests/utils/test-types";
 import type { BatchStatusSummary } from "@/lib/import/batch-types";
 
 // Mock dependencies

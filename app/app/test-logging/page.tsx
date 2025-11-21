@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { testLoggingAction, testErrorAction, testPublicAction } from "./actions";
+import { testLoggingAction, testErrorAction, testPublicAction } from "@/app/app/test-logging/actions";
 
 export default function TestLoggingPage() {
   const [status, setStatus] = useState<string>("");

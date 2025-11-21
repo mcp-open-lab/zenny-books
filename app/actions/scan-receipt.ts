@@ -11,7 +11,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { getUserSettings } from "./user-settings";
+import { getUserSettings } from "@/app/actions/user-settings";
 import { createSafeAction } from "@/lib/safe-action";
 import { devLogger } from "@/lib/dev-logger";
 

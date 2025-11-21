@@ -15,10 +15,10 @@
  * - LOG_LEVEL filtering
  */
 
-import { devLogger } from "../lib/dev-logger";
-import { logger } from "../lib/logger";
-import { createSafeAction } from "../lib/safe-action";
-import { safeSerialize, shouldUseJsonFormat } from "../lib/safe-serializer";
+import { devLogger } from "@/lib/dev-logger";
+import { logger } from "@/lib/logger";
+import { createSafeAction } from "@/lib/safe-action";
+import { safeSerialize, shouldUseJsonFormat } from "@/lib/safe-serializer";
 
 console.log("=".repeat(60));
 console.log("Testing Logging Architecture");

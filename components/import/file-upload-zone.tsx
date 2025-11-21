@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { FileListItem } from "./file-list-item";
+import { FileListItem } from "@/components/import/file-list-item";
 
 export interface FileWithPreview extends File {
   id: string;

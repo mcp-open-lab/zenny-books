@@ -9,7 +9,7 @@ import { eq, and } from "drizzle-orm";
 // Import the handler directly to avoid Server Action wrapper issues in queue context
 // We'll need to call the internal logic directly
 import { scanReceiptHandler } from "@/app/actions/scan-receipt";
-import type { ImportJobPayload, JobProcessingResult } from "./queue-types";
+import type { ImportJobPayload, JobProcessingResult } from "@/lib/import/queue-types";
 import { devLogger } from "@/lib/dev-logger";
 
 /**

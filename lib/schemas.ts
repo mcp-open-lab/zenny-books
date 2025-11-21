@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_REQUIRED_FIELDS, type DefaultValues } from "./consts";
+import { DEFAULT_REQUIRED_FIELDS, type DefaultValues } from "@/lib/consts";
 
 // Create dynamic schema based on required fields
 export function createEditReceiptSchema(

@@ -9,7 +9,7 @@ import type {
   ImportBatchItem,
   NewImportBatch,
   NewImportBatchItem,
-} from "./batch-types";
+} from "@/lib/import/batch-types";
 
 export type {
   BatchStatusSummary,

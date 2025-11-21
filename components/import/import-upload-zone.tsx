@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileUploadZone, type FileWithPreview } from "./file-upload-zone";
+import { FileUploadZone, type FileWithPreview } from "@/components/import/file-upload-zone";
 import { Button } from "@/components/ui/button";
 import {
   Card,

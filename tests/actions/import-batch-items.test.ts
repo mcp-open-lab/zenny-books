@@ -4,6 +4,7 @@ import {
   updateItemStatus,
   getFailedItems,
   retryBatchItem,
+  retryAllFailedItems,
 } from "@/app/actions/import-batch-items";
 import { db } from "@/lib/db";
 import { importBatchItems, importBatches } from "@/lib/db/schema";
@@ -13,15 +14,18 @@ import {
   createMockSelectSequence,
   createMockInsert,
   createMockUpdate,
-} from "../utils/db-mocks";
-import { createMockAuth } from "../utils/test-types";
+  createMockUpdateSequence,
+} from "@/tests/utils/db-mocks";
+import { createMockAuth } from "@/tests/utils/test-types";
+import { enqueueBatchItem } from "@/lib/import/queue-sender";
 
 // Mock dependencies
+// Using Partial<> to match Drizzle's types without full implementation
 vi.mock("@/lib/db", () => ({
   db: {
-    insert: vi.fn(),
-    select: vi.fn(),
-    update: vi.fn(),
+    insert: vi.fn() as ReturnType<typeof vi.fn>,
+    select: vi.fn() as ReturnType<typeof vi.fn>,
+    update: vi.fn() as ReturnType<typeof vi.fn>,
   },
 }));
 
@@ -29,10 +33,18 @@ vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn(),
 }));
 
+vi.mock("@/lib/import/queue-sender", () => ({
+  enqueueBatchItem: vi.fn(),
+}));
+
 describe("createBatchItem", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue(createMockAuth("test-user-id"));
+    vi.mocked(auth).mockResolvedValue(
+      createMockAuth("test-user-id") as unknown as Awaited<
+        ReturnType<typeof auth>
+      >
+    );
   });
 
   it("should create a batch item with valid input", async () => {
@@ -52,9 +64,13 @@ describe("createBatchItem", () => {
       retryCount: 0,
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([mockBatch]) as unknown as ReturnType<typeof db.select>
+    );
 
-    vi.mocked(db.insert).mockReturnValue(createMockInsert([mockItem]));
+    vi.mocked(db.insert).mockReturnValue(
+      createMockInsert([mockItem]) as unknown as ReturnType<typeof db.insert>
+    );
 
     const result = await createBatchItem({
       batchId: "batch-123",
@@ -74,7 +90,9 @@ describe("createBatchItem", () => {
       userId: "other-user-id",
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([mockBatch]) as unknown as ReturnType<typeof db.select>
+    );
 
     await expect(
       createBatchItem({
@@ -86,7 +104,9 @@ describe("createBatchItem", () => {
   });
 
   it("should reject if batch not found", async () => {
-    vi.mocked(db.select).mockReturnValue(createMockSelect([]));
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([]) as unknown as ReturnType<typeof db.select>
+    );
 
     await expect(
       createBatchItem({
@@ -124,9 +144,13 @@ describe("createBatchItem", () => {
       retryCount: 0,
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([mockBatch]) as unknown as ReturnType<typeof db.select>
+    );
 
-    vi.mocked(db.insert).mockReturnValue(createMockInsert([mockItem]));
+    vi.mocked(db.insert).mockReturnValue(
+      createMockInsert([mockItem]) as unknown as ReturnType<typeof db.insert>
+    );
 
     const result = await createBatchItem({
       batchId: "batch-123",
@@ -141,7 +165,11 @@ describe("createBatchItem", () => {
 describe("updateItemStatus", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue(createMockAuth("test-user-id"));
+    vi.mocked(auth).mockResolvedValue(
+      createMockAuth("test-user-id") as unknown as Awaited<
+        ReturnType<typeof auth>
+      >
+    );
   });
 
   it("should update item status to completed", async () => {
@@ -163,10 +191,15 @@ describe("updateItemStatus", () => {
     };
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockItem], [mockBatch])
+      createMockSelectSequence(
+        [mockItem],
+        [mockBatch]
+      ) as unknown as ReturnType<typeof db.select>
     );
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedItem]));
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdate([mockUpdatedItem]) as any
+    );
 
     const result = await updateItemStatus({
       itemId: "item-123",
@@ -195,10 +228,15 @@ describe("updateItemStatus", () => {
     };
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockItem], [mockBatch])
+      createMockSelectSequence(
+        [mockItem],
+        [mockBatch]
+      ) as unknown as ReturnType<typeof db.select>
     );
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedItem]));
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdate([mockUpdatedItem]) as any
+    );
 
     const result = await updateItemStatus({
       itemId: "item-123",
@@ -228,10 +266,15 @@ describe("updateItemStatus", () => {
     };
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockItem], [mockBatch])
+      createMockSelectSequence(
+        [mockItem],
+        [mockBatch]
+      ) as unknown as ReturnType<typeof db.select>
     );
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedItem]));
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdate([mockUpdatedItem]) as any
+    );
 
     const result = await updateItemStatus({
       itemId: "item-123",
@@ -246,7 +289,9 @@ describe("updateItemStatus", () => {
   });
 
   it("should throw error if item not found", async () => {
-    vi.mocked(db.select).mockReturnValue(createMockSelect([]));
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([]) as unknown as ReturnType<typeof db.select>
+    );
 
     await expect(
       updateItemStatus({
@@ -263,7 +308,7 @@ describe("updateItemStatus", () => {
     };
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockItem], [])
+      createMockSelectSequence([mockItem] as any, [] as any) as any
     );
 
     await expect(
@@ -278,7 +323,11 @@ describe("updateItemStatus", () => {
 describe("getFailedItems", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue(createMockAuth("test-user-id"));
+    vi.mocked(auth).mockResolvedValue(
+      createMockAuth("test-user-id") as unknown as Awaited<
+        ReturnType<typeof auth>
+      >
+    );
   });
 
   it("should return failed items for a batch", async () => {
@@ -307,7 +356,10 @@ describe("getFailedItems", () => {
     ];
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockBatch], mockFailedItems)
+      createMockSelectSequence(
+        [mockBatch] as any,
+        mockFailedItems as any
+      ) as any
     );
 
     const result = await getFailedItems({ batchId: "batch-123" });
@@ -324,7 +376,9 @@ describe("getFailedItems", () => {
     };
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockBatch], [])
+      createMockSelectSequence([mockBatch], []) as unknown as ReturnType<
+        typeof db.select
+      >
     );
 
     const result = await getFailedItems({ batchId: "batch-123" });
@@ -334,21 +388,31 @@ describe("getFailedItems", () => {
   });
 
   it("should throw error if batch not found", async () => {
-    vi.mocked(db.select).mockReturnValue(createMockSelect([]));
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([]) as unknown as ReturnType<typeof db.select>
+    );
 
-    await expect(
-      getFailedItems({ batchId: "non-existent" })
-    ).rejects.toThrow("Batch not found or unauthorized");
+    await expect(getFailedItems({ batchId: "non-existent" })).rejects.toThrow(
+      "Batch not found or unauthorized"
+    );
   });
 });
 
 describe("retryBatchItem", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue(createMockAuth("test-user-id"));
+    vi.mocked(auth).mockResolvedValue(
+      createMockAuth("test-user-id") as unknown as Awaited<
+        ReturnType<typeof auth>
+      >
+    );
+    vi.mocked(enqueueBatchItem).mockResolvedValue({
+      success: true,
+      eventId: "event-123",
+    });
   });
 
-  it("should retry failed item", async () => {
+  it("should retry failed item and re-send event to Inngest", async () => {
     const mockItem = {
       id: "item-123",
       batchId: "batch-123",
@@ -356,11 +420,16 @@ describe("retryBatchItem", () => {
       retryCount: 1,
       errorMessage: "Previous error",
       errorCode: "ERR_001",
+      fileUrl: "https://example.com/receipt.jpg",
+      fileName: "receipt.jpg",
+      order: 0,
     };
 
     const mockBatch = {
       id: "batch-123",
       userId: "test-user-id",
+      importType: "receipts",
+      sourceFormat: "images",
     };
 
     const mockUpdatedItem = {
@@ -369,13 +438,21 @@ describe("retryBatchItem", () => {
       retryCount: 2,
       errorMessage: null,
       errorCode: null,
+      fileUrl: "https://example.com/receipt.jpg",
+      fileName: "receipt.jpg",
+      order: 0,
     };
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockItem], [mockBatch])
+      createMockSelectSequence(
+        [mockItem],
+        [mockBatch]
+      ) as unknown as ReturnType<typeof db.select>
     );
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedItem]));
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdate([mockUpdatedItem]) as any
+    );
 
     const result = await retryBatchItem({ itemId: "item-123" });
 
@@ -383,6 +460,107 @@ describe("retryBatchItem", () => {
     expect(result.item.status).toBe("pending");
     expect(result.item.retryCount).toBe(2);
     expect(result.item.errorMessage).toBeNull();
+    expect(result.eventId).toBe("event-123");
+
+    // Verify Inngest event was sent
+    expect(enqueueBatchItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        batchId: "batch-123",
+        batchItemId: "item-123",
+        fileUrl: "https://example.com/receipt.jpg",
+        fileName: "receipt.jpg",
+        userId: "test-user-id",
+        importType: "receipts",
+        sourceFormat: "images",
+        order: 0,
+      })
+    );
+  });
+
+  it("should throw error if item missing fileUrl", async () => {
+    const mockItem = {
+      id: "item-123",
+      batchId: "batch-123",
+      status: "failed",
+      retryCount: 1,
+      fileUrl: null,
+      fileName: "receipt.jpg",
+      order: 0,
+    };
+
+    const mockBatch = {
+      id: "batch-123",
+      userId: "test-user-id",
+    };
+
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelectSequence(
+        [mockItem],
+        [mockBatch]
+      ) as unknown as ReturnType<typeof db.select>
+    );
+
+    await expect(retryBatchItem({ itemId: "item-123" })).rejects.toThrow(
+      "Item missing fileUrl, cannot retry"
+    );
+  });
+
+  it("should revert status if enqueue fails", async () => {
+    const mockItem = {
+      id: "item-123",
+      batchId: "batch-123",
+      status: "failed",
+      retryCount: 1,
+      fileUrl: "https://example.com/receipt.jpg",
+      fileName: "receipt.jpg",
+      order: 0,
+    };
+
+    const mockBatch = {
+      id: "batch-123",
+      userId: "test-user-id",
+      importType: "receipts",
+      sourceFormat: "images",
+    };
+
+    const mockUpdatedItem = {
+      id: "item-123",
+      status: "pending",
+      retryCount: 2,
+    };
+
+    const mockRevertedItem = {
+      id: "item-123",
+      status: "failed",
+      errorMessage: "Inngest error",
+    };
+
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelectSequence(
+        [mockItem],
+        [mockBatch]
+      ) as unknown as ReturnType<typeof db.select>
+    );
+
+    // First update: reset to pending, second update: revert to failed
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdateSequence(
+        [mockUpdatedItem],
+        [mockRevertedItem]
+      ) as unknown as ReturnType<typeof db.update>
+    );
+
+    vi.mocked(enqueueBatchItem).mockResolvedValue({
+      success: false,
+      error: "Inngest error",
+    });
+
+    await expect(retryBatchItem({ itemId: "item-123" })).rejects.toThrow(
+      "Inngest error"
+    );
+
+    // Verify update was called twice (reset and revert)
+    expect(db.update).toHaveBeenCalledTimes(2);
   });
 
   it("should throw error if item not in failed status", async () => {
@@ -399,19 +577,213 @@ describe("retryBatchItem", () => {
     };
 
     vi.mocked(db.select).mockReturnValue(
-      createMockSelectSequence([mockItem], [mockBatch])
+      createMockSelectSequence(
+        [mockItem],
+        [mockBatch]
+      ) as unknown as ReturnType<typeof db.select>
     );
 
-    await expect(
-      retryBatchItem({ itemId: "item-123" })
-    ).rejects.toThrow("Item is not in failed status");
+    await expect(retryBatchItem({ itemId: "item-123" })).rejects.toThrow(
+      "Item is not in failed status"
+    );
   });
 
   it("should throw error if item not found", async () => {
-    vi.mocked(db.select).mockReturnValue(createMockSelect([]));
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([]) as unknown as ReturnType<typeof db.select>
+    );
+
+    await expect(retryBatchItem({ itemId: "non-existent" })).rejects.toThrow(
+      "Batch item not found"
+    );
+  });
+});
+
+describe("retryAllFailedItems", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(auth).mockResolvedValue(
+      createMockAuth("test-user-id") as unknown as Awaited<
+        ReturnType<typeof auth>
+      >
+    );
+    vi.mocked(enqueueBatchItem).mockResolvedValue({
+      success: true,
+      eventId: "event-123",
+    });
+  });
+
+  it("should retry all failed items in a batch", async () => {
+    const mockBatch = {
+      id: "batch-123",
+      userId: "test-user-id",
+      importType: "receipts",
+      sourceFormat: "images",
+    };
+
+    const mockFailedItems = [
+      {
+        id: "item-1",
+        batchId: "batch-123",
+        status: "failed",
+        retryCount: 0,
+        fileUrl: "https://example.com/receipt1.jpg",
+        fileName: "receipt1.jpg",
+        order: 0,
+      },
+      {
+        id: "item-2",
+        batchId: "batch-123",
+        status: "failed",
+        retryCount: 1,
+        fileUrl: "https://example.com/receipt2.jpg",
+        fileName: "receipt2.jpg",
+        order: 1,
+      },
+    ];
+
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelectSequence(
+        [mockBatch] as any,
+        mockFailedItems as any
+      ) as any
+    );
+
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdate([
+        { id: "item-1", status: "pending", retryCount: 1 },
+        { id: "item-2", status: "pending", retryCount: 2 },
+      ]) as unknown as ReturnType<typeof db.update>
+    );
+
+    const result = await retryAllFailedItems({ batchId: "batch-123" });
+
+    expect(result.success).toBe(true);
+    expect(result.retriedCount).toBe(2);
+    expect(enqueueBatchItem).toHaveBeenCalledTimes(2);
+  });
+
+  it("should return success false if no items retried", async () => {
+    const mockBatch = {
+      id: "batch-123",
+      userId: "test-user-id",
+    };
+
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelectSequence([mockBatch], []) as unknown as ReturnType<
+        typeof db.select
+      >
+    );
+
+    const result = await retryAllFailedItems({ batchId: "batch-123" });
+
+    expect(result.success).toBe(true);
+    expect(result.retriedCount).toBe(0);
+    expect(enqueueBatchItem).not.toHaveBeenCalled();
+  });
+
+  it("should handle partial failures", async () => {
+    const mockBatch = {
+      id: "batch-123",
+      userId: "test-user-id",
+      importType: "receipts",
+      sourceFormat: "images",
+    };
+
+    const mockFailedItems = [
+      {
+        id: "item-1",
+        batchId: "batch-123",
+        status: "failed",
+        retryCount: 0,
+        fileUrl: "https://example.com/receipt1.jpg",
+        fileName: "receipt1.jpg",
+        order: 0,
+      },
+      {
+        id: "item-2",
+        batchId: "batch-123",
+        status: "failed",
+        retryCount: 0,
+        fileUrl: null,
+        fileName: "receipt2.jpg",
+        order: 1,
+      },
+    ];
+
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelectSequence(
+        [mockBatch] as any,
+        mockFailedItems as any
+      ) as any
+    );
+
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdate([
+        { id: "item-1", status: "pending", retryCount: 1 },
+      ]) as unknown as ReturnType<typeof db.update>
+    );
+
+    const result = await retryAllFailedItems({ batchId: "batch-123" });
+
+    expect(result.success).toBe(true);
+    expect(result.retriedCount).toBe(1);
+    expect(result.errors).toContain("receipt2.jpg: Missing fileUrl");
+    expect(enqueueBatchItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("should handle enqueue failures", async () => {
+    const mockBatch = {
+      id: "batch-123",
+      userId: "test-user-id",
+      importType: "receipts",
+      sourceFormat: "images",
+    };
+
+    const mockFailedItems = [
+      {
+        id: "item-1",
+        batchId: "batch-123",
+        status: "failed",
+        retryCount: 0,
+        fileUrl: "https://example.com/receipt1.jpg",
+        fileName: "receipt1.jpg",
+        order: 0,
+      },
+    ];
+
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelectSequence(
+        [mockBatch] as any,
+        mockFailedItems as any
+      ) as any
+    );
+
+    vi.mocked(db.update).mockReturnValue(
+      createMockUpdate([
+        { id: "item-1", status: "pending", retryCount: 1 },
+      ]) as unknown as ReturnType<typeof db.update>
+    );
+
+    vi.mocked(enqueueBatchItem).mockResolvedValue({
+      success: false,
+      error: "Inngest error",
+    });
+
+    const result = await retryAllFailedItems({ batchId: "batch-123" });
+
+    expect(result.success).toBe(false);
+    expect(result.retriedCount).toBe(0);
+    expect(result.errors).toContain("receipt1.jpg: Inngest error");
+  });
+
+  it("should throw error if batch not found", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      createMockSelect([]) as unknown as ReturnType<typeof db.select>
+    );
 
     await expect(
-      retryBatchItem({ itemId: "non-existent" })
-    ).rejects.toThrow("Batch item not found");
+      retryAllFailedItems({ batchId: "non-existent" })
+    ).rejects.toThrow("Batch not found or unauthorized");
   });
 });

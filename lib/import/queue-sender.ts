@@ -4,7 +4,7 @@
  */
 
 import { inngest } from "@/lib/inngest/client";
-import type { ImportJobPayload } from "./queue-types";
+import type { ImportJobPayload } from "@/lib/import/queue-types";
 import { devLogger } from "@/lib/dev-logger";
 
 /**

@@ -9,7 +9,7 @@ import {
 } from "@/lib/import/batch-tracker";
 import { db } from "@/lib/db";
 import type { BatchStatusSummary } from "@/lib/import/batch-types";
-import { createMockSelect, createMockSelectSequence } from "../utils/db-mocks";
+import { createMockSelect, createMockSelectSequence } from "@/tests/utils/db-mocks";
 
 // Mock dependencies
 vi.mock("@/lib/db", () => ({

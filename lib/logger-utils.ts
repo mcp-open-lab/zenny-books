@@ -6,8 +6,8 @@
  * In production, returns logger (errors only)
  */
 
-import { logger } from "./logger";
-import { devLogger } from "./dev-logger";
+import { logger } from "@/lib/logger";
+import { devLogger } from "@/lib/dev-logger";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 

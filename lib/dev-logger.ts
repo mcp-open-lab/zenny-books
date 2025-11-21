@@ -11,7 +11,7 @@
  */
 
 import { encode } from "@toon-format/toon";
-import { safeSerialize, shouldUseJsonFormat } from "./safe-serializer";
+import { safeSerialize, shouldUseJsonFormat } from "@/lib/safe-serializer";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
