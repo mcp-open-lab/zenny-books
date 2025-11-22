@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { getUserSettings } from "@/app/actions/user-settings";
 import { createSafeAction } from "@/lib/safe-action";
 import { devLogger } from "@/lib/dev-logger";
+import { CategoryEngine } from "@/lib/categorization/engine";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -77,6 +78,10 @@ async function scanReceiptHandler(
   const province = settings?.province || null;
   const visibleFields = settings?.visibleFields || {};
   const defaultValues = settings?.defaultValues || {};
+
+  // Get available categories for this user
+  const availableCategories = await CategoryEngine.getAvailableCategories(finalUserId);
+  const categoryNames = availableCategories.map((c) => c.name).join('" | "');
 
   // Core fields are always extracted (required for basic receipt functionality)
   const coreFields = ["merchantName", "date", "totalAmount"];
@@ -203,7 +208,7 @@ If only a total tax is shown, extract it as taxAmount.`;
     }
     if (fieldsToExtract.has("category")) {
       jsonFields.push(
-        '  "category": "Food" | "Transport" | "Utilities" | "Supplies" | "Other" or null'
+        `  "category": "${categoryNames}" or null`
       );
     }
     if (fieldsToExtract.has("description")) {

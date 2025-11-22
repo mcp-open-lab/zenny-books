@@ -19,6 +19,7 @@
     "check-logging": "node scripts/check-logging-pattern.js",
     "test:logging": "tsx scripts/test-logging.ts",
     "migrate:receipts": "dotenv -e .env.local -- tsx scripts/migrate-receipts-to-documents.ts",
+    "seed:categories": "dotenv -e .env.local -- tsx scripts/seed-categories.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",

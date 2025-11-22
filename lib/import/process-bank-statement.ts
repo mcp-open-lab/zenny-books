@@ -4,22 +4,27 @@
  */
 
 import { db } from "@/lib/db";
-import { documents, bankStatements, bankStatementTransactions } from "@/lib/db/schema";
+import {
+  documents,
+  bankStatements,
+  bankStatementTransactions,
+} from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { importSpreadsheet, isSpreadsheetFile } from "./import-orchestrator";
 import { devLogger } from "@/lib/dev-logger";
 import { createId } from "@paralleldrive/cuid2";
+import { CategoryEngine } from "@/lib/categorization/engine";
 
 /**
  * Download file buffer from URL
  */
 async function downloadFile(url: string): Promise<Buffer> {
   const response = await fetch(url);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to download file: ${response.statusText}`);
   }
-  
+
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
@@ -104,44 +109,84 @@ export async function processBankStatement(
       processedTransactionCount: 0,
     });
 
-    // Insert transactions
-    const transactionRecords = importResult.transactions.map((tx, index) => {
-      // Calculate amount (handle debit/credit split)
-      let amount = tx.amount ?? 0;
-      if (tx.debit !== null && tx.debit !== undefined) {
-        amount = -Math.abs(tx.debit);
-      }
-      if (tx.credit !== null && tx.credit !== undefined) {
-        amount = Math.abs(tx.credit);
-      }
+    // Categorize and insert transactions
+    const transactionRecords = await Promise.all(
+      importResult.transactions.map(async (tx, index) => {
+        // Calculate amount (handle debit/credit split)
+        let amount = tx.amount ?? 0;
+        if (tx.debit !== null && tx.debit !== undefined) {
+          amount = -Math.abs(tx.debit);
+        }
+        if (tx.credit !== null && tx.credit !== undefined) {
+          amount = Math.abs(tx.credit);
+        }
 
-      // Ensure dates are Date objects or null (not strings)
-      const transactionDate = tx.transactionDate instanceof Date 
-        ? tx.transactionDate 
-        : tx.transactionDate 
-          ? new Date(tx.transactionDate) 
-          : null;
+        // Ensure dates are Date objects or null (not strings)
+        const transactionDate =
+          tx.transactionDate instanceof Date
+            ? tx.transactionDate
+            : tx.transactionDate
+            ? new Date(tx.transactionDate)
+            : null;
 
-      const postedDate = tx.postedDate instanceof Date 
-        ? tx.postedDate 
-        : tx.postedDate 
-          ? new Date(tx.postedDate) 
-          : null;
+        const postedDate =
+          tx.postedDate instanceof Date
+            ? tx.postedDate
+            : tx.postedDate
+            ? new Date(tx.postedDate)
+            : null;
 
-      return {
-        id: createId(),
-        bankStatementId,
-        transactionDate: transactionDate,
-        postedDate: postedDate,
-        description: tx.description || "",
-        merchantName: tx.merchantName,
-        referenceNumber: tx.referenceNumber,
-        amount: amount.toString(),
-        currency: importResult.mappingConfig?.currency || "USD",
-        category: tx.category,
-        order: index,
-      };
-    });
+        // Auto-categorize the transaction
+        let categoryId: string | null = null;
+        let categoryName: string | null = tx.category || null;
+
+        if (tx.merchantName || tx.description) {
+          const categorizationResult = await CategoryEngine.categorizeWithAI(
+            {
+              merchantName: tx.merchantName,
+              description: tx.description,
+              amount: amount.toString(),
+            },
+            {
+              userId,
+              includeAI: true,
+              minConfidence: 0.7,
+            }
+          );
+
+          if (categorizationResult.categoryId) {
+            categoryId = categorizationResult.categoryId;
+            categoryName = categorizationResult.categoryName;
+          } else if (categorizationResult.suggestedCategory) {
+            // New category suggested by AI, store as text for now
+            categoryName = categorizationResult.suggestedCategory;
+          }
+
+          devLogger.debug("Transaction categorized", {
+            merchantName: tx.merchantName,
+            categoryName,
+            categoryId,
+            method: categorizationResult.method,
+            confidence: categorizationResult.confidence,
+          });
+        }
+
+        return {
+          id: createId(),
+          bankStatementId,
+          transactionDate: transactionDate,
+          postedDate: postedDate,
+          description: tx.description || "",
+          merchantName: tx.merchantName,
+          referenceNumber: tx.referenceNumber,
+          amount: amount.toString(),
+          currency: importResult.mappingConfig?.currency || "USD",
+          category: categoryName,
+          categoryId: categoryId,
+          order: index,
+        };
+      })
+    );
 
     await db.insert(bankStatementTransactions).values(transactionRecords);
 
@@ -152,7 +197,8 @@ export async function processBankStatement(
         status: "completed",
         extractedAt: new Date(),
         processedAt: new Date(),
-        extractionConfidence: importResult.mappingConfig?.confidence?.toString(),
+        extractionConfidence:
+          importResult.mappingConfig?.confidence?.toString(),
       })
       .where(eq(documents.id, documentId));
 
@@ -192,4 +238,3 @@ export async function processBankStatement(
     throw error;
   }
 }
-

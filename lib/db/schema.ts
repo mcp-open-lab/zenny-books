@@ -206,7 +206,8 @@ export const receipts = pgTable("receipts", {
 
   // Classification
   date: timestamp("date"),
-  category: text("category"),
+  category: text("category"), // Denormalized for display/fallback
+  categoryId: text("category_id"), // FK to categories
   description: text("description"),
   businessPurpose: text("business_purpose"), // Why this expense (for tax deductions)
   isBusinessExpense: text("is_business_expense").default("true"), // 'true' | 'false'
@@ -274,7 +275,8 @@ export const bankStatementTransactions = pgTable(
     currency: text("currency"),
 
     // Classification
-    category: text("category"),
+    category: text("category"), // Denormalized for display/fallback
+    categoryId: text("category_id"), // FK to categories
     isBusinessExpense: text("is_business_expense"), // 'true' | 'false'
     businessPurpose: text("business_purpose"),
 
@@ -339,6 +341,35 @@ export const invoices = pgTable("invoices", {
 });
 
 // ============================================
+// CATEGORIES & RULES
+// ============================================
+
+export const categories = pgTable("categories", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // 'system' | 'user'
+  userId: text("user_id"), // null for system categories, populated for user categories
+  parentId: text("parent_id"), // For future hierarchical categories
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const categoryRules = pgTable("category_rules", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  categoryId: text("category_id").notNull(), // FK to categories
+  userId: text("user_id").notNull(), // FK to users
+  matchType: text("match_type").notNull(), // 'exact' | 'contains' | 'regex'
+  field: text("field").notNull(), // 'merchantName' | 'description'
+  value: text("value").notNull(), // The pattern to match
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================
 // USER SETTINGS
 // ============================================
 
@@ -348,9 +379,17 @@ export const userSettings = pgTable("user_settings", {
   country: text("country"), // 'US' | 'CA'
   province: text("province"), // State/Province code
   currency: text("currency").default("USD"), // 'USD' | 'CAD'
+  
+  // Legacy fields (for backward compatibility)
   visibleFields: text("visible_fields"), // JSON string of field visibility preferences
   requiredFields: text("required_fields"), // JSON string of required field preferences
   defaultValues: text("default_values"), // JSON string of default field values (isBusinessExpense, businessPurpose, paymentMethod)
+  
+  // Document-type-specific settings
+  receiptSettings: text("receipt_settings"), // JSON: { visibleFields, requiredFields, defaultValues }
+  bankStatementSettings: text("bank_statement_settings"), // JSON: { autoCategorize, matchingRules }
+  invoiceSettings: text("invoice_settings"), // JSON: future invoice-specific settings
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
