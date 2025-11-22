@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type {
   BatchStatusSummary,
   BatchItemStatus,
@@ -21,7 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2,
@@ -30,13 +28,8 @@ import {
   AlertCircle,
   FileText,
   Loader2,
-  RefreshCw,
-  Download,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { retryBatchItem, retryAllFailedItems } from "@/app/actions/import-batch-items";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { useBatchPolling } from "@/hooks/use-batch-polling";
 
 interface BatchDetailViewProps {
@@ -44,15 +37,14 @@ interface BatchDetailViewProps {
   items: BatchItemStatus[];
 }
 
-export function BatchDetailView({ batch: initialBatch, items: initialItems }: BatchDetailViewProps) {
-  const { batch, items, refresh } = useBatchPolling({
+export function BatchDetailView({
+  batch: initialBatch,
+  items: initialItems,
+}: BatchDetailViewProps) {
+  const { batch, items } = useBatchPolling({
     initialBatch,
     initialItems,
   });
-  
-  const [isRetrying, setIsRetrying] = useState<string | null>(null);
-  const [isRetryingAll, setIsRetryingAll] = useState(false);
-  const router = useRouter();
 
   const getStatusBadge = (status: string) => {
     const variants: Record<
@@ -75,9 +67,10 @@ export function BatchDetailView({ batch: initialBatch, items: initialItems }: Ba
     };
 
     // Custom style for duplicate
-    const className = status === "duplicate" 
-      ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80 border-yellow-200" 
-      : "gap-1";
+    const className =
+      status === "duplicate"
+        ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80 border-yellow-200"
+        : "gap-1";
 
     return (
       <Badge variant={variants[status] || "outline"} className={className}>
@@ -86,42 +79,6 @@ export function BatchDetailView({ batch: initialBatch, items: initialItems }: Ba
       </Badge>
     );
   };
-
-  const handleRetryItem = async (itemId: string) => {
-    try {
-      setIsRetrying(itemId);
-      const result = await retryBatchItem({ itemId });
-      if (result.success) {
-        toast.success("Item queued for retry");
-        router.refresh();
-      } else {
-        toast.error("Failed to retry item");
-      }
-    } catch (error) {
-      toast.error("Failed to retry item");
-    } finally {
-      setIsRetrying(null);
-    }
-  };
-
-  const handleRetryAll = async () => {
-    try {
-      setIsRetryingAll(true);
-      const result = await retryAllFailedItems({ batchId: batch.batchId });
-      if (result.success && result.retriedCount !== undefined) {
-        toast.success(`Queued ${result.retriedCount} items for retry`);
-        router.refresh();
-      } else {
-        toast.error("Failed to retry items");
-      }
-    } catch (error) {
-      toast.error("Failed to retry items");
-    } finally {
-      setIsRetryingAll(false);
-    }
-  };
-
-  const failedCount = items.filter((i) => i.status === "failed").length;
 
   return (
     <div className="space-y-6">
@@ -134,30 +91,12 @@ export function BatchDetailView({ batch: initialBatch, items: initialItems }: Ba
                 Batch {batch.batchId.slice(-8)}
               </CardTitle>
               <CardDescription>
-                Created {formatDistanceToNow(batch.createdAt, { addSuffix: true })}
+                Created{" "}
+                {formatDistanceToNow(batch.createdAt, { addSuffix: true })}
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              {failedCount > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRetryAll}
-                  disabled={isRetryingAll}
-                >
-                  {isRetryingAll ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
-                  Retry Failed
-                </Button>
-              )}
-              {/* Placeholder for Download Report */}
-              {/* <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Report
-              </Button> */}
+              {/* Actions removed for simplicity */}
             </div>
           </div>
         </CardHeader>
@@ -219,7 +158,6 @@ export function BatchDetailView({ batch: initialBatch, items: initialItems }: Ba
                 <TableHead>File Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Message</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -233,26 +171,10 @@ export function BatchDetailView({ batch: initialBatch, items: initialItems }: Ba
                   </TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {item.errorMessage || (
-                      item.status === "duplicate" ? "Duplicate detected" : "-"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {item.status === "failed" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRetryItem(item.id)}
-                        disabled={isRetrying === item.id}
-                      >
-                        {isRetrying === item.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4" />
-                        )}
-                        <span className="sr-only">Retry</span>
-                      </Button>
-                    )}
+                    {item.errorMessage ||
+                      (item.status === "duplicate"
+                        ? "Duplicate detected"
+                        : "-")}
                   </TableCell>
                 </TableRow>
               ))}
@@ -263,4 +185,3 @@ export function BatchDetailView({ batch: initialBatch, items: initialItems }: Ba
     </div>
   );
 }
-

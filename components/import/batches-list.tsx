@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { listBatchesAction } from "@/app/actions/import-batch";
 import { getBatchProgressAction } from "@/app/actions/import-batch";
-import { cleanupDatabase } from "@/app/actions/cleanup";
 import {
   Table,
   TableBody,
@@ -22,23 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Trash2 } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
 import type { ImportBatch } from "@/lib/import/batch-types";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 interface BatchesListProps {
   initialBatches: ImportBatch[];
@@ -56,8 +42,6 @@ export function BatchesList({
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [cleaning, setCleaning] = useState(false);
   const router = useRouter();
   const [activeBatchIds, setActiveBatchIds] = useState<Set<string>>(
     new Set(
@@ -66,24 +50,6 @@ export function BatchesList({
         .map((b) => b.id)
     )
   );
-
-  const handleCleanup = async () => {
-    setCleaning(true);
-    try {
-      const result = await cleanupDatabase({ confirm: true });
-      if (result.success) {
-        toast.success("Database cleaned successfully");
-        setBatches([]);
-        setActiveBatchIds(new Set());
-        router.refresh();
-      }
-    } catch (error) {
-      console.error("Error cleaning database:", error);
-      toast.error("Failed to clean database");
-    } finally {
-      setCleaning(false);
-    }
-  };
 
   // Sync with server updates (e.g. after router.refresh())
   useEffect(() => {
@@ -101,34 +67,6 @@ export function BatchesList({
       return next;
     });
   }, [initialBatches, initialCursor, initialHasMore]);
-
-  const refreshBatches = async () => {
-    setRefreshing(true);
-    try {
-      const result = await listBatchesAction({
-        limit: 20,
-        status: statusFilter === "all" ? undefined : statusFilter,
-      });
-
-      if (result.success) {
-        setBatches(result.batches);
-        setCursor(result.nextCursor);
-        setHasMore(result.hasMore ?? false);
-
-        const newActiveIds = new Set(
-          result.batches
-            .filter((b) => b.status === "processing" || b.status === "pending")
-            .map((b) => b.id)
-        );
-        setActiveBatchIds(newActiveIds);
-      }
-    } catch (error) {
-      console.error("Error refreshing batches:", error);
-      toast.error("Failed to refresh batches");
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const loadMore = async () => {
     if (!hasMore || loading || !cursor) return;
@@ -148,7 +86,6 @@ export function BatchesList({
       }
     } catch (error) {
       console.error("Error loading more batches:", error);
-      toast.error("Failed to load more batches");
     } finally {
       setLoading(false);
     }
@@ -170,7 +107,6 @@ export function BatchesList({
       }
     } catch (error) {
       console.error("Error filtering batches:", error);
-      toast.error("Failed to filter batches");
     } finally {
       setLoading(false);
     }
@@ -235,7 +171,10 @@ export function BatchesList({
   }, [activeBatchIds]);
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       completed: "default",
       processing: "secondary",
       pending: "outline",
@@ -282,48 +221,6 @@ export function BatchesList({
             </SelectContent>
           </Select>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refreshBatches}
-          disabled={refreshing}
-        >
-          <RefreshCw
-            className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={cleaning}>
-              {cleaning ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
-              )}
-              Clean Slate
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete all your imported batches, receipts,
-                and documents. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleCleanup}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete Everything
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
 
       {batches.length === 0 ? (
@@ -345,10 +242,12 @@ export function BatchesList({
               </TableHeader>
               <TableBody>
                 {batches.map((batch) => (
-                  <TableRow 
-                    key={batch.id} 
+                  <TableRow
+                    key={batch.id}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => router.push(`/app/import/batches/${batch.id}`)}
+                    onClick={() =>
+                      router.push(`/app/import/batches/${batch.id}`)
+                    }
                   >
                     <TableCell>{getStatusBadge(batch.status)}</TableCell>
                     <TableCell>
@@ -370,7 +269,10 @@ export function BatchesList({
                           className="h-2"
                         />
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{Math.min(batch.processedFiles, batch.totalFiles)}/{batch.totalFiles}</span>
+                          <span>
+                            {Math.min(batch.processedFiles, batch.totalFiles)}/
+                            {batch.totalFiles}
+                          </span>
                           {batch.successfulFiles > 0 && (
                             <span className="text-green-600">
                               {batch.successfulFiles} ✓
@@ -391,12 +293,15 @@ export function BatchesList({
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {batch.totalFiles} file{batch.totalFiles !== 1 ? "s" : ""}
+                        {batch.totalFiles} file
+                        {batch.totalFiles !== 1 ? "s" : ""}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(batch.createdAt, { addSuffix: true })}
+                        {formatDistanceToNow(batch.createdAt, {
+                          addSuffix: true,
+                        })}
                       </div>
                       {batch.completedAt && (
                         <div className="text-xs text-muted-foreground">
@@ -415,11 +320,7 @@ export function BatchesList({
 
           {hasMore && (
             <div className="flex justify-center">
-              <Button
-                variant="outline"
-                onClick={loadMore}
-                disabled={loading}
-              >
+              <Button variant="outline" onClick={loadMore} disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -436,4 +337,3 @@ export function BatchesList({
     </div>
   );
 }
-
