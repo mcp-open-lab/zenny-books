@@ -29,59 +29,52 @@ const CreateCategorySchema = z.object({
 });
 
 export const createUserCategory = createSafeAction(
-  CreateCategorySchema,
-  async (data) => {
-    try {
-      const { userId } = await auth();
-      if (!userId) throw new Error("Unauthorized");
+  "createUserCategory",
+  async (data: z.infer<typeof CreateCategorySchema>) => {
+    // Validate input
+    const validated = CreateCategorySchema.parse(data);
+    
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
 
-      devLogger.info("Creating user category", {
-        context: { categoryName: data.name, userId },
+    devLogger.info("Creating user category", {
+      context: { categoryName: validated.name, userId },
+    });
+
+    // Check if a category with this name already exists (system or user's own)
+    const existingCategories = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.name, validated.name));
+
+    // Check if any matching category is a system category or belongs to this user
+    const isDuplicate = existingCategories.some(
+      (cat) => cat.type === "system" || cat.userId === userId
+    );
+
+    if (isDuplicate) {
+      devLogger.warn("Category creation failed - duplicate name", {
+        context: { categoryName: validated.name, existingCount: existingCategories.length },
       });
-
-      // Check if a category with this name already exists (system or user's own)
-      const existingCategories = await db
-        .select()
-        .from(categories)
-        .where(eq(categories.name, data.name));
-
-      // Check if any matching category is a system category or belongs to this user
-      const isDuplicate = existingCategories.some(
-        (cat) => cat.type === "system" || cat.userId === userId
-      );
-
-      if (isDuplicate) {
-        devLogger.warn("Category creation failed - duplicate name", {
-          context: { categoryName: data.name, existingCount: existingCategories.length },
-        });
-        throw new Error("A category with this name already exists");
-      }
-
-      const newCategory = await db
-        .insert(categories)
-        .values({
-          id: createId(),
-          name: data.name,
-          type: "user",
-          userId,
-        })
-        .returning();
-
-      devLogger.info("Category created successfully", {
-        context: { categoryId: newCategory[0].id, categoryName: newCategory[0].name },
-      });
-
-      revalidatePath("/app/settings/categories");
-      return newCategory[0];
-    } catch (error) {
-      devLogger.error("Error creating category", {
-        context: {
-          error: error instanceof Error ? error.message : String(error),
-          categoryName: data.name,
-        },
-      });
-      throw error;
+      throw new Error("A category with this name already exists");
     }
+
+    const newCategory = await db
+      .insert(categories)
+      .values({
+        id: createId(),
+        name: validated.name,
+        type: "user",
+        userId,
+      })
+      .returning();
+
+    devLogger.info("Category created successfully", {
+      context: { categoryId: newCategory[0].id, categoryName: newCategory[0].name },
+    });
+
+    revalidatePath("/app/settings/categories");
+    return newCategory[0];
   }
 );
 
@@ -91,8 +84,9 @@ const DeleteCategorySchema = z.object({
 });
 
 export const deleteUserCategory = createSafeAction(
-  DeleteCategorySchema,
-  async (data) => {
+  "deleteUserCategory",
+  async (data: z.infer<typeof DeleteCategorySchema>) => {
+    const validated = DeleteCategorySchema.parse(data);
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -100,7 +94,7 @@ export const deleteUserCategory = createSafeAction(
     const category = await db
       .select()
       .from(categories)
-      .where(eq(categories.id, data.categoryId))
+      .where(eq(categories.id, validated.categoryId))
       .limit(1);
 
     if (
@@ -111,7 +105,7 @@ export const deleteUserCategory = createSafeAction(
       throw new Error("Category not found or unauthorized");
     }
 
-    await db.delete(categories).where(eq(categories.id, data.categoryId));
+    await db.delete(categories).where(eq(categories.id, validated.categoryId));
 
     revalidatePath("/app/settings/categories");
     return { success: true };
@@ -144,8 +138,9 @@ const CreateRuleSchema = z.object({
 });
 
 export const createCategoryRule = createSafeAction(
-  CreateRuleSchema,
-  async (data) => {
+  "createCategoryRule",
+  async (data: z.infer<typeof CreateRuleSchema>) => {
+    const validated = CreateRuleSchema.parse(data);
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -153,7 +148,7 @@ export const createCategoryRule = createSafeAction(
     const category = await db
       .select()
       .from(categories)
-      .where(eq(categories.id, data.categoryId))
+      .where(eq(categories.id, validated.categoryId))
       .limit(1);
 
     if (category.length === 0) {
@@ -171,11 +166,11 @@ export const createCategoryRule = createSafeAction(
       .insert(categoryRules)
       .values({
         id: createId(),
-        categoryId: data.categoryId,
+        categoryId: validated.categoryId,
         userId,
-        matchType: data.matchType,
-        field: data.field,
-        value: data.value,
+        matchType: validated.matchType,
+        field: validated.field,
+        value: validated.value,
       })
       .returning();
 
@@ -190,8 +185,9 @@ const DeleteRuleSchema = z.object({
 });
 
 export const deleteCategoryRule = createSafeAction(
-  DeleteRuleSchema,
-  async (data) => {
+  "deleteCategoryRule",
+  async (data: z.infer<typeof DeleteRuleSchema>) => {
+    const validated = DeleteRuleSchema.parse(data);
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -199,14 +195,14 @@ export const deleteCategoryRule = createSafeAction(
     const rule = await db
       .select()
       .from(categoryRules)
-      .where(eq(categoryRules.id, data.ruleId))
+      .where(eq(categoryRules.id, validated.ruleId))
       .limit(1);
 
     if (rule.length === 0 || rule[0].userId !== userId) {
       throw new Error("Rule not found or unauthorized");
     }
 
-    await db.delete(categoryRules).where(eq(categoryRules.id, data.ruleId));
+    await db.delete(categoryRules).where(eq(categoryRules.id, validated.ruleId));
 
     revalidatePath("/app/settings/categories");
     return { success: true };

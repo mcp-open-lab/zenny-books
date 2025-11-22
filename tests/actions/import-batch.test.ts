@@ -136,7 +136,7 @@ describe("updateBatchStatus", () => {
       failedFiles: 1,
     };
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedBatch]));
+    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedBatch]) as any);
 
     const result = await updateBatchStatus({
       batchId: "batch-123",
@@ -157,7 +157,7 @@ describe("updateBatchStatus", () => {
       errors: JSON.stringify(["Error 1", "Error 2"]),
     };
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedBatch]));
+    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockUpdatedBatch]) as any);
 
     const result = await updateBatchStatus({
       batchId: "batch-123",
@@ -168,7 +168,7 @@ describe("updateBatchStatus", () => {
   });
 
   it("should throw error if batch not found", async () => {
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([]));
+    vi.mocked(db.update).mockReturnValue(createMockUpdate([]) as any);
 
     await expect(
       updateBatchStatus({
@@ -230,7 +230,7 @@ describe("completeBatch", () => {
       completedAt: new Date(),
     };
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockCompletedBatch]));
+    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockCompletedBatch]) as any);
 
     const result = await completeBatch({
       batchId: "batch-123",
@@ -250,7 +250,7 @@ describe("completeBatch", () => {
       errors: JSON.stringify(["Processing failed"]),
     };
 
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockFailedBatch]));
+    vi.mocked(db.update).mockReturnValue(createMockUpdate([mockFailedBatch]) as any);
 
     const result = await completeBatch({
       batchId: "batch-123",
@@ -263,7 +263,7 @@ describe("completeBatch", () => {
   });
 
   it("should throw error if batch not found", async () => {
-    vi.mocked(db.update).mockReturnValue(createMockUpdate([]));
+    vi.mocked(db.update).mockReturnValue(createMockUpdate([]) as any);
 
     await expect(
       completeBatch({

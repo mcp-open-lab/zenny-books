@@ -43,7 +43,7 @@ describe("getBatchStatusSummary", () => {
       updatedAt: new Date(),
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]) as any);
 
     const result = await getBatchStatusSummary("batch-123", "test-user-id");
 
@@ -73,7 +73,7 @@ describe("getBatchStatusSummary", () => {
       updatedAt: new Date(),
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]) as any);
 
     const result = await getBatchStatusSummary("batch-123", "test-user-id");
 
@@ -101,7 +101,7 @@ describe("getBatchStatusSummary", () => {
       updatedAt: new Date(),
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]) as any);
 
     const result = await getBatchStatusSummary("batch-123", "test-user-id");
 
@@ -128,7 +128,7 @@ describe("getBatchStatusSummary", () => {
       updatedAt: new Date(),
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]) as any);
 
     const result = await getBatchStatusSummary("batch-123", "test-user-id");
 
@@ -136,7 +136,7 @@ describe("getBatchStatusSummary", () => {
   });
 
   it("should throw error if batch not found", async () => {
-    vi.mocked(db.select).mockReturnValue(createMockSelect([]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([]) as any);
 
     await expect(
       getBatchStatusSummary("non-existent", "test-user-id")
@@ -341,7 +341,7 @@ describe("getBatchItemsStatus", () => {
   });
 
   it("should throw error if batch not found", async () => {
-    vi.mocked(db.select).mockReturnValue(createMockSelect([]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([]) as any);
 
     await expect(
       getBatchItemsStatus("non-existent", "test-user-id")
@@ -374,7 +374,7 @@ describe("getBatchProgress", () => {
       updatedAt: new Date(),
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]) as any);
 
     const result = await getBatchProgress("batch-123", "test-user-id");
 
@@ -409,7 +409,7 @@ describe("getBatchProgress", () => {
       updatedAt: new Date(),
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]) as any);
 
     const result = await getBatchProgress("batch-123", "test-user-id");
 
@@ -436,7 +436,7 @@ describe("getBatchProgress", () => {
       updatedAt: new Date(),
     };
 
-    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]));
+    vi.mocked(db.select).mockReturnValue(createMockSelect([mockBatch]) as any);
 
     const result = await getBatchProgress("batch-123", "test-user-id");
 
