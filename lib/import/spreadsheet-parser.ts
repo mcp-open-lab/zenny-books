@@ -3,24 +3,6 @@ import type { MappingConfig } from "./ai-column-mapper";
 import { convertInstructionsToConfig } from "./ai-column-mapper";
 import { DataConverter } from "./field-converters";
 
-export interface TransactionRow {
-  date?: string | Date;
-  description?: string;
-  amount?: number | string;
-  category?: string;
-  balance?: number | string;
-  reference?: string;
-  [key: string]: any;
-}
-
-export interface ParseResult {
-  success: boolean;
-  rows: TransactionRow[];
-  headers?: string[];
-  error?: string;
-  sheetName?: string;
-}
-
 export interface NormalizedTransaction {
   transactionDate?: Date | null;
   postedDate?: Date | null;
@@ -33,113 +15,6 @@ export interface NormalizedTransaction {
   merchantName?: string;
   referenceNumber?: string;
   raw: Record<string, any>;
-}
-
-/**
- * Parse a spreadsheet file (XLSX, XLS, CSV) buffer into JSON rows
- */
-export function parseSpreadsheet(
-  fileBuffer: ArrayBuffer | Buffer,
-  fileName: string
-): ParseResult {
-  try {
-    const workbook = XLSX.read(fileBuffer, {
-      type: "buffer",
-      cellDates: true, // Parse dates as JS Date objects
-      cellNF: false, // Skip format strings (perf)
-      cellText: false, // Skip generated text (perf)
-    });
-
-    // Use the first sheet
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-
-    if (!sheet) {
-      return { success: false, rows: [], error: "No sheets found in file" };
-    }
-
-    // Convert to JSON (array of arrays for raw processing)
-    // header: 1 means "array of arrays"
-    const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
-      header: 1,
-      blankrows: false,
-      defval: "",
-    });
-
-    if (rawRows.length === 0) {
-      return { success: true, rows: [], sheetName };
-    }
-
-    // 1. Find the header row
-    // Heuristic: Look for common transaction headers in the first 10 rows
-    // "Date", "Description", "Amount", "Debit", "Credit", "Balance"
-    let headerRowIndex = -1;
-    let headers: string[] = [];
-
-    const commonHeaders = [
-      "date",
-      "time",
-      "description",
-      "payee",
-      "merchant",
-      "amount",
-      "debit",
-      "credit",
-      "balance",
-      "reference",
-      "ref",
-      "category",
-    ];
-
-    for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
-      const row = rawRows[i];
-      if (!Array.isArray(row)) continue;
-
-      const matchingColumns = row.filter((cell) => {
-        if (typeof cell !== "string") return false;
-        const normalized = cell.toLowerCase().trim();
-        return commonHeaders.some((h) => normalized.includes(h));
-      });
-
-      // If we find at least 2 transaction-like columns, assume this is the header
-      if (matchingColumns.length >= 2) {
-        headerRowIndex = i;
-        headers = row.map((c) => String(c).trim());
-        break;
-      }
-    }
-
-    // If no header found, assume first row is header if it has strings
-    if (headerRowIndex === -1 && rawRows.length > 0) {
-      headerRowIndex = 0;
-      headers = rawRows[0].map((c) => String(c).trim());
-    }
-
-    // 2. Extract data rows
-    const dataRows = rawRows.slice(headerRowIndex + 1);
-    const parsedRows: TransactionRow[] = dataRows.map((row) => {
-      const rowObj: TransactionRow = {};
-      
-      // Map row array to object using headers
-      headers.forEach((header, index) => {
-        if (index < row.length && header) {
-          rowObj[header] = row[index];
-        }
-      });
-      
-      return rowObj;
-    });
-
-    return {
-      success: true,
-      rows: parsedRows,
-      headers,
-      sheetName,
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return { success: false, rows: [], error: errorMessage };
-  }
 }
 
 /**
