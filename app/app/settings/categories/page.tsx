@@ -17,7 +17,7 @@ export default async function CategoriesPage() {
 
   return (
     <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
-      <PageHeader title="Categories & Rules" />
+      <PageHeader title="Categories & Rules" backHref="/app/settings" />
       <CategoriesManager categories={categories} rules={rules} />
     </div>
   );

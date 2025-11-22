@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { BatchDetailView } from "@/components/import/batch-detail-view";
+import { BatchDetailContainer } from "@/components/import/batch-detail-container";
 import {
   getBatchStatusSummary,
   getBatchItemsStatus,
@@ -41,7 +41,7 @@ export default async function BatchDetailPage(props: {
           <UserButton />
         </div>
 
-        <BatchDetailView batch={batch} items={items} />
+        <BatchDetailContainer initialBatch={batch} initialItems={items} />
       </div>
     );
   } catch (error) {
