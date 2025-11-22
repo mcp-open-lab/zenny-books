@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -22,13 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Tag } from "lucide-react";
-import { toast } from "sonner";
-import {
-  createUserCategory,
-  deleteUserCategory,
-  createCategoryRule,
-  deleteCategoryRule,
-} from "@/app/actions/categories";
+import { useCategoriesManager } from "@/lib/hooks/use-categories-manager";
 import type { categories, categoryRules } from "@/lib/db/schema";
 
 type Category = typeof categories.$inferSelect;
@@ -40,108 +33,33 @@ type CategoriesManagerProps = {
 };
 
 export function CategoriesManager({
-  categories: initialCategories,
-  rules: initialRules,
+  categories,
+  rules,
 }: CategoriesManagerProps) {
-  const [isPending, startTransition] = useTransition();
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newRuleCategoryId, setNewRuleCategoryId] = useState("");
-  const [newRuleField, setNewRuleField] = useState<
-    "merchantName" | "description"
-  >("merchantName");
-  const [newRuleMatchType, setNewRuleMatchType] = useState<
-    "exact" | "contains" | "regex"
-  >("contains");
-  const [newRuleValue, setNewRuleValue] = useState("");
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
-
-  const systemCategories = initialCategories.filter((c) => c.type === "system");
-  const userCategories = initialCategories.filter((c) => c.type === "user");
-
-  const handleCreateCategory = () => {
-    if (!newCategoryName.trim()) {
-      toast.error("Please enter a category name");
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await createUserCategory({ name: newCategoryName.trim() });
-        toast.success("Category created!");
-        setNewCategoryName("");
-        setCategoryDialogOpen(false);
-        // Refresh the page to show the new category
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to create category"
-        );
-      }
-    });
-  };
-
-  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
-    if (!confirm(`Delete "${categoryName}"? This cannot be undone.`)) {
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await deleteUserCategory({ categoryId });
-        toast.success("Category deleted");
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to delete category"
-        );
-      }
-    });
-  };
-
-  const handleCreateRule = () => {
-    if (!newRuleCategoryId || !newRuleValue.trim()) {
-      toast.error("Please fill all fields");
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await createCategoryRule({
-          categoryId: newRuleCategoryId,
-          matchType: newRuleMatchType,
-          field: newRuleField,
-          value: newRuleValue.trim(),
-        });
-        toast.success("Rule created!");
-        setNewRuleValue("");
-        setRuleDialogOpen(false);
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to create rule"
-        );
-      }
-    });
-  };
-
-  const handleDeleteRule = (ruleId: string) => {
-    if (!confirm("Delete this rule? This cannot be undone.")) {
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        await deleteCategoryRule({ ruleId });
-        toast.success("Rule deleted");
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to delete rule"
-        );
-      }
-    });
-  };
+  const {
+    isPending,
+    systemCategories,
+    userCategories,
+    newCategoryName,
+    setNewCategoryName,
+    categoryDialogOpen,
+    setCategoryDialogOpen,
+    newRuleCategoryId,
+    setNewRuleCategoryId,
+    newRuleField,
+    setNewRuleField,
+    newRuleMatchType,
+    setNewRuleMatchType,
+    newRuleValue,
+    setNewRuleValue,
+    ruleDialogOpen,
+    setRuleDialogOpen,
+    handleCreateCategory,
+    handleDeleteCategory,
+    handleCreateRule,
+    handleDeleteRule,
+    getRulePlaceholder,
+  } = useCategoriesManager({ categories, rules });
 
   return (
     <div className="space-y-6">
@@ -270,7 +188,7 @@ export function CategoriesManager({
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {initialCategories.map((cat) => (
+                      {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name} {cat.type === "system" ? "(System)" : ""}
                         </SelectItem>
@@ -317,13 +235,7 @@ export function CategoriesManager({
                 <div>
                   <label className="text-sm font-medium">Pattern</label>
                   <Input
-                    placeholder={
-                      newRuleMatchType === "contains"
-                        ? "e.g., Starbucks"
-                        : newRuleMatchType === "exact"
-                        ? "e.g., STARBUCKS COFFEE"
-                        : "e.g., ^STARBUCKS.*"
-                    }
+                    placeholder={getRulePlaceholder()}
                     value={newRuleValue}
                     onChange={(e) => setNewRuleValue(e.target.value)}
                   />
@@ -343,7 +255,7 @@ export function CategoriesManager({
           </Dialog>
         </div>
 
-        {initialRules.length === 0 ? (
+        {rules.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <p>
               No rules yet. Create your first rule to automate categorization!
@@ -351,7 +263,7 @@ export function CategoriesManager({
           </div>
         ) : (
           <div className="space-y-2">
-            {initialRules.map(({ rule, category }) => (
+            {rules.map(({ rule, category }) => (
               <div
                 key={rule.id}
                 className="flex items-center justify-between p-3 border rounded-lg"
