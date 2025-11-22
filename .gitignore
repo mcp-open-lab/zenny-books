@@ -47,3 +47,6 @@ next-env.d.ts
 
 # docs
 /docs
+
+# test documents
+/test-docs

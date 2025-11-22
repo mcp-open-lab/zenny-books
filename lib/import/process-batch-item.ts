@@ -74,9 +74,9 @@ export async function processBatchItem(
         batchId,
         userId
       );
-      
+
       documentId = result.documentId;
-      
+
       devLogger.info("Bank statement processed", {
         batchItemId,
         documentId,
