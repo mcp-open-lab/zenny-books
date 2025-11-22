@@ -46,9 +46,9 @@ export function CategoriesManager({
   const [isPending, startTransition] = useTransition();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newRuleCategoryId, setNewRuleCategoryId] = useState("");
-  const [newRuleField, setNewRuleField] = useState<"merchantName" | "description">(
-    "merchantName"
-  );
+  const [newRuleField, setNewRuleField] = useState<
+    "merchantName" | "description"
+  >("merchantName");
   const [newRuleMatchType, setNewRuleMatchType] = useState<
     "exact" | "contains" | "regex"
   >("contains");
@@ -66,13 +66,17 @@ export function CategoriesManager({
     }
 
     startTransition(async () => {
-      const result = await createUserCategory({ name: newCategoryName.trim() });
-      if (result.success) {
+      try {
+        await createUserCategory({ name: newCategoryName.trim() });
         toast.success("Category created!");
         setNewCategoryName("");
         setCategoryDialogOpen(false);
-      } else {
-        toast.error(result.error || "Failed to create category");
+        // Refresh the page to show the new category
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create category"
+        );
       }
     });
   };
@@ -83,11 +87,14 @@ export function CategoriesManager({
     }
 
     startTransition(async () => {
-      const result = await deleteUserCategory({ categoryId });
-      if (result.success) {
+      try {
+        await deleteUserCategory({ categoryId });
         toast.success("Category deleted");
-      } else {
-        toast.error(result.error || "Failed to delete category");
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to delete category"
+        );
       }
     });
   };
@@ -99,18 +106,21 @@ export function CategoriesManager({
     }
 
     startTransition(async () => {
-      const result = await createCategoryRule({
-        categoryId: newRuleCategoryId,
-        matchType: newRuleMatchType,
-        field: newRuleField,
-        value: newRuleValue.trim(),
-      });
-      if (result.success) {
+      try {
+        await createCategoryRule({
+          categoryId: newRuleCategoryId,
+          matchType: newRuleMatchType,
+          field: newRuleField,
+          value: newRuleValue.trim(),
+        });
         toast.success("Rule created!");
         setNewRuleValue("");
         setRuleDialogOpen(false);
-      } else {
-        toast.error(result.error || "Failed to create rule");
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create rule"
+        );
       }
     });
   };
@@ -121,11 +131,14 @@ export function CategoriesManager({
     }
 
     startTransition(async () => {
-      const result = await deleteCategoryRule({ ruleId });
-      if (result.success) {
+      try {
+        await deleteCategoryRule({ ruleId });
         toast.success("Rule deleted");
-      } else {
-        toast.error(result.error || "Failed to delete rule");
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to delete rule"
+        );
       }
     });
   };
@@ -138,10 +151,14 @@ export function CategoriesManager({
           <div>
             <h2 className="text-lg font-semibold">Categories</h2>
             <p className="text-sm text-muted-foreground">
-              System categories are provided by default. You can create custom categories.
+              System categories are provided by default. You can create custom
+              categories.
             </p>
           </div>
-          <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+          <Dialog
+            open={categoryDialogOpen}
+            onOpenChange={setCategoryDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
@@ -192,7 +209,9 @@ export function CategoriesManager({
 
           {userCategories.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium mb-2">Your Custom Categories</h3>
+              <h3 className="text-sm font-medium mb-2">
+                Your Custom Categories
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {userCategories.map((category) => (
                   <Badge key={category.id} variant="outline" className="pr-1">
@@ -202,7 +221,9 @@ export function CategoriesManager({
                       variant="ghost"
                       size="sm"
                       className="h-4 w-4 p-0 ml-2 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() => handleDeleteCategory(category.id, category.name)}
+                      onClick={() =>
+                        handleDeleteCategory(category.id, category.name)
+                      }
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -220,7 +241,8 @@ export function CategoriesManager({
           <div>
             <h2 className="text-lg font-semibold">Auto-Categorization Rules</h2>
             <p className="text-sm text-muted-foreground">
-              Create rules to automatically categorize transactions based on merchant or description
+              Create rules to automatically categorize transactions based on
+              merchant or description
             </p>
           </div>
           <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
@@ -240,7 +262,10 @@ export function CategoriesManager({
               <div className="space-y-4 py-4">
                 <div>
                   <label className="text-sm font-medium">Category</label>
-                  <Select value={newRuleCategoryId} onValueChange={setNewRuleCategoryId}>
+                  <Select
+                    value={newRuleCategoryId}
+                    onValueChange={setNewRuleCategoryId}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -264,7 +289,9 @@ export function CategoriesManager({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="merchantName">Merchant Name</SelectItem>
+                      <SelectItem value="merchantName">
+                        Merchant Name
+                      </SelectItem>
                       <SelectItem value="description">Description</SelectItem>
                     </SelectContent>
                   </Select>
@@ -305,7 +332,9 @@ export function CategoriesManager({
               <DialogFooter>
                 <Button
                   onClick={handleCreateRule}
-                  disabled={isPending || !newRuleCategoryId || !newRuleValue.trim()}
+                  disabled={
+                    isPending || !newRuleCategoryId || !newRuleValue.trim()
+                  }
                 >
                   Create Rule
                 </Button>
@@ -316,7 +345,9 @@ export function CategoriesManager({
 
         {initialRules.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p>No rules yet. Create your first rule to automate categorization!</p>
+            <p>
+              No rules yet. Create your first rule to automate categorization!
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -329,7 +360,9 @@ export function CategoriesManager({
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{category.name}</Badge>
                     <span className="text-xs text-muted-foreground">
-                      {rule.field === "merchantName" ? "Merchant" : "Description"}{" "}
+                      {rule.field === "merchantName"
+                        ? "Merchant"
+                        : "Description"}{" "}
                       {rule.matchType === "contains"
                         ? "contains"
                         : rule.matchType === "exact"
@@ -356,4 +389,3 @@ export function CategoriesManager({
     </div>
   );
 }
-
