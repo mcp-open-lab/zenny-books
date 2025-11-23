@@ -252,23 +252,41 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     const imageMimeType = this.getMimeType(imageUrl);
 
     // Call AI with structured output (Zod schema enforces structure)
-    // Using GPT-4o-mini for cost optimization (93% cheaper than GPT-4o)
-    const result = await generateObjectForExtraction(prompt, receiptSchema, {
-      image: { data: base64Image, mimeType: imageMimeType },
-      temperature: AI_TEMPERATURES.STRUCTURED_OUTPUT,
-      loggingContext: {
-        userId: this.userId,
-        entityId: null, // Will be set after receipt is created
-        entityType: "receipt",
-        promptType: "extraction",
-        inputData: {
-          fileName,
-          country: this.country,
-          currency: this.currency,
-          fieldsToExtract: Array.from(fieldsToExtract),
-        },
-      },
-    });
+    // Use GPT-4o-mini for cost optimization (93% cheaper), or GPT-4o if forced
+    const result = useGPT4o
+      ? await generateObject(prompt, receiptSchema, {
+          image: { data: base64Image, mimeType: imageMimeType },
+          temperature: AI_TEMPERATURES.STRUCTURED_OUTPUT,
+          loggingContext: {
+            userId: this.userId,
+            entityId: null, // Will be set after receipt is created
+            entityType: "receipt",
+            promptType: "extraction",
+            inputData: {
+              fileName,
+              country: this.country,
+              currency: this.currency,
+              fieldsToExtract: Array.from(fieldsToExtract),
+              retry: true, // Mark as retry
+            },
+          },
+        })
+      : await generateObjectForExtraction(prompt, receiptSchema, {
+          image: { data: base64Image, mimeType: imageMimeType },
+          temperature: AI_TEMPERATURES.STRUCTURED_OUTPUT,
+          loggingContext: {
+            userId: this.userId,
+            entityId: null, // Will be set after receipt is created
+            entityType: "receipt",
+            promptType: "extraction",
+            inputData: {
+              fileName,
+              country: this.country,
+              currency: this.currency,
+              fieldsToExtract: Array.from(fieldsToExtract),
+            },
+          },
+        });
 
     if (!result.success || !result.data) {
       throw new Error(result.error || "AI extraction failed");
