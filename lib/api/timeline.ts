@@ -134,7 +134,9 @@ export async function getTimelineItems({
     txConditions.push(sql`${bankStatementTransactions.category} = ${category}`);
   }
   if (categoryId) {
-    txConditions.push(sql`${bankStatementTransactions.categoryId} = ${categoryId}`);
+    txConditions.push(
+      sql`${bankStatementTransactions.categoryId} = ${categoryId}`
+    );
   }
   // Status for transactions is always 'completed' for now, so we simulate filtering
   if (status && status !== "completed") {
@@ -145,7 +147,9 @@ export async function getTimelineItems({
   } else if (businessFilter === "business") {
     txConditions.push(sql`${bankStatementTransactions.businessId} IS NOT NULL`);
   } else if (businessFilter && businessFilter !== "all") {
-    txConditions.push(sql`${bankStatementTransactions.businessId} = ${businessFilter}`);
+    txConditions.push(
+      sql`${bankStatementTransactions.businessId} = ${businessFilter}`
+    );
   }
   if (transactionType === "expense") {
     txConditions.push(sql`${bankStatementTransactions.amount} < 0`);
@@ -154,23 +158,33 @@ export async function getTimelineItems({
   }
   if (filters?.dateFrom) {
     txConditions.push(
-      sql`${bankStatementTransactions.transactionDate} >= ${filters.dateFrom.toISOString()}`
+      sql`${
+        bankStatementTransactions.transactionDate
+      } >= ${filters.dateFrom.toISOString()}`
     );
   }
   if (filters?.dateTo) {
     txConditions.push(
-      sql`${bankStatementTransactions.transactionDate} <= ${filters.dateTo.toISOString()}`
+      sql`${
+        bankStatementTransactions.transactionDate
+      } <= ${filters.dateTo.toISOString()}`
     );
   }
   if (filters?.amountMin !== undefined) {
-    txConditions.push(sql`ABS(${bankStatementTransactions.amount}) >= ${filters.amountMin}`);
+    txConditions.push(
+      sql`ABS(${bankStatementTransactions.amount}) >= ${filters.amountMin}`
+    );
   }
   if (filters?.amountMax !== undefined) {
-    txConditions.push(sql`ABS(${bankStatementTransactions.amount}) <= ${filters.amountMax}`);
+    txConditions.push(
+      sql`ABS(${bankStatementTransactions.amount}) <= ${filters.amountMax}`
+    );
   }
   if (merchant) {
     txConditions.push(
-      sql`LOWER(${bankStatementTransactions.merchantName}) = ${merchant.toLowerCase()}`
+      sql`LOWER(${
+        bankStatementTransactions.merchantName
+      }) = ${merchant.toLowerCase()}`
     );
   }
 
@@ -236,7 +250,7 @@ export async function getTimelineItems({
   }
 
   const result = await db.execute(query);
-  
+
   type RawTimelineRow = {
     id: string;
     type: string;
@@ -252,7 +266,7 @@ export async function getTimelineItems({
     currency: string | null;
     document_id: string | null;
   };
-  
+
   return result.rows.map((row) => {
     const typedRow = row as RawTimelineRow;
     return {
