@@ -455,3 +455,54 @@ export const userSettings = pgTable("user_settings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// ============================================
+// LLM OBSERVABILITY & COST TRACKING
+// ============================================
+
+export const llmLogs = pgTable(
+  "llm_logs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("user_id").notNull(),
+
+    // Entity linking (for accuracy tracking)
+    entityId: text("entity_id"), // Links to receipts.id, bankStatementTransactions.id, etc.
+    entityType: text("entity_type"), // 'receipt' | 'transaction' | 'batch' | 'document'
+
+    // Provider and model
+    provider: text("provider").notNull(), // 'openai' | 'gemini'
+    model: text("model").notNull(), // 'gpt-4o' | 'gemini-2.0-flash-exp'
+    promptType: text("prompt_type").notNull(), // 'extraction' | 'categorization' | 'mapping'
+
+    // Token usage
+    inputTokens: integer("input_tokens").notNull(),
+    outputTokens: integer("output_tokens").notNull(),
+    totalTokens: integer("total_tokens").notNull(),
+
+    // Cost tracking
+    costUsd: decimal("cost_usd", { precision: 10, scale: 6 }).notNull(), // $0.000001 precision
+
+    // Performance
+    durationMs: integer("duration_ms").notNull(),
+
+    // Data (for quality tracking)
+    inputJson: text("input_json"), // JSON: prompt inputs (for debugging)
+    outputJson: text("output_json"), // JSON: raw AI response (for accuracy comparison)
+
+    // Status
+    status: text("status").notNull(), // 'success' | 'failed'
+    errorMessage: text("error_message"), // If failed
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("llm_logs_user_id_idx").on(table.userId),
+    entityIdIdx: index("llm_logs_entity_id_idx").on(table.entityId),
+    providerIdx: index("llm_logs_provider_idx").on(table.provider),
+    promptTypeIdx: index("llm_logs_prompt_type_idx").on(table.promptType),
+    createdAtIdx: index("llm_logs_created_at_idx").on(table.createdAt),
+  })
+);

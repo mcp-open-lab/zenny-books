@@ -49,14 +49,12 @@ Instructions:
 1. Select the BEST matching category from the available list.
 2. If none of the categories fit well, suggest a new category name and set isNewCategory to true.
 3. Provide a confidence score (0.0 to 1.0).
-4. Briefly explain your reasoning.
 
 Return your response as JSON matching this schema:
 {
   "categoryName": "string",
   "confidence": number,
-  "isNewCategory": boolean,
-  "reasoning": "string (optional)"
+  "isNewCategory": boolean
 }`;
   }
 

@@ -125,6 +125,9 @@ export class OpenAIProvider implements LLMProviderInterface {
         data: validated,
         provider: "openai",
         tokensUsed: completion.usage?.total_tokens,
+        inputTokens: completion.usage?.prompt_tokens,
+        outputTokens: completion.usage?.completion_tokens,
+        model: this.model,
       };
     } catch (error) {
       const errorMessage =

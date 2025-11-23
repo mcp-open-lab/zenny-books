@@ -3,6 +3,7 @@ import { GeminiProvider } from "./providers/gemini";
 import { OpenAIProvider } from "./providers/openai";
 import type { LLMResponse, CompletionOptions } from "./types";
 import { devLogger } from "@/lib/dev-logger";
+import { logLLMInteraction } from "./logger";
 
 let geminiProvider: GeminiProvider | null = null;
 let openaiProvider: OpenAIProvider | null = null;
@@ -30,6 +31,7 @@ export async function generateObject<T>(
   schema: z.ZodSchema<T>,
   options?: CompletionOptions
 ): Promise<LLMResponse<T>> {
+  const startTime = Date.now();
   const openai = getOpenAIProvider();
 
   if (openai) {
@@ -40,9 +42,26 @@ export async function generateObject<T>(
     const result = await openai.generateObject(prompt, schema, options);
 
     if (result.success) {
+      const durationMs = Date.now() - startTime;
       devLogger.info("OpenAI request successful", {
         context: { tokensUsed: result.tokensUsed },
       });
+
+      // Log interaction if context provided
+      if (options?.loggingContext) {
+        await logLLMInteraction({
+          ...options.loggingContext,
+          provider: result.provider,
+          model: result.model || "unknown",
+          inputTokens: result.inputTokens || 0,
+          outputTokens: result.outputTokens || 0,
+          durationMs: result.durationMs || durationMs,
+          inputJson: options.loggingContext.inputData,
+          outputJson: result.data,
+          status: "success",
+        });
+      }
+
       return result;
     }
 
@@ -59,15 +78,46 @@ export async function generateObject<T>(
     });
 
     const result = await gemini.generateObject(prompt, schema, options);
+    const durationMs = Date.now() - startTime;
 
     if (result.success) {
       devLogger.info("Gemini request successful", {
         context: { tokensUsed: result.tokensUsed },
       });
+
+      // Log interaction if context provided
+      if (options?.loggingContext) {
+        await logLLMInteraction({
+          ...options.loggingContext,
+          provider: result.provider,
+          model: result.model || "unknown",
+          inputTokens: result.inputTokens || 0,
+          outputTokens: result.outputTokens || 0,
+          durationMs: result.durationMs || durationMs,
+          inputJson: options.loggingContext.inputData,
+          outputJson: result.data,
+          status: "success",
+        });
+      }
     } else {
       devLogger.error("Gemini request failed", {
         context: { error: result.error },
       });
+
+      // Log failure if context provided
+      if (options?.loggingContext) {
+        await logLLMInteraction({
+          ...options.loggingContext,
+          provider: result.provider,
+          model: result.model || "unknown",
+          inputTokens: result.inputTokens || 0,
+          outputTokens: result.outputTokens || 0,
+          durationMs: result.durationMs || durationMs,
+          inputJson: options.loggingContext.inputData,
+          status: "failed",
+          errorMessage: result.error,
+        });
+      }
     }
 
     return result;

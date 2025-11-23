@@ -9,7 +9,6 @@ const CategorizationSchema = z.object({
   categoryName: z.string(),
   confidence: z.number().min(0).max(1),
   isNewCategory: z.boolean(),
-  reasoning: z.string().nullable(),
 });
 
 export interface AICategorizeOptions {
@@ -52,17 +51,13 @@ export async function aiCategorizeTransaction(
       };
     }
 
-    const { categoryName, confidence, isNewCategory, reasoning } = result.data;
-    
-    // Handle nullable reasoning field
-    const reasoningText = reasoning ?? undefined;
+    const { categoryName, confidence, isNewCategory } = result.data;
 
     devLogger.info("AI categorization completed", {
       merchantName: transaction.merchantName,
       categoryName,
       confidence,
       isNewCategory,
-      reasoning: reasoningText,
     });
 
     // Find the category ID if it exists

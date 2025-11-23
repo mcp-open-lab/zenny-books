@@ -113,6 +113,9 @@ export class GeminiProvider implements LLMProviderInterface {
         data: validated,
         provider: "gemini",
         tokensUsed: response.usageMetadata?.totalTokenCount,
+        inputTokens: response.usageMetadata?.promptTokenCount,
+        outputTokens: response.usageMetadata?.candidatesTokenCount,
+        model: this.model,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
