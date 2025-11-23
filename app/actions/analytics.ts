@@ -10,7 +10,7 @@ import {
   businesses,
 } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { sql, eq, and, gte, lte, isNull, desc } from "drizzle-orm";
+import { sql, eq, and, gte, lte, isNull, desc, inArray } from "drizzle-orm";
 import { startOfMonth, subMonths, format } from "date-fns";
 
 export interface SpendingTrend {
@@ -273,7 +273,7 @@ async function getCategoryBreakdown(
   const categoryData = await db
     .select()
     .from(categories)
-    .where(sql`${categories.id} = ANY(${categoryIds})`);
+    .where(inArray(categories.id, categoryIds));
 
   const categoryNameMap = new Map(categoryData.map((c) => [c.id, c.name]));
 
@@ -385,7 +385,7 @@ async function getBusinessSplit(
       ? await db
           .select()
           .from(businesses)
-          .where(sql`${businesses.id} = ANY(${businessIds})`)
+          .where(inArray(businesses.id, businessIds))
       : [];
 
   const businessNameMap = new Map(businessData.map((b) => [b.id, b.name]));
@@ -526,7 +526,7 @@ async function getTopMerchants(
       ? await db
           .select()
           .from(categories)
-          .where(sql`${categories.id} = ANY(${categoryIds})`)
+          .where(inArray(categories.id, categoryIds))
       : [];
 
   const categoryNameMap = new Map(categoryData.map((c) => [c.id, c.name]));
