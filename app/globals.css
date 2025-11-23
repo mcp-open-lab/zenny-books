@@ -37,6 +37,17 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Layout tokens - following shadcn CSS variable pattern */
+    --container-narrow: 42rem; /* 672px - max-w-2xl */
+    --container-standard: 56rem; /* 896px - max-w-4xl */
+    --container-wide: 72rem; /* 1152px - max-w-6xl */
+    
+    /* Spacing tokens - Tailwind's 0.25rem (4px) scale */
+    --spacing-page: 1.5rem; /* 24px - p-6 */
+    --spacing-section: 2rem; /* 32px - space-y-8 */
+    --spacing-tight: 1.5rem; /* 24px - space-y-6 */
+    --spacing-compact: 1rem; /* 16px - space-y-4 */
   }
 
   .dark {
@@ -72,6 +83,17 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Layout tokens - same values for dark mode */
+    --container-narrow: 42rem;
+    --container-standard: 56rem;
+    --container-wide: 72rem;
+    
+    /* Spacing tokens */
+    --spacing-page: 1.5rem;
+    --spacing-section: 2rem;
+    --spacing-tight: 1.5rem;
+    --spacing-compact: 1rem;
   }
 }
 

@@ -151,8 +151,8 @@ export function FileUploadZone({
           Drag and drop files here, or click to select
         </p>
         <p className="text-xs text-muted-foreground">
-          Supports images and PDFs (max {Math.round(maxSizeBytes / 1024 / 1024)}
-          MB per file, up to {maxFiles} files)
+          Supports images (JPG, PNG, HEIC, WebP), PDFs, and data files (CSV, Excel) - max {Math.round(maxSizeBytes / 1024 / 1024)}
+          MB per file, up to {maxFiles} files
         </p>
       </div>
 

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { getMerchantTransactions } from "@/app/actions/financial-categories";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/layouts/page-container";
 import { MerchantDetailView } from "@/components/merchants/merchant-detail-view";
 
 export default async function MerchantDetailPage({
@@ -24,7 +25,7 @@ export default async function MerchantDetailPage({
   }
 
   return (
-    <div className="flex-1 max-w-6xl mx-auto w-full p-6 space-y-8">
+    <PageContainer size="wide">
       <PageHeader
         title={`Merchant: ${decodedMerchantName}`}
         useHistoryBack
@@ -33,7 +34,7 @@ export default async function MerchantDetailPage({
         merchantName={decodedMerchantName}
         transactions={transactions}
       />
-    </div>
+    </PageContainer>
   );
 }
 

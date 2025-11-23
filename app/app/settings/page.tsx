@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getUserSettings } from "@/app/actions/user-settings";
 import { SettingsFormV2 } from "@/components/settings-form-v2";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/layouts/page-container";
 
 export default async function SettingsPage() {
   const { userId } = await auth();
@@ -16,9 +17,9 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
+    <PageContainer size="standard">
       <PageHeader title="Settings" />
       <SettingsFormV2 initialSettings={settings} />
-    </div>
+    </PageContainer>
   );
 }

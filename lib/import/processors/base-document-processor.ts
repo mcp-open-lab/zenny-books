@@ -49,6 +49,7 @@ export interface ProcessedDocument {
   // Classification
   category?: string | null;
   categoryId?: string | null;
+  businessId?: string | null;
   description?: string | null;
 
   // Metadata
@@ -150,9 +151,13 @@ export abstract class BaseDocumentProcessor {
     merchantName: string | null,
     description: string | null,
     amount: string
-  ): Promise<{ categoryId: string | null; categoryName: string | null }> {
+  ): Promise<{
+    categoryId: string | null;
+    categoryName: string | null;
+    businessId: string | null;
+  }> {
     if (!merchantName && !description) {
-      return { categoryId: null, categoryName: null };
+      return { categoryId: null, categoryName: null, businessId: null };
     }
 
     try {
@@ -165,10 +170,11 @@ export abstract class BaseDocumentProcessor {
       return {
         categoryId: result.categoryId || null,
         categoryName: result.categoryName || result.suggestedCategory || null,
+        businessId: result.businessId || null,
       };
     } catch (error) {
       // Categorization is optional - don't fail the whole process
-      return { categoryId: null, categoryName: null };
+      return { categoryId: null, categoryName: null, businessId: null };
     }
   }
 }

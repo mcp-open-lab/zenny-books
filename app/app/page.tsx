@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Timeline } from "@/components/timeline";
 import { getUserSettings } from "@/app/actions/user-settings";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/layouts/page-container";
 import { getTimelineItems } from "@/lib/api/timeline";
 import { getUserCategories } from "@/app/actions/financial-categories";
 import { getTimelineMerchants, getTimelineBusinesses } from "@/app/actions/timeline";
@@ -34,7 +35,7 @@ export default async function Dashboard() {
   ]);
 
   return (
-    <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
+    <PageContainer size="standard">
       <PageHeader title="Timeline" />
 
       <Timeline
@@ -54,6 +55,6 @@ export default async function Dashboard() {
         merchants={merchants}
         businesses={businesses}
       />
-    </div>
+    </PageContainer>
   );
 }

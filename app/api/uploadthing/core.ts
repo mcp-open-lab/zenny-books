@@ -1,12 +1,20 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { auth } from "@clerk/nextjs/server";
 import { devLogger } from "@/lib/dev-logger";
+import {
+  MAX_FILE_SIZE,
+  MAX_FILE_COUNT_SINGLE,
+  MAX_FILE_COUNT_BATCH,
+} from "@/lib/constants";
 
 const f = createUploadthing();
 
 export const ourFileRouter = {
-  // Allow up to 16MB to give room for higher-res images, while we still compress on mobile
-  receiptUploader: f({ image: { maxFileSize: "16MB", maxFileCount: 1 } })
+  // Single receipt uploader - supports images, PDFs, and HEIC/HEIF
+  receiptUploader: f({
+    image: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_SINGLE },
+    pdf: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_SINGLE },
+  })
     .middleware(async () => {
       const { userId } = await auth();
       if (!userId) throw new Error("Unauthorized");
@@ -24,12 +32,12 @@ export const ourFileRouter = {
       // Return immediately - processing happens via client-triggered action
       return { uploadedBy: metadata.userId, url: file.url };
     }),
-  // Batch uploader for multiple files (images, PDFs, and spreadsheets)
+  // Batch uploader for multiple files (images, PDFs, HEIC/HEIF, and spreadsheets)
   batchUploader: f({
-    image: { maxFileSize: "16MB", maxFileCount: 50 },
-    pdf: { maxFileSize: "16MB", maxFileCount: 50 },
-    text: { maxFileSize: "16MB", maxFileCount: 50 }, // CSV files
-    blob: { maxFileSize: "16MB", maxFileCount: 50 }, // XLSX/XLS files
+    image: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_BATCH },
+    pdf: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_BATCH },
+    text: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_BATCH }, // CSV files
+    blob: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_BATCH }, // XLSX/XLS files
   })
     .middleware(async () => {
       const { userId } = await auth();

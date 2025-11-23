@@ -15,34 +15,7 @@ import { createSafeAction } from "@/lib/safe-action";
 import { devLogger } from "@/lib/dev-logger";
 import { ReceiptProcessor } from "@/lib/import/processors/receipt-processor";
 import { calculateFileHash } from "@/lib/utils/file-hash";
-
-function getMimeType(url: string): string {
-  const extension = url.split(".").pop()?.toLowerCase();
-  const mimeTypes: Record<string, string> = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    webp: "image/webp",
-    gif: "image/gif",
-  };
-  return mimeTypes[extension || ""] || "image/jpeg";
-}
-
-function getFileFormat(url: string): string {
-  const extension = url.split(".").pop()?.toLowerCase() || "";
-  const formatMap: Record<string, string> = {
-    jpg: "jpg",
-    jpeg: "jpg",
-    png: "png",
-    webp: "webp",
-    gif: "gif",
-    pdf: "pdf",
-    csv: "csv",
-    xlsx: "xlsx",
-    xls: "xls",
-  };
-  return formatMap[extension] || "jpg";
-}
+import { getMimeTypeFromUrl, getFileFormatFromUrl } from "@/lib/constants";
 
 function getFileName(url: string): string | null {
   try {
@@ -111,8 +84,8 @@ async function scanReceiptHandler(
     const extractedData = await processor.processDocument(imageUrl, fileName);
 
     // Only create document record AFTER successful extraction
-    const fileFormat = getFileFormat(imageUrl);
-    const mimeType = getMimeType(imageUrl);
+    const fileFormat = getFileFormatFromUrl(imageUrl);
+    const mimeType = getMimeTypeFromUrl(imageUrl);
 
     const [document] = await db
       .insert(documents)
@@ -178,7 +151,7 @@ async function scanReceiptHandler(
         ? String(defaultValues.isBusinessExpense)
         : null;
 
-    // Save to database
+    // Save to database with categorization results (including businessId)
     await db.insert(receipts).values({
       documentId: document.id,
       userId: finalUserId,
@@ -195,6 +168,8 @@ async function scanReceiptHandler(
       tipAmount: extractedData.tipAmount?.toString() || null,
       discountAmount: null, // Not currently extracted
       category: extractedData.category,
+      categoryId: extractedData.categoryId,
+      businessId: extractedData.businessId || null,
       description: extractedData.description,
       paymentMethod,
       businessPurpose,

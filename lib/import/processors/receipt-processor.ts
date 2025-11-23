@@ -108,6 +108,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     // Auto-categorize if merchant name is present
     let categoryId: string | null = null;
     let categoryName: string | null = extractedData.category || null;
+    let businessId: string | null = null;
 
     if (extractedData.merchantName) {
       const catResult = await this.categorizeDocument(
@@ -116,6 +117,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
         extractedData.totalAmount?.toString() || "0"
       );
       categoryId = catResult.categoryId;
+      businessId = catResult.businessId;
       if (!categoryName) {
         categoryName = catResult.categoryName;
       }
@@ -161,6 +163,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
       paymentMethod: extractedData.paymentMethod || null,
       category: categoryName,
       categoryId,
+      businessId,
       description: null, // User-driven field, not extracted by LLM
       currency: this.currency,
       country: this.country,

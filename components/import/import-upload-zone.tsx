@@ -26,6 +26,7 @@ import { batchImport } from "@/app/actions/batch-import";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { CurrencySelect } from "@/components/ui/currency-select";
+import { ALLOWED_MIME_TYPES } from "@/lib/constants";
 
 type ImportType = "receipts" | "bank_statements" | "mixed";
 type SourceFormat = "pdf" | "csv" | "xlsx" | "images";
@@ -39,7 +40,7 @@ function validateFilesForImportType(
   };
 
   const spreadsheetExtensions = ["csv", "xlsx", "xls"];
-  const imageExtensions = ["jpg", "jpeg", "png", "webp", "gif"];
+  const imageExtensions = ["jpg", "jpeg", "png", "webp", "heic", "heif", "gif"];
   const pdfExtension = "pdf";
 
   for (const file of files) {
@@ -48,7 +49,7 @@ function validateFilesForImportType(
     if (importType === "receipts") {
       // Receipts: only images and PDFs
       if (!imageExtensions.includes(ext) && ext !== pdfExtension) {
-        return `File "${file.name}" is not supported for Receipts. Please use images (JPG, PNG, etc.) or PDF files. For spreadsheets, select "Bank Statements" import type.`;
+        return `File "${file.name}" is not supported for Receipts. Please use images (JPG, PNG, HEIC, etc.) or PDF files. For spreadsheets, select "Bank Statements" import type.`;
       }
     } else if (importType === "bank_statements") {
       // Bank statements: only spreadsheets (CSV, XLSX, XLS)
@@ -176,7 +177,8 @@ export function ImportUploadZone({
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel",
       ];
-    return ["image/*", "application/pdf"]; // Default: images and PDFs
+    // Default: all supported types
+    return Object.keys(ALLOWED_MIME_TYPES);
   };
 
   return (

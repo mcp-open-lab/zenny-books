@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { scanReceipt } from "@/app/actions/scan-receipt";
+import { future_genUploader } from "uploadthing/client-future";
+import type { OurFileRouter } from "@/app/api/uploadthing/core";
 
 declare global {
   interface WindowEventMap {
@@ -15,33 +20,6 @@ declare global {
     }>;
   }
 }
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { scanReceipt } from "@/app/actions/scan-receipt";
-import {
-  Camera,
-  Upload,
-  X,
-  Plus,
-  ArrowUpToLine,
-  Brain,
-  Maximize2,
-  Minimize2,
-  Smartphone,
-} from "lucide-react";
-import { future_genUploader } from "uploadthing/client-future";
-import type { OurFileRouter } from "@/app/api/uploadthing/core";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Get API URL from window location (works in browser)
 const getApiUrl = () => {
@@ -105,7 +83,7 @@ async function compressImageFile(
   }
 }
 
-export function QuickActions() {
+export function useQuickActions() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -160,12 +138,10 @@ export function QuickActions() {
 
   // Check fullscreen support and state
   useEffect(() => {
-    // Detect iOS/Safari - Fullscreen API is not supported
     const isIOS =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-    // Check if Fullscreen API is available
     const hasFullscreenSupport =
       !isIOS &&
       (document.documentElement.requestFullscreen ||
@@ -187,7 +163,6 @@ export function QuickActions() {
         );
       };
 
-      // Listen for fullscreen changes (with vendor prefixes)
       document.addEventListener("fullscreenchange", checkFullscreen);
       document.addEventListener("webkitfullscreenchange", checkFullscreen);
       document.addEventListener("mozfullscreenchange", checkFullscreen);
@@ -235,7 +210,6 @@ export function QuickActions() {
         doc.msFullscreenElement;
 
       if (!isCurrentlyFullscreen) {
-        // Try different vendor-prefixed methods
         if (doc.requestFullscreen) {
           await doc.requestFullscreen();
         } else if (doc.webkitRequestFullscreen) {
@@ -248,7 +222,6 @@ export function QuickActions() {
         setIsFullscreen(true);
         toast.success("Entered fullscreen mode");
       } else {
-        // Exit fullscreen
         if (document.exitFullscreen) {
           await document.exitFullscreen();
         } else if ((document as any).webkitExitFullscreen) {
@@ -274,7 +247,6 @@ export function QuickActions() {
   ) => {
     if (!files || files.length === 0) return;
 
-    // If doc type not provided, show selector
     if (!docType) {
       setPendingFiles(files);
       setShowDocTypeSelector(true);
@@ -353,7 +325,6 @@ export function QuickActions() {
 
   const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelect(e.target.files);
-    // Reset input so same file can be selected again
     if (cameraInputRef.current) {
       cameraInputRef.current.value = "";
     }
@@ -361,213 +332,60 @@ export function QuickActions() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelect(e.target.files);
-    // Reset input so same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  return (
-    <>
-      {/* Document Type Selector Dialog */}
-      <Dialog open={showDocTypeSelector} onOpenChange={setShowDocTypeSelector}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Document Type</DialogTitle>
-            <DialogDescription>
-              What type of document are you uploading?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <RadioGroup
-              value={selectedDocType}
-              onValueChange={(value) =>
-                setSelectedDocType(value as "receipt" | "bank_statement")
-              }
-            >
-              <div className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-accent transition-colors">
-                <RadioGroupItem value="receipt" id="receipt" />
-                <Label
-                  htmlFor="receipt"
-                  className="flex items-center gap-3 cursor-pointer flex-1"
-                >
-                  <Receipt className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-medium">Receipt</p>
-                    <p className="text-sm text-muted-foreground">
-                      Expense receipts with images
-                    </p>
-                  </div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-accent transition-colors">
-                <RadioGroupItem value="bank_statement" id="bank_statement" />
-                <Label
-                  htmlFor="bank_statement"
-                  className="flex items-center gap-3 cursor-pointer flex-1"
-                >
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-medium">Bank Statement</p>
-                    <p className="text-sm text-muted-foreground">
-                      CSV or spreadsheet files
-                    </p>
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDocTypeSelector(false);
-                setPendingFiles(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleDocTypeConfirm}>Continue</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+  const handleAddToHome = async () => {
+    setIsOpen(false);
+    if (platform === "android" && deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === "accepted") {
+          setDeferredPrompt(null);
+          setIsStandalone(true);
+        }
+      } catch (error) {
+        console.error("Error showing install prompt:", error);
+      }
+    } else if (platform === "ios") {
+      setShowInstallDialog(true);
+    }
+  };
 
-      {/* Hidden file inputs */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleCameraCapture}
-        disabled={isUploading}
-      />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.csv,.xlsx,.xls"
-        className="hidden"
-        onChange={handleFileChange}
-        disabled={isUploading}
-      />
-
-      {/* Quick Actions Menu - Hidden on desktop (lg screens and above) */}
-      <div className="fixed bottom-20 right-4 z-50 quick-actions-menu md:hidden">
-        {/* Quick Actions Fan-out */}
-        {isOpen && (
-          <div className="absolute bottom-16 right-0 flex flex-col gap-2 mb-3 w-44">
-            {/* Camera */}
-            <Button
-              onClick={() => {
-                setIsOpen(false);
-                handleCameraClick();
-              }}
-              disabled={isUploading}
-              className="w-full justify-start gap-2 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Camera className="h-4 w-4" />
-              <span>Camera</span>
-              <Brain className="h-3.5 w-3.5 ml-auto" />
-            </Button>
-
-            {/* File Upload */}
-            <Button
-              onClick={() => {
-                setIsOpen(false);
-                handleFileUploadClick();
-              }}
-              disabled={isUploading}
-              className="w-full justify-start gap-2 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Upload className="h-4 w-4" />
-              <span>Upload</span>
-              <Brain className="h-3.5 w-3.5 ml-auto" />
-            </Button>
-
-            <div className="h-px bg-border my-1" />
-
-            {/* Export */}
-            <Button
-              onClick={() => {
-                setIsOpen(false);
-                router.push("/app/export");
-              }}
-              variant="secondary"
-              className="w-full justify-start gap-2 shadow-md"
-            >
-              <ArrowUpToLine className="h-4 w-4" />
-              <span>Export</span>
-            </Button>
-
-            {/* Fullscreen */}
-            {isFullscreenSupported && (
-              <Button
-                onClick={() => {
-                  setIsOpen(false);
-                  toggleFullscreen();
-                }}
-                variant="secondary"
-                className="w-full justify-start gap-2 shadow-md"
-              >
-                {isFullscreen ? (
-                  <>
-                    <Minimize2 className="h-4 w-4" />
-                    <span>Exit Fullscreen</span>
-                  </>
-                ) : (
-                  <>
-                    <Maximize2 className="h-4 w-4" />
-                    <span>Fullscreen</span>
-                  </>
-                )}
-              </Button>
-            )}
-
-            {/* Add to Home Screen */}
-            {!isStandalone &&
-              ((platform === "android" && deferredPrompt) ||
-                platform === "ios") && (
-                <Button
-                  onClick={async () => {
-                    setIsOpen(false);
-                    if (platform === "android" && deferredPrompt) {
-                      try {
-                        await deferredPrompt.prompt();
-                        const choice = await deferredPrompt.userChoice;
-                        if (choice.outcome === "accepted") {
-                          setDeferredPrompt(null);
-                          setIsStandalone(true);
-                        }
-                      } catch (error) {
-                        console.error("Error showing install prompt:", error);
-                      }
-                    } else if (platform === "ios") {
-                      setShowInstallDialog(true);
-                    }
-                  }}
-                  variant="secondary"
-                  className="w-full justify-start gap-2 shadow-md"
-                >
-                  <Smartphone className="h-4 w-4" />
-                  <span>Add to Home</span>
-                </Button>
-              )}
-          </div>
-        )}
-
-        {/* Main FAB Button - Smaller */}
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isUploading}
-          className={`rounded-full w-14 h-14 p-0 shadow-xl transition-all duration-300 ${
-            isOpen
-              ? "bg-destructive hover:bg-destructive/90 rotate-45"
-              : "bg-primary hover:bg-primary/90"
-          } text-primary-foreground`}
-        >
-          {isOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
-        </Button>
-      </div>
-    </>
-  );
+  return {
+    // State
+    isOpen,
+    setIsOpen,
+    isUploading,
+    isFullscreen,
+    isFullscreenSupported,
+    showDocTypeSelector,
+    setShowDocTypeSelector,
+    pendingFiles,
+    setPendingFiles,
+    selectedDocType,
+    setSelectedDocType,
+    deferredPrompt,
+    showInstallDialog,
+    setShowInstallDialog,
+    isStandalone,
+    platform,
+    // Refs
+    fileInputRef,
+    cameraInputRef,
+    // Handlers
+    toggleFullscreen,
+    handleFileSelect,
+    handleDocTypeConfirm,
+    handleCameraClick,
+    handleFileUploadClick,
+    handleCameraCapture,
+    handleFileChange,
+    handleAddToHome,
+    router,
+  };
 }
+

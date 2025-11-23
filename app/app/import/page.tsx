@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/layouts/page-container";
 import { ImportTabs } from "@/components/import/import-tabs";
 import { listBatches } from "@/lib/import/batch-tracker";
 import { getUserSettings } from "@/app/actions/user-settings";
@@ -22,7 +23,7 @@ export default async function ImportPage(props: {
   const defaultCurrency = userSettings?.currency || "USD";
 
   return (
-    <div className="flex-1 max-w-6xl mx-auto w-full p-6 space-y-6">
+    <PageContainer size="tight">
       <PageHeader title="Import Documents" />
       <div className="text-sm text-muted-foreground">
         Upload multiple receipts, bank statements, invoices, or other financial
@@ -36,6 +37,6 @@ export default async function ImportPage(props: {
         initialTab={initialTab}
         defaultCurrency={defaultCurrency}
       />
-    </div>
+    </PageContainer>
   );
 }

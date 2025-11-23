@@ -34,14 +34,14 @@ export function PageHeader({ title, backHref, useHistoryBack }: PageHeaderProps)
               <ArrowLeft className="h-4 w-4" />
             </Button>
           ) : (
-            <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild>
               <Link href={backHref!}>
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
           )}
         </>
-      )}
+        )}
       <h1 className="text-2xl font-bold">{title}</h1>
     </div>
   );

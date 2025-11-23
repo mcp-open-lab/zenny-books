@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/layouts/page-container";
 
 export default async function InvoicesPage() {
   const { userId } = await auth();
@@ -9,11 +10,11 @@ export default async function InvoicesPage() {
   }
 
   return (
-    <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-4">
+    <PageContainer size="standard">
       <PageHeader title="Invoices" />
       <p className="text-muted-foreground">
         Invoice management is coming soon.
       </p>
-    </div>
+    </PageContainer>
   );
 }

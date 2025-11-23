@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { Receipt } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function MobileHeader() {
   return (
@@ -14,15 +15,18 @@ export function MobileHeader() {
           <span className="font-bold text-sm">Turbo Invoice</span>
         </Link>
 
-        {/* User Button - Right */}
-        <UserButton
-          afterSignOutUrl="/"
-          appearance={{
-            elements: {
-              avatarBox: "h-8 w-8",
-            },
-          }}
-        />
+        {/* Theme Toggle and User Button - Right */}
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <UserButton
+            afterSignOutUrl="/"
+            appearance={{
+              elements: {
+                avatarBox: "h-8 w-8",
+              },
+            }}
+          />
+        </div>
       </div>
     </header>
   );

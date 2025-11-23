@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Clock,
   ArrowDownToLine,
@@ -97,7 +98,8 @@ export function DesktopNav() {
         </div>
 
         {/* User Menu - Only visible on desktop (md+) */}
-        <div className="flex items-center gap-4 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <ThemeToggle />
           <UserButton
             afterSignOutUrl="/"
             appearance={{

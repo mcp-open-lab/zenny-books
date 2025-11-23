@@ -4,6 +4,7 @@ import { eq, and, or } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { PageContainer } from "@/components/layouts/page-container";
 import { ReceiptDetailView } from "@/components/receipts/receipt-detail-view";
 import { getUserSettings } from "@/app/actions/user-settings";
 import { getUserCategories } from "@/app/actions/financial-categories";
@@ -36,13 +37,13 @@ export default async function ReceiptDetailPage({
   ]);
 
   return (
-    <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
+    <PageContainer size="standard">
       <PageHeader title="Receipt Details" useHistoryBack />
       <ReceiptDetailView
         receipt={receipt[0]}
         categories={categories}
         userSettings={userSettings}
       />
-    </div>
+    </PageContainer>
   );
 }

@@ -61,6 +61,11 @@ const config: Config = {
   				ring: 'hsl(var(--sidebar-ring))'
   			}
   		},
+  		maxWidth: {
+  			'container-narrow': '42rem', /* 672px - aligned with max-w-2xl */
+  			'container-standard': '56rem', /* 896px - aligned with max-w-4xl */
+  			'container-wide': '72rem', /* 1152px - aligned with max-w-6xl */
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
