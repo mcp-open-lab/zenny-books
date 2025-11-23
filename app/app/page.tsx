@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Timeline } from "@/components/timeline";
-import { AddToHomeScreenButton } from "@/components/add-to-home";
 import { getUserSettings } from "@/app/actions/user-settings";
 import { PageHeader } from "@/components/page-header";
 import { getTimelineItems } from "@/lib/api/timeline";
@@ -37,10 +36,6 @@ export default async function Dashboard() {
   return (
     <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
       <PageHeader title="Timeline" />
-
-      <div className="flex mb-4">
-        <AddToHomeScreenButton />
-      </div>
 
       <Timeline
         initialItems={initialItems}

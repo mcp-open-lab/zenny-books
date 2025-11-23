@@ -1,6 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent;
+  }
+
+  interface BeforeInstallPromptEvent extends Event {
+    prompt: () => Promise<void>;
+    userChoice: Promise<{
+      outcome: "accepted" | "dismissed";
+      platform: string;
+    }>;
+  }
+}
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -9,18 +23,12 @@ import {
   Camera,
   Upload,
   X,
-  Grid3X3,
-  ArrowDownToLine,
+  Plus,
   ArrowUpToLine,
-  Wallet,
-  FileText,
-  Clock,
-  Settings,
   Brain,
   Maximize2,
   Minimize2,
-  Receipt,
-  CreditCard,
+  Smartphone,
 } from "lucide-react";
 import { future_genUploader } from "uploadthing/client-future";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
@@ -107,53 +115,48 @@ export function QuickActions() {
   const [selectedDocType, setSelectedDocType] = useState<
     "receipt" | "bank_statement"
   >("receipt");
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [platform, setPlatform] = useState<"ios" | "android" | null>(null);
   const router = useRouter();
-  const navItems = [
-    {
-      label: "Timeline",
-      href: "/app",
-      icon: Clock,
-      showAiIcon: false,
-    },
 
-    {
-      label: "Budgets",
-      href: "/app/budgets",
-      icon: Wallet,
-      showAiIcon: true,
-    },
-    {
-      label: "Invoices",
-      href: "/app/invoices",
-      icon: FileText,
-      showAiIcon: true,
-    },
-    {
-      label: "Import",
-      href: "/app/import",
-      icon: ArrowDownToLine,
-      showAiIcon: false,
-    },
-    {
-      label: "Export",
-      href: "/app/export",
-      icon: ArrowUpToLine,
-      showAiIcon: false,
-    },
-    {
-      label: "Settings",
-      href: "/app/settings",
-      icon: Settings,
-      showAiIcon: false,
-    },
-  ];
-
-  const handleNavigate = (href: string) => {
-    setIsOpen(false);
-    router.push(href);
-  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Add to Home Screen logic
+  useEffect(() => {
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    const isAndroid = /android/i.test(window.navigator.userAgent);
+    setPlatform(isIos ? "ios" : isAndroid ? "android" : null);
+
+    const checkStandalone = () => {
+      const standalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as any).standalone === true;
+      setIsStandalone(standalone);
+    };
+    checkStandalone();
+
+    const handler = (e: BeforeInstallPromptEvent) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+
+    const installedHandler = () => {
+      setIsStandalone(true);
+      setDeferredPrompt(null);
+    };
+    window.addEventListener("appinstalled", installedHandler);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
+  }, []);
 
   // Check fullscreen support and state
   useEffect(() => {
@@ -450,90 +453,119 @@ export function QuickActions() {
 
       {/* Quick Actions Menu - Hidden on desktop (lg screens and above) */}
       <div className="fixed bottom-20 right-4 z-50 quick-actions-menu md:hidden">
-        {/* Fan-out buttons */}
+        {/* Quick Actions Fan-out */}
         {isOpen && (
-          <div className="absolute bottom-20 right-0 flex flex-col gap-2 mb-3 w-48">
-            {navItems.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.href}
-                  variant="secondary"
-                  className="w-full justify-between gap-2 shadow-md"
-                  onClick={() => handleNavigate(item.href)}
-                  style={{ animationDelay: `${index * 40}ms` }}
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </div>
-                  {item.showAiIcon && (
-                    <Brain className="h-3.5 w-3.5 text-primary" />
-                  )}
-                </Button>
-              );
-            })}
+          <div className="absolute bottom-16 right-0 flex flex-col gap-2 mb-3 w-44">
+            {/* Camera */}
+            <Button
+              onClick={() => {
+                setIsOpen(false);
+                handleCameraClick();
+              }}
+              disabled={isUploading}
+              className="w-full justify-start gap-2 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Camera className="h-4 w-4" />
+              <span>Camera</span>
+              <Brain className="h-3.5 w-3.5 ml-auto" />
+            </Button>
 
+            {/* File Upload */}
+            <Button
+              onClick={() => {
+                setIsOpen(false);
+                handleFileUploadClick();
+              }}
+              disabled={isUploading}
+              className="w-full justify-start gap-2 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Upload className="h-4 w-4" />
+              <span>Upload</span>
+              <Brain className="h-3.5 w-3.5 ml-auto" />
+            </Button>
+
+            <div className="h-px bg-border my-1" />
+
+            {/* Export */}
+            <Button
+              onClick={() => {
+                setIsOpen(false);
+                router.push("/app/export");
+              }}
+              variant="secondary"
+              className="w-full justify-start gap-2 shadow-md"
+            >
+              <ArrowUpToLine className="h-4 w-4" />
+              <span>Export</span>
+            </Button>
+
+            {/* Fullscreen */}
             {isFullscreenSupported && (
-              <>
-                <div className="h-px bg-border my-2" />
-
-                <Button
-                  onClick={toggleFullscreen}
-                  className="w-full justify-between gap-2 shadow-md"
-                  variant="secondary"
-                >
-                  <div className="flex items-center gap-2">
-                    {isFullscreen ? (
-                      <Minimize2 className="h-4 w-4" />
-                    ) : (
-                      <Maximize2 className="h-4 w-4" />
-                    )}
-                    {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                  </div>
-                </Button>
-              </>
+              <Button
+                onClick={() => {
+                  setIsOpen(false);
+                  toggleFullscreen();
+                }}
+                variant="secondary"
+                className="w-full justify-start gap-2 shadow-md"
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="h-4 w-4" />
+                    <span>Exit Fullscreen</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="h-4 w-4" />
+                    <span>Fullscreen</span>
+                  </>
+                )}
+              </Button>
             )}
 
-            <div className="h-px bg-border my-2" />
-
-            <Button
-              onClick={handleFileUploadClick}
-              disabled={isUploading}
-              className="w-full justify-between gap-2 rounded-md shadow-md bg-primary text-primary-foreground"
-            >
-              <div className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                File Upload
-              </div>
-              <Brain className="h-3.5 w-3.5" />
-            </Button>
-
-            <Button
-              onClick={handleCameraClick}
-              disabled={isUploading}
-              className="w-full justify-between gap-2 rounded-md shadow-md bg-primary text-primary-foreground"
-            >
-              <div className="flex items-center gap-2">
-                <Camera className="h-4 w-4" />
-                Camera
-              </div>
-              <Brain className="h-3.5 w-3.5" />
-            </Button>
+            {/* Add to Home Screen */}
+            {!isStandalone &&
+              ((platform === "android" && deferredPrompt) ||
+                platform === "ios") && (
+                <Button
+                  onClick={async () => {
+                    setIsOpen(false);
+                    if (platform === "android" && deferredPrompt) {
+                      try {
+                        await deferredPrompt.prompt();
+                        const choice = await deferredPrompt.userChoice;
+                        if (choice.outcome === "accepted") {
+                          setDeferredPrompt(null);
+                          setIsStandalone(true);
+                        }
+                      } catch (error) {
+                        console.error("Error showing install prompt:", error);
+                      }
+                    } else if (platform === "ios") {
+                      setShowInstallDialog(true);
+                    }
+                  }}
+                  variant="secondary"
+                  className="w-full justify-start gap-2 shadow-md"
+                >
+                  <Smartphone className="h-4 w-4" />
+                  <span>Add to Home</span>
+                </Button>
+              )}
           </div>
         )}
 
-        {/* Main FAB Button */}
+        {/* Main FAB Button - Smaller */}
         <Button
           onClick={() => setIsOpen(!isOpen)}
           disabled={isUploading}
-          className={`rounded-full w-16 h-16 p-0 shadow-xl transition-all duration-300 ${
+          className={`rounded-full w-14 h-14 p-0 shadow-xl transition-all duration-300 ${
             isOpen
               ? "bg-destructive hover:bg-destructive/90 rotate-45"
               : "bg-primary hover:bg-primary/90"
           } text-primary-foreground`}
         >
-          {isOpen ? <X className="w-8 h-8" /> : <Grid3X3 className="w-8 h-8" />}
+          {isOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
         </Button>
       </div>
     </>
