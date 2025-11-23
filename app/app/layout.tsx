@@ -16,7 +16,9 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen bg-background">
       <DesktopNav />
-      {children}
+      <div className="lg:pt-16">
+        {children}
+      </div>
       <QuickActions />
     </div>
   );

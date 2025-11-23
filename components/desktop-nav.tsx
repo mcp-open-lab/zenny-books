@@ -58,7 +58,7 @@ export function DesktopNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden lg:flex sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="w-full flex h-16 items-center justify-between px-6 max-w-[1800px] mx-auto">
         {/* Logo/Brand */}
         <Link href="/app" className="flex items-center space-x-2 flex-shrink-0">
@@ -96,7 +96,7 @@ export function DesktopNav() {
           })}
         </div>
 
-        {/* User Menu */}
+        {/* User Menu - Only visible on desktop (lg+) */}
         <div className="flex items-center gap-4 flex-shrink-0">
           <UserButton
             afterSignOutUrl="/"
