@@ -1,12 +1,19 @@
 /**
- * Migration script to update categories and prepare for business table
- *
- * This script:
- * 1. Updates all categories with usageScope='both' to 'business'
- * 2. Creates a default business for users with existing business transactions
- * 3. Links existing business transactions to the default business
- *
- * Run with: npx tsx scripts/migrate-business-categories.ts
+ * Migration: Business Table Setup
+ * 
+ * This migration sets up the businesses table and links existing business transactions.
+ * 
+ * Note: Categories keep usageScope='both' - they can be used for both personal 
+ * and business transactions. The businessId field on transactions determines context:
+ * - businessId=NULL → personal transaction
+ * - businessId=set → business transaction
+ * 
+ * What it does:
+ * 1. Finds users who have business transactions (isBusinessExpense='true')
+ * 2. Creates a default "My Business" entry for those users
+ * 3. Links existing business receipts to those businesses
+ * 
+ * Run with: node --env-file=.env.local -r esbuild-register scripts/migrate-business-categories.ts
  */
 
 import { db } from "../lib/db";
@@ -20,25 +27,11 @@ import { eq, and, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
 async function migrate() {
-  console.log("Starting business categories migration...\n");
+  console.log("Starting business table setup migration...\n");
 
   try {
-    // Step 1: Update categories with usageScope='both' to 'business'
-    console.log(
-      "Step 1: Updating categories with usageScope='both' to 'business'..."
-    );
-    const updateResult = await db
-      .update(categories)
-      .set({ usageScope: "business", updatedAt: new Date() })
-      .where(eq(categories.usageScope, "both"))
-      .returning();
-
-    console.log(
-      `✓ Updated ${updateResult.length} categories from 'both' to 'business'\n`
-    );
-
-    // Step 2: Find users with business transactions (isBusinessExpense='true')
-    console.log("Step 2: Finding users with business transactions...");
+    // Step 1: Find users with business transactions (isBusinessExpense='true')
+    console.log("Step 1: Finding users with business transactions...");
 
     // Get unique user IDs from receipts with business expenses
     const businessReceiptUsers = await db
@@ -47,7 +40,7 @@ async function migrate() {
       .where(eq(receipts.isBusinessExpense, "true"));
 
     // Get unique user IDs from bank transactions with business expenses
-    // Note: bank_statement_transactions don't have userId directly, 
+    // Note: bank_statement_transactions don't have userId directly,
     // they're linked through bank_statements -> documents
     // For this migration, we'll update all bank transactions with isBusinessExpense='true'
     // regardless of user (they'll be linked by businessId in the update step)
@@ -60,8 +53,8 @@ async function migrate() {
       `Found ${allBusinessUserIds.length} users with business transactions\n`
     );
 
-    // Step 3: Create default business for each user
-    console.log("Step 3: Creating default business for users...");
+    // Step 2: Create default business for each user
+    console.log("Step 2: Creating default business for users...");
     let createdBusinessCount = 0;
 
     for (const userId of allBusinessUserIds) {
@@ -87,9 +80,9 @@ async function migrate() {
 
     console.log(`✓ Created ${createdBusinessCount} default businesses\n`);
 
-    // Step 4: Link existing business transactions to default business
+    // Step 3: Link existing business transactions to default business
     console.log(
-      "Step 4: Linking business transactions to default businesses..."
+      "Step 3: Linking business transactions to default businesses..."
     );
 
     let linkedReceiptsCount = 0;
@@ -125,9 +118,8 @@ async function migrate() {
 
     console.log("Migration completed successfully! ✨");
     console.log("\nSummary:");
-    console.log(`- Updated ${updateResult.length} categories`);
     console.log(`- Created ${createdBusinessCount} default businesses`);
-    console.log(`- Linked ${linkedReceiptsCount} receipts`);
+    console.log(`- Linked ${linkedReceiptsCount} business receipts`);
   } catch (error) {
     console.error("Migration failed:", error);
     throw error;

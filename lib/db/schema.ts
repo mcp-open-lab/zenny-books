@@ -432,7 +432,7 @@ export const categories = pgTable("categories", {
   
   // Financial classification (with defaults for existing data)
   transactionType: text("transaction_type").notNull().default("expense"), // 'income' | 'expense'
-  usageScope: text("usage_scope").notNull().default("business"), // 'personal' | 'business'
+  usageScope: text("usage_scope").notNull().default("both"), // 'personal' | 'business' | 'both'
   
   // Hierarchy
   parentId: text("parent_id"), // For future hierarchical categories

@@ -20,8 +20,8 @@ export function useCategories({ categories }: UseCategoriesProps) {
   const [newCategoryTransactionType, setNewCategoryTransactionType] =
     useState<"income" | "expense">("expense");
   const [newCategoryUsageScope, setNewCategoryUsageScope] = useState<
-    "personal" | "business"
-  >("business");
+    "personal" | "business" | "both"
+  >("both");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
