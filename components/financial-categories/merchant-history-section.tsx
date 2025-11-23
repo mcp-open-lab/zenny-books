@@ -319,19 +319,19 @@ export function MerchantHistorySection({
                 key={stat.merchantName}
                 className="grid grid-cols-12 gap-3 items-center p-3 border-b hover:bg-muted/50 transition-colors"
               >
-                <div className="col-span-3">
+                <div className="col-span-3 overflow-hidden">
                   <Link
                     href={`/app/merchants/${encodeURIComponent(stat.merchantName)}`}
-                    className="font-medium text-sm truncate hover:text-primary underline-offset-4 hover:underline"
+                    className="font-medium text-sm truncate block hover:text-primary underline-offset-4 hover:underline"
                     title={stat.merchantName}
                   >
                     {stat.merchantName}
                   </Link>
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-3 overflow-hidden">
                   {stat.mostCommonCategoryName ? (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge variant="outline" className="text-xs whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="outline" className="text-xs truncate max-w-[140px]" title={stat.mostCommonCategoryName}>
                         {stat.mostCommonCategoryName}
                       </Badge>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
