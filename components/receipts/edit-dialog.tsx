@@ -15,7 +15,7 @@ import {
   type EditReceiptFormValues,
 } from "@/lib/schemas";
 import { DEFAULT_REQUIRED_FIELDS } from "@/lib/consts";
-import type { receipts } from "@/lib/db/schema";
+import type { receipts, categories } from "@/lib/db/schema";
 
 type Receipt = typeof receipts.$inferSelect;
 
@@ -31,10 +31,13 @@ type UserSettings = {
   } | null;
 };
 
+type Category = typeof categories.$inferSelect;
+
 type EditReceiptDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipt: Receipt | null;
+  categories: Category[];
   userSettings?: UserSettings | null;
 };
 
@@ -53,7 +56,7 @@ function getDefaultValues(
       paymentMethod: userDefaults?.paymentMethod ?? "",
       tipAmount: "",
       discountAmount: "",
-      category: "",
+      categoryId: "",
       status: "needs_review",
     };
   }
@@ -73,7 +76,7 @@ function getDefaultValues(
     paymentMethod,
     tipAmount: receipt.tipAmount ?? "",
     discountAmount: receipt.discountAmount ?? "",
-    category: receipt.category ?? "",
+    categoryId: receipt.categoryId ?? "",
     status: (receipt.status as "needs_review" | "approved") ?? "needs_review",
   };
 }
@@ -82,6 +85,7 @@ export function EditReceiptDialog({
   open,
   onOpenChange,
   receipt,
+  categories,
   userSettings,
 }: EditReceiptDialogProps) {
   const requiredFields =
@@ -143,6 +147,7 @@ export function EditReceiptDialog({
                   schema={schema}
                   requiredFields={requiredFields}
                   visibleFields={visibleFields}
+                  categories={categories}
                   onOpenChange={onOpenChange}
                 />
               </div>

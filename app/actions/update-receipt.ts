@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { receipts } from "@/lib/db/schema";
+import { receipts, categories } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { EditReceiptSchema } from "@/lib/schemas";
 
@@ -16,9 +16,21 @@ export async function updateReceipt(data: unknown) {
   // Validate input with Zod schema
   const validated = EditReceiptSchema.parse(data);
 
+  // If categoryId is provided, fetch the category name for denormalization
+  let categoryName: string | null = null;
+  if (validated.categoryId) {
+    const categoryResult = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, validated.categoryId))
+      .limit(1);
+    categoryName = categoryResult[0]?.name ?? null;
+  }
+
   const updateData: Partial<typeof receipts.$inferInsert> = {
     merchantName: validated.merchantName ?? null,
-    category: validated.category ?? null,
+    categoryId: validated.categoryId ?? null,
+    category: categoryName, // Denormalized for display/fallback
     description: validated.description ?? null,
     paymentMethod: validated.paymentMethod ?? null,
     status: validated.status ?? "needs_review",

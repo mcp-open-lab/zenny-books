@@ -2,10 +2,12 @@
 
 import { Card } from "@/components/ui/card";
 import { BankTransactionForm } from "./transaction-form";
-import type { bankStatementTransactions } from "@/lib/db/schema";
+import type { bankStatementTransactions, categories } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { TrendingUp, TrendingDown } from "lucide-react";
+
+type Category = typeof categories.$inferSelect;
 
 type BankTransaction = {
   id: string;
@@ -31,11 +33,13 @@ type UserSettings = {
 
 type BankTransactionDetailViewProps = {
   transaction: BankTransaction;
+  categories: Category[];
   userSettings?: UserSettings | null;
 };
 
 export function BankTransactionDetailView({
   transaction,
+  categories,
   userSettings,
 }: BankTransactionDetailViewProps) {
   const amount = parseFloat(transaction.amount);
@@ -119,6 +123,7 @@ export function BankTransactionDetailView({
         </h2>
         <BankTransactionForm
           transaction={transaction}
+          categories={categories}
           transactionType={transactionType}
           userSettings={userSettings}
         />

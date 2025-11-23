@@ -23,7 +23,10 @@ export function PageHeader({ title, backHref }: PageHeaderProps) {
         )}
       <h1 className="text-2xl font-bold">{title}</h1>
       </div>
-      <UserButton />
+      {/* Show UserButton only on mobile/tablet, hidden on desktop (lg+) */}
+      <div className="lg:hidden">
+        <UserButton />
+      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { redirect, notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { BankTransactionDetailView } from "@/components/bank-transactions/transaction-detail-view";
 import { getUserSettings } from "@/app/actions/user-settings";
+import { getUserCategories } from "@/app/actions/financial-categories";
 
 export default async function BankTransactionDetailPage({
   params,
@@ -55,13 +56,17 @@ export default async function BankTransactionDetailPage({
     notFound();
   }
 
-  const userSettings = await getUserSettings();
+  const [userSettings, categories] = await Promise.all([
+    getUserSettings(),
+    getUserCategories(),
+  ]);
 
   return (
     <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
       <PageHeader title="Transaction Details" backHref="/app" />
       <BankTransactionDetailView
         transaction={transaction[0]}
+        categories={categories}
         userSettings={userSettings}
       />
     </div>

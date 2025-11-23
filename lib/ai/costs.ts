@@ -1,31 +1,19 @@
 /**
  * LLM Cost Calculation
- * Pricing per 1M tokens (as of 2025-01-XX)
+ * Pricing per 1M tokens (as of 2025-11-23)
  */
 
 import type { LLMProvider } from "./types";
 
 // Pricing per 1M tokens (USD)
 export const MODEL_PRICING = {
-  "gpt-4o": {
-    input: 2.5, // $2.50 per 1M input tokens
-    output: 10.0, // $10.00 per 1M output tokens
-  },
   "gpt-4o-mini": {
     input: 0.15, // $0.15 per 1M input tokens
     output: 0.6, // $0.60 per 1M output tokens
   },
-  "gemini-2.0-flash-exp": {
-    input: 0.0, // Free during preview
-    output: 0.0, // Free during preview
-  },
-  "gemini-1.5-flash": {
-    input: 0.075, // $0.075 per 1M input tokens
-    output: 0.3, // $0.30 per 1M output tokens
-  },
-  "gemini-1.5-pro": {
-    input: 1.25, // $1.25 per 1M input tokens
-    output: 5.0, // $5.00 per 1M output tokens
+  "gemini-2.0-flash": {
+    input: 0.1, // $0.10 per 1M input tokens (GA pricing as of Nov 2025)
+    output: 0.4, // $0.40 per 1M output tokens (GA pricing as of Nov 2025)
   },
 } as const;
 
@@ -98,4 +86,3 @@ export function formatCost(costUsd: number): string {
   if (costUsd < 0.01) return `$${costUsd.toFixed(4)}`;
   return `$${costUsd.toFixed(2)}`;
 }
-

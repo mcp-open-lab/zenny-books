@@ -22,20 +22,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RECEIPT_CATEGORIES, RECEIPT_STATUSES } from "@/lib/consts";
+import { RECEIPT_STATUSES } from "@/lib/consts";
 import type { EditReceiptFormValues } from "@/lib/schemas";
 import type { createEditReceiptSchema } from "@/lib/schemas";
+import type { categories as categoriesSchema } from "@/lib/db/schema";
+
+type Category = typeof categoriesSchema.$inferSelect;
 
 type ReceiptFormProps = {
   defaultValues: EditReceiptFormValues;
   schema: ReturnType<typeof createEditReceiptSchema>;
   requiredFields: Record<string, boolean>;
   visibleFields: Record<string, boolean>;
+  categories: Category[];
   onOpenChange?: (open: boolean) => void;
   isPage?: boolean;
 };
 
-const categories = RECEIPT_CATEGORIES;
 const statuses = RECEIPT_STATUSES;
 
 export function ReceiptForm({
@@ -43,6 +46,7 @@ export function ReceiptForm({
   schema,
   requiredFields,
   visibleFields,
+  categories,
   onOpenChange,
   isPage = false,
 }: ReceiptFormProps) {
@@ -276,7 +280,7 @@ export function ReceiptForm({
 
         <FormField
           control={form.control}
-          name="category"
+          name="categoryId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
@@ -292,9 +296,9 @@ export function ReceiptForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name} {cat.type === "user" ? "(Custom)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

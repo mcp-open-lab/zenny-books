@@ -31,7 +31,7 @@ export function createEditReceiptSchema(
     discountAmount: requiredFields.discountAmount
       ? z.string().min(1, "Discount amount is required").nullable()
       : z.string().optional().nullable(),
-    category: requiredFields.category
+    categoryId: requiredFields.category
       ? z.string().min(1, "Category is required").nullable()
       : z.string().optional().nullable(),
     status: z.enum(["needs_review", "approved"]),

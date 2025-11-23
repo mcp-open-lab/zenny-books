@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { receipts, bankStatementTransactions, categories } from "@/lib/db/schema";
-import { eq, and, isNotNull, desc } from "drizzle-orm";
+import { receipts, bankStatementTransactions, bankStatements, documents, categories } from "@/lib/db/schema";
+import { eq, and, isNotNull, desc, sql, or, inArray } from "drizzle-orm";
 import { devLogger } from "@/lib/dev-logger";
 
 /**
@@ -17,6 +17,19 @@ export interface TransactionHistory {
   merchantName: string;
   createdAt: Date;
   entityType: EntityType;
+}
+
+/**
+ * Merchant statistics aggregated from transaction history
+ */
+export interface MerchantStats {
+  merchantName: string; // The most common or representative merchant name
+  transactionCount: number;
+  mostCommonCategoryId: string | null;
+  mostCommonCategoryName: string | null;
+  categoryUsageCount: number; // Number of times the most common category was used
+  lastUsedDate: Date;
+  hasRule: boolean; // Whether a rule exists for this merchant
 }
 
 /**
@@ -154,6 +167,319 @@ export class TransactionRepository {
     }
 
     return null;
+  }
+
+  /**
+   * Get merchant statistics from transaction history
+   * Returns aggregated data for each merchant with transaction counts,
+   * most common category, and whether a rule exists
+   */
+  async getMerchantStatistics(userId: string): Promise<MerchantStats[]> {
+    try {
+      // Query receipts for merchant stats
+      const receiptStats = await db
+        .select({
+          merchantName: receipts.merchantName,
+          categoryId: receipts.categoryId,
+          date: receipts.date,
+        })
+        .from(receipts)
+        .where(
+          and(
+            eq(receipts.userId, userId),
+            isNotNull(receipts.merchantName),
+            isNotNull(receipts.categoryId)
+          )
+        );
+
+      // Query bank transactions for merchant stats (join through bankStatements -> documents to get userId)
+      const bankStats = await db
+        .select({
+          merchantName: bankStatementTransactions.merchantName,
+          categoryId: bankStatementTransactions.categoryId,
+          date: bankStatementTransactions.transactionDate,
+        })
+        .from(bankStatementTransactions)
+        .innerJoin(bankStatements, eq(bankStatementTransactions.bankStatementId, bankStatements.id))
+        .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+        .where(
+          and(
+            eq(documents.userId, userId),
+            isNotNull(bankStatementTransactions.merchantName),
+            isNotNull(bankStatementTransactions.categoryId)
+          )
+        );
+
+      // Aggregate merchant data
+      const merchantMap = new Map<string, {
+        count: number;
+        categoryFrequency: Map<string, number>;
+        lastDate: Date;
+      }>();
+
+      // Process receipts
+      for (const row of receiptStats) {
+        if (!row.merchantName || !row.categoryId) continue;
+        
+        const key = row.merchantName.toLowerCase();
+        const existing = merchantMap.get(key) || {
+          count: 0,
+          categoryFrequency: new Map(),
+          lastDate: row.date || new Date(0),
+        };
+
+        existing.count++;
+        existing.categoryFrequency.set(
+          row.categoryId,
+          (existing.categoryFrequency.get(row.categoryId) || 0) + 1
+        );
+        if (row.date && row.date > existing.lastDate) {
+          existing.lastDate = row.date;
+        }
+
+        merchantMap.set(key, existing);
+      }
+
+      // Process bank transactions
+      for (const row of bankStats) {
+        if (!row.merchantName || !row.categoryId) continue;
+        
+        const key = row.merchantName.toLowerCase();
+        const existing = merchantMap.get(key) || {
+          count: 0,
+          categoryFrequency: new Map(),
+          lastDate: row.date || new Date(0),
+        };
+
+        existing.count++;
+        existing.categoryFrequency.set(
+          row.categoryId,
+          (existing.categoryFrequency.get(row.categoryId) || 0) + 1
+        );
+        if (row.date && row.date > existing.lastDate) {
+          existing.lastDate = row.date;
+        }
+
+        merchantMap.set(key, existing);
+      }
+
+      // Get all categories at once
+      const allCategoryIds = Array.from(
+        new Set(
+          Array.from(merchantMap.values()).flatMap((m) =>
+            Array.from(m.categoryFrequency.keys())
+          )
+        )
+      );
+
+      const categoryData = allCategoryIds.length > 0
+        ? await db
+            .select()
+            .from(categories)
+            .where(inArray(categories.id, allCategoryIds))
+        : [];
+
+      const categoryMap = new Map(categoryData.map((c) => [c.id, c.name]));
+
+      // Convert to MerchantStats array
+      const stats: MerchantStats[] = Array.from(merchantMap.entries()).map(
+        ([merchantKey, data]) => {
+          // Find most common category
+          let mostCommonCategoryId: string | null = null;
+          let maxCount = 0;
+
+          for (const [catId, count] of data.categoryFrequency.entries()) {
+            if (count > maxCount) {
+              maxCount = count;
+              mostCommonCategoryId = catId;
+            }
+          }
+
+          return {
+            merchantName: merchantKey,
+            transactionCount: data.count,
+            mostCommonCategoryId,
+            mostCommonCategoryName: mostCommonCategoryId
+              ? categoryMap.get(mostCommonCategoryId) || null
+              : null,
+            categoryUsageCount: maxCount,
+            lastUsedDate: data.lastDate,
+            hasRule: false, // Will be set in the calling function
+          };
+        }
+      );
+
+      // Sort by transaction count descending
+      stats.sort((a, b) => b.transactionCount - a.transactionCount);
+
+      return stats;
+    } catch (error) {
+      devLogger.error("TransactionRepository: Error getting merchant stats", {
+        error,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Get all transactions for a specific merchant
+   * Returns combined results from receipts and bank transactions
+   */
+  async getMerchantTransactions(
+    merchantName: string,
+    userId: string
+  ): Promise<
+    Array<{
+      id: string;
+      merchantName: string;
+      date: Date | null;
+      amount: string;
+      categoryId: string | null;
+      categoryName: string | null;
+      description: string | null;
+      entityType: EntityType;
+      source: "receipt" | "bank_transaction";
+    }>
+  > {
+    try {
+      const transactions: Array<{
+        id: string;
+        merchantName: string;
+        date: Date | null;
+        amount: string;
+        categoryId: string | null;
+        categoryName: string | null;
+        description: string | null;
+        entityType: EntityType;
+        source: "receipt" | "bank_transaction";
+      }> = [];
+
+      // Get receipts for this merchant
+      const receiptData = await db
+        .select({
+          id: receipts.id,
+          merchantName: receipts.merchantName,
+          date: receipts.date,
+          totalAmount: receipts.totalAmount,
+          categoryId: receipts.categoryId,
+          description: receipts.description,
+        })
+        .from(receipts)
+        .where(
+          and(
+            eq(receipts.userId, userId),
+            eq(receipts.merchantName, merchantName)
+          )
+        )
+        .orderBy(desc(receipts.date));
+
+      // Get category names for receipts
+      const receiptCategoryIds = receiptData
+        .filter((r) => r.categoryId)
+        .map((r) => r.categoryId!);
+      
+      const receiptCategories =
+        receiptCategoryIds.length > 0
+          ? await db
+              .select()
+              .from(categories)
+              .where(inArray(categories.id, receiptCategoryIds))
+          : [];
+
+      const categoryMap = new Map(
+        receiptCategories.map((c) => [c.id, c.name])
+      );
+
+      // Add receipts to transactions
+      for (const receipt of receiptData) {
+        transactions.push({
+          id: receipt.id,
+          merchantName: receipt.merchantName!,
+          date: receipt.date,
+          amount: receipt.totalAmount || "0",
+          categoryId: receipt.categoryId,
+          categoryName: receipt.categoryId
+            ? categoryMap.get(receipt.categoryId) || null
+            : null,
+          description: receipt.description,
+          entityType: "receipt",
+          source: "receipt",
+        });
+      }
+
+      // Get bank transactions for this merchant
+      const bankData = await db
+        .select({
+          id: bankStatementTransactions.id,
+          merchantName: bankStatementTransactions.merchantName,
+          date: bankStatementTransactions.transactionDate,
+          amount: bankStatementTransactions.amount,
+          categoryId: bankStatementTransactions.categoryId,
+          description: bankStatementTransactions.description,
+        })
+        .from(bankStatementTransactions)
+        .innerJoin(
+          bankStatements,
+          eq(bankStatementTransactions.bankStatementId, bankStatements.id)
+        )
+        .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+        .where(
+          and(
+            eq(documents.userId, userId),
+            eq(bankStatementTransactions.merchantName, merchantName)
+          )
+        )
+        .orderBy(desc(bankStatementTransactions.transactionDate));
+
+      // Get category names for bank transactions
+      const bankCategoryIds = bankData
+        .filter((b) => b.categoryId)
+        .map((b) => b.categoryId!);
+
+      const bankCategories =
+        bankCategoryIds.length > 0
+          ? await db
+              .select()
+              .from(categories)
+              .where(inArray(categories.id, bankCategoryIds))
+          : [];
+
+      const bankCategoryMap = new Map(
+        bankCategories.map((c) => [c.id, c.name])
+      );
+
+      // Add bank transactions
+      for (const bankTxn of bankData) {
+        transactions.push({
+          id: bankTxn.id,
+          merchantName: bankTxn.merchantName!,
+          date: bankTxn.date,
+          amount: bankTxn.amount,
+          categoryId: bankTxn.categoryId,
+          categoryName: bankTxn.categoryId
+            ? bankCategoryMap.get(bankTxn.categoryId) || null
+            : null,
+          description: bankTxn.description,
+          entityType: "bank_transaction",
+          source: "bank_transaction",
+        });
+      }
+
+      // Sort all transactions by date (most recent first)
+      transactions.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return b.date.getTime() - a.date.getTime();
+      });
+
+      return transactions;
+    } catch (error) {
+      devLogger.error(
+        "TransactionRepository: Error getting merchant transactions",
+        { error, merchantName }
+      );
+      return [];
+    }
   }
 }
 

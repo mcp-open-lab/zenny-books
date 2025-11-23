@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
 import { receipts } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { ReceiptDetailView } from "@/components/receipts/receipt-detail-view";
 import { getUserSettings } from "@/app/actions/user-settings";
+import { getUserCategories } from "@/app/actions/financial-categories";
 
 export default async function ReceiptDetailPage({
   params,
@@ -29,12 +30,19 @@ export default async function ReceiptDetailPage({
     notFound();
   }
 
-  const userSettings = await getUserSettings();
+  const [userSettings, categories] = await Promise.all([
+    getUserSettings(),
+    getUserCategories(),
+  ]);
 
   return (
     <div className="flex-1 max-w-4xl mx-auto w-full p-6 space-y-8">
       <PageHeader title="Receipt Details" backHref="/app" />
-      <ReceiptDetailView receipt={receipt[0]} userSettings={userSettings} />
+      <ReceiptDetailView
+        receipt={receipt[0]}
+        categories={categories}
+        userSettings={userSettings}
+      />
     </div>
   );
 }

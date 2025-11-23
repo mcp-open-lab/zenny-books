@@ -431,8 +431,8 @@ export function QuickActions() {
         disabled={isUploading}
       />
 
-      {/* Quick Actions Menu */}
-      <div className="fixed bottom-4 right-4 z-50 quick-actions-menu">
+      {/* Quick Actions Menu - Hidden on desktop (lg screens and above) */}
+      <div className="fixed bottom-4 right-4 z-50 quick-actions-menu lg:hidden">
         {/* Fan-out buttons */}
         {isOpen && (
           <div className="absolute bottom-20 right-0 flex flex-col gap-2 mb-3 w-48">

@@ -427,6 +427,7 @@ export const categoryRules = pgTable("category_rules", {
   matchType: text("match_type").notNull(), // 'exact' | 'contains' | 'regex'
   field: text("field").notNull(), // 'merchantName' | 'description'
   value: text("value").notNull(), // The pattern to match
+  displayName: text("display_name"), // Optional user-friendly name (especially for merchantName rules)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -474,7 +475,7 @@ export const llmLogs = pgTable(
 
     // Provider and model
     provider: text("provider").notNull(), // 'openai' | 'gemini'
-    model: text("model").notNull(), // 'gpt-4o' | 'gemini-2.0-flash-exp'
+    model: text("model").notNull(), // 'gpt-4o-mini' | 'gemini-2.0-flash'
     promptType: text("prompt_type").notNull(), // 'extraction' | 'categorization' | 'mapping'
 
     // Token usage

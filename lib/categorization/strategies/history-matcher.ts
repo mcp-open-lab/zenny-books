@@ -1,6 +1,5 @@
 import { devLogger } from "@/lib/dev-logger";
 import { TransactionRepository } from "../repositories/transaction-repository";
-import { CONFIDENCE_DEFAULTS } from "@/lib/ai/constants";
 import type {
   CategorizationStrategy,
   CategorizationInput,
@@ -48,7 +47,7 @@ export class HistoryMatcher implements CategorizationStrategy {
         return {
           categoryId: history.categoryId,
           categoryName: history.categoryName,
-          confidence: CONFIDENCE_DEFAULTS.CATEGORIZATION_RULE,
+          confidence: 1.0,
           method: "history",
         };
       }
@@ -64,4 +63,3 @@ export class HistoryMatcher implements CategorizationStrategy {
     };
   }
 }
-

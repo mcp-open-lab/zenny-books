@@ -25,10 +25,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import type { categories } from "@/lib/db/schema";
+
+type Category = typeof categories.$inferSelect;
+
 const bankTransactionSchema = z.object({
   id: z.string(),
   merchantName: z.string().optional(),
-  category: z.string().optional(),
+  categoryId: z.string().optional(),
   paymentMethod: z.enum(["cash", "card", "check", "other"]).optional(),
   notes: z.string().optional(),
 });
@@ -38,12 +42,13 @@ type BankTransactionFormValues = z.infer<typeof bankTransactionSchema>;
 type BankTransaction = {
   id: string;
   merchantName: string | null;
-  category: string | null;
+  categoryId: string | null;
   paymentMethod: string | null;
 };
 
 type BankTransactionFormProps = {
   transaction: BankTransaction;
+  categories: Category[];
   transactionType: "income" | "expense";
   userSettings?: {
     country?: string | null;
@@ -51,47 +56,27 @@ type BankTransactionFormProps = {
   } | null;
 };
 
-// Simplified category lists (will be replaced with CategoryFilterService later)
-const INCOME_CATEGORIES = [
-  "Salary & Wages",
-  "Freelance Income",
-  "Investment Income",
-  "Interest Income",
-  "Refunds & Reimbursements",
-  "Other Income",
-];
-
-const EXPENSE_CATEGORIES = [
-  "Groceries",
-  "Housing & Rent",
-  "Transportation",
-  "Healthcare & Medical",
-  "Entertainment",
-  "Food & Dining",
-  "Shopping & Retail",
-  "Utilities",
-  "Software & Subscriptions",
-  "Business Travel",
-  "Office Supplies",
-  "Other Expense",
-];
-
 export function BankTransactionForm({
   transaction,
+  categories,
   transactionType,
   userSettings,
 }: BankTransactionFormProps) {
   const [isPending, startTransition] = useTransition();
 
-  const availableCategories =
-    transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  // Filter categories by transaction type
+  const availableCategories = categories.filter(
+    (cat) =>
+      cat.transactionType === transactionType ||
+      cat.transactionType === "expense" // Default to expense if not specified
+  );
 
   const form = useForm<BankTransactionFormValues>({
     resolver: zodResolver(bankTransactionSchema),
     defaultValues: {
       id: transaction.id,
       merchantName: transaction.merchantName ?? "",
-      category: transaction.category ?? "",
+      categoryId: transaction.categoryId ?? "",
       paymentMethod: (transaction.paymentMethod as "cash" | "card" | "check" | "other") || undefined,
       notes: "",
     },
@@ -132,7 +117,7 @@ export function BankTransactionForm({
 
         <FormField
           control={form.control}
-          name="category"
+          name="categoryId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
@@ -144,8 +129,8 @@ export function BankTransactionForm({
                 </FormControl>
                 <SelectContent>
                   {availableCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name} {cat.type === "user" ? "(Custom)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,7 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import type { LLMProviderInterface, LLMResponse, CompletionOptions } from "../types";
+import type {
+  LLMProviderInterface,
+  LLMResponse,
+  CompletionOptions,
+} from "../types";
 import { devLogger } from "@/lib/dev-logger";
 import { GeminiSchemaTransformer } from "../transformers";
 
@@ -10,7 +14,7 @@ export class GeminiProvider implements LLMProviderInterface {
   private model: string;
   private schemaTransformer: GeminiSchemaTransformer;
 
-  constructor(apiKey: string, model = "gemini-2.0-flash-exp") {
+  constructor(apiKey: string, model = "gemini-2.0-flash") {
     this.client = new GoogleGenerativeAI(apiKey);
     this.model = model;
     this.schemaTransformer = new GeminiSchemaTransformer();
@@ -24,7 +28,7 @@ export class GeminiProvider implements LLMProviderInterface {
     try {
       // Convert Zod schema to JSON Schema for Gemini structured output
       const rawJsonSchema = zodToJsonSchema(schema, "ExtractedData");
-      
+
       // Transform schema using centralized transformer
       const jsonSchema = this.schemaTransformer.transform(rawJsonSchema);
 
@@ -84,11 +88,18 @@ export class GeminiProvider implements LLMProviderInterface {
       } catch (parseError) {
         devLogger.error("Gemini JSON parse failed", {
           textPreview: text.substring(0, 500),
-          error: parseError instanceof Error ? parseError.message : String(parseError),
+          error:
+            parseError instanceof Error
+              ? parseError.message
+              : String(parseError),
         });
         return {
           success: false,
-          error: `Gemini returned invalid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+          error: `Gemini returned invalid JSON: ${
+            parseError instanceof Error
+              ? parseError.message
+              : String(parseError)
+          }`,
           provider: "gemini",
         };
       }
@@ -99,11 +110,18 @@ export class GeminiProvider implements LLMProviderInterface {
       } catch (validationError) {
         devLogger.error("Gemini schema validation failed", {
           parsedPreview: JSON.stringify(parsed).substring(0, 500),
-          error: validationError instanceof Error ? validationError.message : String(validationError),
+          error:
+            validationError instanceof Error
+              ? validationError.message
+              : String(validationError),
         });
         return {
           success: false,
-          error: `Schema validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`,
+          error: `Schema validation failed: ${
+            validationError instanceof Error
+              ? validationError.message
+              : String(validationError)
+          }`,
           provider: "gemini",
         };
       }
@@ -118,7 +136,8 @@ export class GeminiProvider implements LLMProviderInterface {
         model: this.model,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       devLogger.error("Gemini exception", {
         error: errorMessage,
       });
@@ -157,7 +176,8 @@ export class GeminiProvider implements LLMProviderInterface {
         tokensUsed: response.usageMetadata?.totalTokenCount,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         success: false,
         error: `Gemini error: ${errorMessage}`,

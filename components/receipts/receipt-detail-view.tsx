@@ -6,9 +6,10 @@ import { ReceiptForm } from "./receipt-form";
 import { createEditReceiptSchema, type EditReceiptFormValues } from "@/lib/schemas";
 import { DEFAULT_REQUIRED_FIELDS } from "@/lib/consts";
 import { useMemo } from "react";
-import type { receipts } from "@/lib/db/schema";
+import type { receipts, categories } from "@/lib/db/schema";
 
 type Receipt = typeof receipts.$inferSelect;
+type Category = typeof categories.$inferSelect;
 
 type UserSettings = {
   visibleFields?: Record<string, boolean> | null;
@@ -24,6 +25,7 @@ type UserSettings = {
 
 type ReceiptDetailViewProps = {
   receipt: Receipt;
+  categories: Category[];
   userSettings?: UserSettings | null;
 };
 
@@ -46,13 +48,14 @@ function getDefaultValues(
     paymentMethod,
     tipAmount: receipt.tipAmount ?? "",
     discountAmount: receipt.discountAmount ?? "",
-    category: receipt.category ?? "",
+    categoryId: receipt.categoryId ?? "",
     status: (receipt.status as "needs_review" | "approved") ?? "needs_review",
   };
 }
 
 export function ReceiptDetailView({
   receipt,
+  categories,
   userSettings,
 }: ReceiptDetailViewProps) {
   const requiredFields =
@@ -89,6 +92,7 @@ export function ReceiptDetailView({
           schema={schema}
           requiredFields={requiredFields}
           visibleFields={visibleFields}
+          categories={categories}
           isPage={true}
         />
       </Card>

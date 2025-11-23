@@ -5,8 +5,10 @@ import {
   deleteUserCategory,
   createCategoryRule,
   deleteCategoryRule,
+  createMerchantRule,
 } from "@/app/actions/financial-categories";
 import type { categories, categoryRules } from "@/lib/db/schema";
+import type { MerchantStats } from "@/lib/categorization/repositories/transaction-repository";
 
 type Category = typeof categories.$inferSelect;
 type CategoryRule = typeof categoryRules.$inferSelect;
@@ -14,11 +16,13 @@ type CategoryRule = typeof categoryRules.$inferSelect;
 type UseCategoriesManagerProps = {
   categories: Category[];
   rules: Array<{ rule: CategoryRule; category: Category }>;
+  merchantStats?: MerchantStats[];
 };
 
 export function useFinancialCategories({
   categories,
   rules,
+  merchantStats = [],
 }: UseCategoriesManagerProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -36,6 +40,12 @@ export function useFinancialCategories({
   >("contains");
   const [newRuleValue, setNewRuleValue] = useState("");
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+
+  // Merchant rule state
+  const [newMerchantName, setNewMerchantName] = useState("");
+  const [newMerchantCategoryId, setNewMerchantCategoryId] = useState("");
+  const [newMerchantDisplayName, setNewMerchantDisplayName] = useState("");
+  const [merchantDialogOpen, setMerchantDialogOpen] = useState(false);
 
   // Computed values
   const systemCategories = useMemo(
@@ -133,6 +143,51 @@ export function useFinancialCategories({
     });
   };
 
+  // Merchant rule handlers
+  const handleCreateMerchantRule = () => {
+    if (!newMerchantCategoryId || !newMerchantName.trim()) {
+      toast.error("Please fill merchant name and category");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await createMerchantRule({
+          merchantName: newMerchantName.trim(),
+          categoryId: newMerchantCategoryId,
+          displayName: newMerchantDisplayName.trim() || undefined,
+        });
+        toast.success("Merchant rule created!");
+        setNewMerchantName("");
+        setNewMerchantCategoryId("");
+        setNewMerchantDisplayName("");
+        setMerchantDialogOpen(false);
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create merchant rule"
+        );
+      }
+    });
+  };
+
+  const handleQuickCreateRule = (merchantName: string, categoryId: string) => {
+    startTransition(async () => {
+      try {
+        await createMerchantRule({
+          merchantName,
+          categoryId,
+        });
+        toast.success("Merchant rule created!");
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create merchant rule"
+        );
+      }
+    });
+  };
+
   // Helper for rule placeholder text
   const getRulePlaceholder = () => {
     switch (newRuleMatchType) {
@@ -154,6 +209,7 @@ export function useFinancialCategories({
     userCategories,
     rules,
     categories,
+    merchantStats,
 
     // Category state
     newCategoryName,
@@ -173,11 +229,23 @@ export function useFinancialCategories({
     ruleDialogOpen,
     setRuleDialogOpen,
 
+    // Merchant rule state
+    newMerchantName,
+    setNewMerchantName,
+    newMerchantCategoryId,
+    setNewMerchantCategoryId,
+    newMerchantDisplayName,
+    setNewMerchantDisplayName,
+    merchantDialogOpen,
+    setMerchantDialogOpen,
+
     // Handlers
     handleCreateCategory,
     handleDeleteCategory,
     handleCreateRule,
     handleDeleteRule,
+    handleCreateMerchantRule,
+    handleQuickCreateRule,
 
     // Helpers
     getRulePlaceholder,

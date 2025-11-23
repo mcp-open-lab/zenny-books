@@ -38,7 +38,9 @@ export default async function BatchDetailPage(props: {
             </Button>
             <h1 className="text-2xl font-bold">Batch Details</h1>
           </div>
-          <UserButton />
+          <div className="lg:hidden">
+            <UserButton />
+          </div>
         </div>
 
         <BatchDetailContainer initialBatch={batch} initialItems={items} />
@@ -56,7 +58,9 @@ export default async function BatchDetailPage(props: {
             </Button>
             <h1 className="text-2xl font-bold">Batch Details</h1>
           </div>
-          <UserButton />
+          <div className="lg:hidden">
+            <UserButton />
+          </div>
         </div>
         <div className="p-8 text-center text-muted-foreground border rounded-lg">
           Batch not found or you don't have permission to view it.
