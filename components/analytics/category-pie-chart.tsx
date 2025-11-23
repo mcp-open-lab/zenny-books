@@ -33,6 +33,7 @@ export function CategoryPieChart({
   // Format data for recharts
   const chartData = data.map((category) => ({
     category: category.categoryId,
+    categoryName: category.categoryName,
     value: category.totalSpent,
     fill: `var(--color-${category.categoryId})`,
   }));
@@ -63,7 +64,16 @@ export function CategoryPieChart({
               content={
                 <ChartTooltipContent
                   hideLabel
-                  formatter={(value) => formatCurrency(value as number)}
+                  formatter={(value, name, item) => (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium">
+                        {item.payload.categoryName}
+                      </span>
+                      <span className="font-semibold">
+                        {formatCurrency(value as number)}
+                      </span>
+                    </div>
+                  )}
                 />
               }
             />
