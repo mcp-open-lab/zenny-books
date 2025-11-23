@@ -112,7 +112,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     if (extractedData.merchantName) {
       const catResult = await this.categorizeDocument(
         extractedData.merchantName,
-        extractedData.description || null,
+        null, // description is user-driven, not used for categorization
         extractedData.totalAmount?.toString() || "0"
       );
       categoryId = catResult.categoryId;
@@ -161,7 +161,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
       paymentMethod: extractedData.paymentMethod || null,
       category: categoryName,
       categoryId,
-      description: extractedData.description || null,
+      description: null, // User-driven field, not extracted by LLM
       currency: this.currency,
       country: this.country,
       province: extractedData.province || null,
@@ -194,7 +194,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     fields.add("receiptNumber");
     fields.add("paymentMethod");
     fields.add("category");
-    fields.add("description");
+    // description is user-driven, not extracted by LLM
 
     return fields;
   }
@@ -327,9 +327,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     if (fieldsToExtract.has("category")) {
       schemaFields.category = z.string().nullable();
     }
-    if (fieldsToExtract.has("description")) {
-      schemaFields.description = z.string().nullable();
-    }
+    // description is user-driven, not extracted by LLM
 
     return z.object(schemaFields);
   }
