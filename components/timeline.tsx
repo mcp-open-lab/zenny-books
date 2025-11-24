@@ -392,7 +392,7 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
               {group.monthLabel}
             </h3>
             {/* Mobile: Compact List View */}
-            <div className="space-y-1.5 md:hidden pl-3 border-l-2 border-muted ml-1">
+            <div className="space-y-2.5 md:hidden pl-4 border-l-2 border-muted ml-2">
               {group.items.map((item) => {
                 const href =
                   item.type === "transaction"
@@ -403,13 +403,13 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
 
                 return (
                   <Link key={item.id} href={href}>
-                    <Card className="p-2 flex justify-between items-center cursor-pointer hover:bg-accent/50 transition-colors border-none shadow-sm relative -ml-[17px] group">
+                    <Card className="p-3 flex justify-between items-center cursor-pointer hover:bg-accent/50 transition-colors border-none shadow-sm relative -ml-[19px] group">
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary border-2 border-background"></div>
                       <div className="flex-1 ml-3 min-w-0">
-                        <p className="font-medium text-xs truncate">
+                        <p className="font-medium text-sm truncate">
                           {item.merchantName || "Unknown"}
                         </p>
-                        <div className="flex gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                        <div className="flex gap-1.5 text-[11px] text-muted-foreground mt-1">
                           <span>
                             {item.date
                               ? new Date(item.date).toLocaleDateString(undefined, {
@@ -427,7 +427,7 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-2">
-                        <p className={`font-semibold text-xs ${isIncome ? "text-green-600" : "text-red-600"}`}>
+                        <p className={`font-semibold text-sm ${isIncome ? "text-green-600" : "text-red-600"}`}>
                           {isIncome ? "+" : "-"}{item.currency || "$"}{Math.abs(amount).toFixed(2)}
                         </p>
                       </div>
