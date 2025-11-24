@@ -188,7 +188,16 @@ export class TransactionRepository {
    * Returns aggregated data for each merchant with transaction counts,
    * most common category, and whether a rule exists
    */
-  async getMerchantStatistics(userId: string): Promise<MerchantStats[]> {
+  async getMerchantStatistics(
+    userId: string,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<{
+    stats: MerchantStats[];
+    totalCount: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
     try {
       // Query receipts for merchant stats
       const receiptStats = await db
@@ -336,12 +345,28 @@ export class TransactionRepository {
       // Sort by transaction count descending
       stats.sort((a, b) => b.transactionCount - a.transactionCount);
 
-      return stats;
+      // Calculate pagination
+      const totalCount = stats.length;
+      const totalPages = Math.ceil(totalCount / pageSize);
+      const offset = (page - 1) * pageSize;
+      const paginatedStats = stats.slice(offset, offset + pageSize);
+
+      return {
+        stats: paginatedStats,
+        totalCount,
+        totalPages,
+        currentPage: page,
+      };
     } catch (error) {
       devLogger.error("TransactionRepository: Error getting merchant stats", {
         error,
       });
-      return [];
+      return {
+        stats: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: page,
+      };
     }
   }
 

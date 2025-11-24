@@ -1,7 +1,12 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { categories, categoryRules, receipts, bankStatementTransactions } from "@/lib/db/schema";
+import {
+  categories,
+  categoryRules,
+  receipts,
+  bankStatementTransactions,
+} from "@/lib/db/schema";
 import { eq, and, or, inArray } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
@@ -315,14 +320,17 @@ export const deleteCategoryRule = createSafeAction(
 );
 
 // Get merchant statistics from transaction history
-export async function getMerchantStatistics() {
+export async function getMerchantStatistics(
+  page: number = 1,
+  pageSize: number = 25
+) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
-  devLogger.info("Getting merchant statistics", { context: { userId } });
+  devLogger.info("Getting merchant statistics", { context: { userId, page, pageSize } });
 
   const repository = new TransactionRepository();
-  const stats = await repository.getMerchantStatistics(userId);
+  const result = await repository.getMerchantStatistics(userId, page, pageSize);
 
   // Check which merchants have existing rules
   const merchantRules = await db
@@ -348,7 +356,7 @@ export async function getMerchantStatistics() {
     merchantRules.map((r) => [r.value.toLowerCase(), r])
   );
 
-  stats.forEach((stat) => {
+  result.stats.forEach((stat) => {
     const rule = rulesMap.get(stat.merchantName.toLowerCase());
     if (rule) {
       stat.hasRule = true;
@@ -364,10 +372,10 @@ export async function getMerchantStatistics() {
   });
 
   devLogger.info("Merchant statistics retrieved", {
-    context: { count: stats.length },
+    context: { count: result.stats.length, totalCount: result.totalCount },
   });
 
-  return stats;
+  return result;
 }
 
 // Create a merchant rule from transaction history
@@ -611,10 +619,9 @@ export async function bulkUpdateMerchantCategory(
           status: "approved",
           updatedAt: new Date(),
         })
-        .where(and(
-          inArray(receipts.id, receiptIds),
-          eq(receipts.userId, userId)
-        ));
+        .where(
+          and(inArray(receipts.id, receiptIds), eq(receipts.userId, userId))
+        );
     }
 
     // Update bank transactions

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
@@ -82,6 +83,11 @@ const dataItems = [
 
 export function DesktopNav() {
   const pathname = usePathname();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const isActiveGroup = (items: typeof mainItems) => {
     return items.some(
@@ -90,6 +96,24 @@ export function DesktopNav() {
         (item.href !== "/app" && pathname?.startsWith(item.href))
     );
   };
+
+  // Prevent hydration mismatch by only rendering NavigationMenu on client
+  if (!isMounted) {
+    return (
+      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center justify-between px-4 mx-auto">
+          <Link href="/app" className="flex items-center space-x-2 flex-shrink-0">
+            <Receipt className="h-6 w-6" />
+            <span className="font-bold text-lg">Turbo Invoice</span>
+          </Link>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <ThemeToggle />
+            <UserButton afterSignOutUrl="/" />
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -112,8 +136,9 @@ export function DesktopNav() {
 
               return (
                 <NavigationMenuItem key={item.href}>
-                  <Link href={item.href}>
-                    <NavigationMenuLink
+                  <NavigationMenuLink asChild>
+                    <Link
+                      href={item.href}
                       className={cn(
                         navigationMenuTriggerStyle(),
                         isActive && "bg-accent"
@@ -121,8 +146,8 @@ export function DesktopNav() {
                     >
                       <Icon className="h-4 w-4 mr-2" />
                       {item.label}
-                    </NavigationMenuLink>
-                  </Link>
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
               );
             })}
@@ -210,8 +235,9 @@ export function DesktopNav() {
 
             {/* Settings */}
             <NavigationMenuItem>
-              <Link href="/app/settings">
-                <NavigationMenuLink
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/app/settings"
                   className={cn(
                     navigationMenuTriggerStyle(),
                     pathname?.startsWith("/app/settings") && "bg-accent"
@@ -219,8 +245,8 @@ export function DesktopNav() {
                 >
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
-                </NavigationMenuLink>
-              </Link>
+                </Link>
+              </NavigationMenuLink>
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>

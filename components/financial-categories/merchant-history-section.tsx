@@ -1,3 +1,4 @@
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -25,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Check, Edit2, MoreVertical, Trash2 } from "lucide-react";
+import { Plus, Check, Edit2, MoreVertical, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { categories } from "@/lib/db/schema";
 import type { MerchantStats } from "@/lib/categorization/repositories/transaction-repository";
 
@@ -34,6 +35,9 @@ type Category = typeof categories.$inferSelect;
 type MerchantHistorySectionProps = {
   categories: Category[];
   merchantStats: MerchantStats[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
   businesses?: { id: string; name: string }[]; // Optional list of user businesses
   isPending: boolean;
   newMerchantName: string;
@@ -60,6 +64,9 @@ type MerchantHistorySectionProps = {
 export function MerchantHistorySection({
   categories,
   merchantStats,
+  totalCount,
+  totalPages,
+  currentPage,
   businesses = [],
   isPending,
   newMerchantName,
@@ -82,6 +89,15 @@ export function MerchantHistorySection({
   handleUpdateMerchantRule,
   handleDeleteMerchantRule,
 }: MerchantHistorySectionProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", newPage.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -404,6 +420,64 @@ export function MerchantHistorySection({
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t px-3">
+              <div className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * 25 + 1}-{Math.min(currentPage * 25, totalCount)} of {totalCount}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                        className="w-9"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Card>

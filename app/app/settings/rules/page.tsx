@@ -10,16 +10,24 @@ import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { RulesManager } from "./_components/rules-manager";
 
-export default async function RulesPage() {
+export default async function RulesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
+}) {
   const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");
   }
 
-  const [categories, rules, merchantStats, businesses] = await Promise.all([
+  const { page: pageParam, pageSize: pageSizeParam } = await searchParams;
+  const page = parseInt(pageParam || "1", 10);
+  const pageSize = parseInt(pageSizeParam || "25", 10);
+
+  const [categories, rules, merchantStatsResult, businesses] = await Promise.all([
     getUserCategories(),
     getUserRules(),
-    getMerchantStatistics(),
+    getMerchantStatistics(page, pageSize),
     getUserBusinesses(),
   ]);
 
@@ -33,7 +41,10 @@ export default async function RulesPage() {
       <RulesManager
         categories={categories}
         rules={rules}
-        merchantStats={merchantStats}
+        merchantStats={merchantStatsResult.stats}
+        merchantStatsTotalCount={merchantStatsResult.totalCount}
+        merchantStatsTotalPages={merchantStatsResult.totalPages}
+        merchantStatsCurrentPage={merchantStatsResult.currentPage}
         businesses={businesses}
       />
     </PageContainer>

@@ -13,6 +13,9 @@ type RulesManagerProps = {
   categories: Category[];
   rules: Array<{ rule: CategoryRule; category: Category }>;
   merchantStats: MerchantStats[];
+  merchantStatsTotalCount: number;
+  merchantStatsTotalPages: number;
+  merchantStatsCurrentPage: number;
   businesses?: { id: string; name: string }[];
 };
 
@@ -20,6 +23,9 @@ export function RulesManager({
   categories,
   rules,
   merchantStats,
+  merchantStatsTotalCount,
+  merchantStatsTotalPages,
+  merchantStatsCurrentPage,
   businesses = [],
 }: RulesManagerProps) {
   const hook = useRules({ categories, rules, merchantStats });
@@ -29,6 +35,9 @@ export function RulesManager({
       <MerchantHistorySection
         categories={categories}
         merchantStats={merchantStats}
+        totalCount={merchantStatsTotalCount}
+        totalPages={merchantStatsTotalPages}
+        currentPage={merchantStatsCurrentPage}
         businesses={businesses}
         isPending={hook.isPending}
         newMerchantName={hook.newMerchantName}
