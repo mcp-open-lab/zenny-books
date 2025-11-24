@@ -327,7 +327,9 @@ export async function getMerchantStatistics(
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
-  devLogger.info("Getting merchant statistics", { context: { userId, page, pageSize } });
+  devLogger.info("Getting merchant statistics", {
+    context: { userId, page, pageSize },
+  });
 
   const repository = new TransactionRepository();
   const result = await repository.getMerchantStatistics(userId, page, pageSize);
