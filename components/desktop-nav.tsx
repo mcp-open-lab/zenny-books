@@ -6,6 +6,15 @@ import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import {
   Clock,
   ArrowDownToLine,
   ArrowUpToLine,
@@ -16,61 +25,71 @@ import {
   Receipt,
   BarChart3,
   AlertCircle,
+  Sparkles,
+  Database,
 } from "lucide-react";
 
-const navItems = [
+const mainItems = [
   {
     label: "Timeline",
     href: "/app",
     icon: Clock,
-    showAiIcon: false,
+    description: "View all transactions",
   },
   {
     label: "Review",
     href: "/app/review",
     icon: AlertCircle,
-    showAiIcon: false,
+    description: "Categorize & organize",
   },
+];
+
+const insightsItems = [
   {
     label: "Analytics",
     href: "/app/analytics",
     icon: BarChart3,
-    showAiIcon: true,
+    description: "AI-powered insights",
   },
   {
     label: "Budgets",
     href: "/app/budgets",
     icon: Wallet,
-    showAiIcon: true,
+    description: "Track spending goals",
   },
   {
     label: "Invoices",
     href: "/app/invoices",
     icon: FileText,
-    showAiIcon: true,
+    description: "Manage invoices",
   },
+];
+
+const dataItems = [
   {
     label: "Import",
     href: "/app/import",
     icon: ArrowDownToLine,
-    showAiIcon: false,
+    description: "Upload documents",
   },
   {
     label: "Export",
     href: "/app/export",
     icon: ArrowUpToLine,
-    showAiIcon: false,
-  },
-  {
-    label: "Settings",
-    href: "/app/settings",
-    icon: Settings,
-    showAiIcon: false,
+    description: "Download reports",
   },
 ];
 
 export function DesktopNav() {
   const pathname = usePathname();
+
+  const isActiveGroup = (items: typeof mainItems) => {
+    return items.some(
+      (item) =>
+        pathname === item.href ||
+        (item.href !== "/app" && pathname?.startsWith(item.href))
+    );
+  };
 
   return (
     <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -81,35 +100,126 @@ export function DesktopNav() {
           <span className="font-bold text-lg">Turbo Invoice</span>
         </Link>
 
-        {/* Navigation Links - Centered */}
-        <div className="flex items-center space-x-1 mx-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/app" && pathname?.startsWith(item.href));
+        {/* Navigation Menu - Centered */}
+        <NavigationMenu className="mx-auto">
+          <NavigationMenuList>
+            {/* Main Pages */}
+            {mainItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/app" && pathname?.startsWith(item.href));
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
-                {item.showAiIcon && (
-                  <Brain className="h-3.5 w-3.5 text-primary" />
-                )}
+              return (
+                <NavigationMenuItem key={item.href}>
+                  <Link href={item.href}>
+                    <NavigationMenuLink
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        isActive && "bg-accent"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 mr-2" />
+                      {item.label}
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              );
+            })}
+
+            {/* Insights Dropdown */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className={isActiveGroup(insightsItems) ? "bg-accent" : ""}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Insights
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2">
+                  {insightsItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.href}>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href={item.href}
+                            className={cn(
+                              "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                              pathname?.startsWith(item.href) && "bg-accent"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              <div className="text-sm font-medium leading-none">
+                                {item.label}
+                              </div>
+                              <Brain className="h-3 w-3 text-primary ml-auto" />
+                            </div>
+                            <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+                              {item.description}
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+
+            {/* Data Dropdown */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className={isActiveGroup(dataItems) ? "bg-accent" : ""}>
+                <Database className="h-4 w-4 mr-2" />
+                Data
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid w-[400px] gap-3 p-4">
+                  {dataItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.href}>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href={item.href}
+                            className={cn(
+                              "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                              pathname?.startsWith(item.href) && "bg-accent"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              <div className="text-sm font-medium leading-none">
+                                {item.label}
+                              </div>
+                            </div>
+                            <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+                              {item.description}
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+
+            {/* Settings */}
+            <NavigationMenuItem>
+              <Link href="/app/settings">
+                <NavigationMenuLink
+                  className={cn(
+                    navigationMenuTriggerStyle(),
+                    pathname?.startsWith("/app/settings") && "bg-accent"
+                  )}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </NavigationMenuLink>
               </Link>
-            );
-          })}
-        </div>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
 
         {/* User Menu - Only visible on desktop (md+) */}
         <div className="flex items-center gap-3 flex-shrink-0">
