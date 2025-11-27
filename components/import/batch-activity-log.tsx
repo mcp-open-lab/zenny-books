@@ -84,10 +84,21 @@ export function BatchActivityLog({
   };
 
   const cleanMessage = (message: string) => {
-    // Remove emoji from start of message (they're shown as icons)
-    let cleaned = message.replace(/^[\u{1F300}-\u{1F9FF}]+\s*/u, "");
+    // Remove ALL emojis from message (they're shown as icons on the left)
+    // This regex matches emoji ranges including:
+    // - Emoticons (😀-🙏)
+    // - Symbols & Pictographs (🌀-🗿)
+    // - Transport & Map (🚀-🛿)
+    // - Flags (🏁-🏿)
+    // - And other emoji ranges
+    let cleaned = message.replace(
+      /[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu,
+      ""
+    );
     // Remove "(ai)" text - will be shown as brain icon instead
     cleaned = cleaned.replace(/\s*\(ai\)/gi, "");
+    // Clean up multiple spaces
+    cleaned = cleaned.replace(/\s+/g, " ");
     return cleaned.trim();
   };
 
