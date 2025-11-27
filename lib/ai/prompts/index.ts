@@ -12,3 +12,6 @@ export type { ColumnMappingConfig } from "./column-mapping";
 export { CategorizationPrompt } from "./categorization";
 export type { CategorizationConfig } from "./categorization";
 
+export { BankStatementExtractionPrompt } from "./bank-statement-extraction";
+export type { BankStatementExtractionConfig } from "./bank-statement-extraction";
+
