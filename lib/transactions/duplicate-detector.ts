@@ -4,8 +4,13 @@
  */
 
 import { db } from "@/lib/db";
-import { receipts, bankStatementTransactions, bankStatements, documents } from "@/lib/db/schema";
-import { sql, and, gte, lte, eq, or } from "drizzle-orm";
+import {
+  receipts,
+  bankStatementTransactions,
+  bankStatements,
+  documents,
+} from "@/lib/db/schema";
+import { sql, and, gte, lte, eq } from "drizzle-orm";
 import { SIMILARITY_THRESHOLD } from "@/lib/constants";
 import type { TransactionFlags } from "@/lib/constants/transaction-flags";
 
@@ -34,14 +39,14 @@ const DATE_WINDOW_DAYS = 3; // Look within 3 days
 function amountsMatch(amount1: string, amount2: string): boolean {
   const a1 = Math.abs(parseFloat(amount1) || 0);
   const a2 = Math.abs(parseFloat(amount2) || 0);
-  
+
   if (a1 === 0 && a2 === 0) return true;
   if (a1 === 0 || a2 === 0) return false;
-  
+
   const diff = Math.abs(a1 - a2);
   const avg = (a1 + a2) / 2;
   const percentDiff = diff / avg;
-  
+
   return percentDiff <= AMOUNT_TOLERANCE;
 }
 
@@ -50,10 +55,10 @@ function amountsMatch(amount1: string, amount2: string): boolean {
  */
 function datesMatch(date1: Date | null, date2: Date | null): boolean {
   if (!date1 || !date2) return false;
-  
+
   const diffMs = Math.abs(date1.getTime() - date2.getTime());
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
-  
+
   return diffDays <= DATE_WINDOW_DAYS;
 }
 
@@ -67,22 +72,22 @@ function calculateConfidence(
   exactAmountMatch: boolean
 ): number {
   let confidence = 0;
-  
+
   // Merchant similarity (40% weight)
   confidence += merchantSimilarity * 0.4;
-  
+
   // Amount match (40% weight)
   if (exactAmountMatch) {
     confidence += 0.4;
   } else if (amountMatch) {
     confidence += 0.3;
   }
-  
+
   // Date match (20% weight)
   if (dateMatch) {
     confidence += 0.2;
   }
-  
+
   return Math.min(confidence, 1.0);
 }
 
@@ -102,7 +107,7 @@ export async function findDuplicateBankTransactions(
   // Calculate date range
   const startDate = new Date(receiptDate);
   startDate.setDate(startDate.getDate() - DATE_WINDOW_DAYS);
-  
+
   const endDate = new Date(receiptDate);
   endDate.setDate(endDate.getDate() + DATE_WINDOW_DAYS);
 
@@ -113,21 +118,31 @@ export async function findDuplicateBankTransactions(
       ${bankStatementTransactions.merchantName} as "merchantName",
       ${bankStatementTransactions.amount} as amount,
       ${bankStatementTransactions.transactionDate} as date,
-      similarity(${bankStatementTransactions.merchantName}, ${receiptMerchantName}) as sim_score,
+      similarity(${
+        bankStatementTransactions.merchantName
+      }, ${receiptMerchantName}) as sim_score,
       'bank_transaction' as type
     FROM ${bankStatementTransactions}
-    INNER JOIN ${bankStatements} ON ${bankStatementTransactions.bankStatementId} = ${bankStatements.id}
+    INNER JOIN ${bankStatements} ON ${
+    bankStatementTransactions.bankStatementId
+  } = ${bankStatements.id}
     INNER JOIN ${documents} ON ${bankStatements.documentId} = ${documents.id}
     WHERE ${documents.userId} = ${userId}
       AND ${bankStatementTransactions.merchantName} IS NOT NULL
       AND ${bankStatementTransactions.transactionDate} >= ${startDate}
       AND ${bankStatementTransactions.transactionDate} <= ${endDate}
-      AND similarity(${bankStatementTransactions.merchantName}, ${receiptMerchantName}) > ${SIMILARITY_THRESHOLD}
+      AND similarity(${
+        bankStatementTransactions.merchantName
+      }, ${receiptMerchantName}) > ${SIMILARITY_THRESHOLD}
       AND (
         ${bankStatementTransactions.transactionFlags}->>'isDuplicate' IS NULL
-        OR ${bankStatementTransactions.transactionFlags}->>'isDuplicate' = 'false'
+        OR ${
+          bankStatementTransactions.transactionFlags
+        }->>'isDuplicate' = 'false'
       )
-    ORDER BY sim_score DESC, ABS(ABS(CAST(${bankStatementTransactions.amount} AS NUMERIC)) - ${Math.abs(parseFloat(receiptAmount))}) ASC
+    ORDER BY sim_score DESC, ABS(ABS(CAST(${
+      bankStatementTransactions.amount
+    } AS NUMERIC)) - ${Math.abs(parseFloat(receiptAmount))}) ASC
     LIMIT 5
   `);
 
@@ -136,9 +151,10 @@ export async function findDuplicateBankTransactions(
   for (const row of results.rows as any[]) {
     const merchantSimilarity = row.sim_score || 0;
     const amountMatch = amountsMatch(receiptAmount, row.amount);
-    const exactAmountMatch = Math.abs(parseFloat(receiptAmount)) === Math.abs(parseFloat(row.amount));
+    const exactAmountMatch =
+      Math.abs(parseFloat(receiptAmount)) === Math.abs(parseFloat(row.amount));
     const dateMatch = datesMatch(receiptDate, row.date);
-    
+
     const confidence = calculateConfidence(
       merchantSimilarity,
       amountMatch,
@@ -189,7 +205,7 @@ export async function findDuplicateReceipts(
   // Calculate date range
   const startDate = new Date(txDate);
   startDate.setDate(startDate.getDate() - DATE_WINDOW_DAYS);
-  
+
   const endDate = new Date(txDate);
   endDate.setDate(endDate.getDate() + DATE_WINDOW_DAYS);
 
@@ -207,12 +223,16 @@ export async function findDuplicateReceipts(
       AND ${receipts.merchantName} IS NOT NULL
       AND ${receipts.date} >= ${startDate}
       AND ${receipts.date} <= ${endDate}
-      AND similarity(${receipts.merchantName}, ${txMerchantName}) > ${SIMILARITY_THRESHOLD}
+      AND similarity(${
+        receipts.merchantName
+      }, ${txMerchantName}) > ${SIMILARITY_THRESHOLD}
       AND (
         ${receipts.transactionFlags}->>'isDuplicate' IS NULL
         OR ${receipts.transactionFlags}->>'isDuplicate' = 'false'
       )
-    ORDER BY sim_score DESC, ABS(CAST(${receipts.totalAmount} AS NUMERIC) - ${Math.abs(parseFloat(txAmount))}) ASC
+    ORDER BY sim_score DESC, ABS(CAST(${
+      receipts.totalAmount
+    } AS NUMERIC) - ${Math.abs(parseFloat(txAmount))}) ASC
     LIMIT 5
   `);
 
@@ -220,10 +240,14 @@ export async function findDuplicateReceipts(
 
   for (const row of results.rows as any[]) {
     const merchantSimilarity = row.sim_score || 0;
-    const amountMatch = amountsMatch(Math.abs(parseFloat(txAmount)).toString(), row.amount);
-    const exactAmountMatch = Math.abs(parseFloat(txAmount)) === parseFloat(row.amount);
+    const amountMatch = amountsMatch(
+      Math.abs(parseFloat(txAmount)).toString(),
+      row.amount
+    );
+    const exactAmountMatch =
+      Math.abs(parseFloat(txAmount)) === parseFloat(row.amount);
     const dateMatch = datesMatch(txDate, row.date);
-    
+
     const confidence = calculateConfidence(
       merchantSimilarity,
       amountMatch,
@@ -312,7 +336,7 @@ export async function markAsDuplicate(
 }
 
 /**
- * Remove duplicate flag from a transaction
+ * Remove duplicate flag from a transaction (preserves other flags)
  */
 export async function unmarkAsDuplicate(
   transactionId: string,
@@ -320,20 +344,68 @@ export async function unmarkAsDuplicate(
   userId: string
 ): Promise<void> {
   if (transactionType === "receipt") {
-    await db
-      .update(receipts)
-      .set({ transactionFlags: null })
-      .where(and(eq(receipts.id, transactionId), eq(receipts.userId, userId)));
+    const existing = await db
+      .select({ transactionFlags: receipts.transactionFlags })
+      .from(receipts)
+      .where(and(eq(receipts.id, transactionId), eq(receipts.userId, userId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const flags = (existing[0].transactionFlags as TransactionFlags) || {};
+      delete flags.isDuplicate;
+      delete flags.linkedTransactionId;
+      delete flags.linkedTransactionType;
+      delete flags.duplicateConfidence;
+      if (flags.exclusionReason === "duplicate") {
+        delete flags.isExcludedFromAnalytics;
+        delete flags.exclusionReason;
+      }
+
+      const hasFlags = Object.keys(flags).length > 0;
+      await db
+        .update(receipts)
+        .set({ transactionFlags: hasFlags ? flags : null })
+        .where(
+          and(eq(receipts.id, transactionId), eq(receipts.userId, userId))
+        );
+    }
   } else {
-    await db.execute(sql`
-      UPDATE ${bankStatementTransactions}
-      SET transaction_flags = NULL
-      FROM ${bankStatements}, ${documents}
-      WHERE ${bankStatementTransactions.id} = ${transactionId}
-        AND ${bankStatementTransactions.bankStatementId} = ${bankStatements.id}
-        AND ${bankStatements.documentId} = ${documents.id}
-        AND ${documents.userId} = ${userId}
-    `);
+    // Verify ownership and get existing flags
+    const existing = await db
+      .select({
+        id: bankStatementTransactions.id,
+        transactionFlags: bankStatementTransactions.transactionFlags,
+      })
+      .from(bankStatementTransactions)
+      .innerJoin(
+        bankStatements,
+        eq(bankStatementTransactions.bankStatementId, bankStatements.id)
+      )
+      .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+      .where(
+        and(
+          eq(bankStatementTransactions.id, transactionId),
+          eq(documents.userId, userId)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      const flags = (existing[0].transactionFlags as TransactionFlags) || {};
+      delete flags.isDuplicate;
+      delete flags.linkedTransactionId;
+      delete flags.linkedTransactionType;
+      delete flags.duplicateConfidence;
+      if (flags.exclusionReason === "duplicate") {
+        delete flags.isExcludedFromAnalytics;
+        delete flags.exclusionReason;
+      }
+
+      const hasFlags = Object.keys(flags).length > 0;
+      await db
+        .update(bankStatementTransactions)
+        .set({ transactionFlags: hasFlags ? flags : null })
+        .where(eq(bankStatementTransactions.id, transactionId));
+    }
   }
 }
-

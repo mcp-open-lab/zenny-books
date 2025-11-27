@@ -76,6 +76,8 @@ export const toggleExcludeFromAnalytics = createAuthenticatedAction(
           .where(eq(bankStatementTransactions.id, transactionId));
       }
     }
+
+    return { success: true };
   }
 );
 
@@ -92,16 +94,17 @@ export const findDuplicates = createAuthenticatedAction(
   async (userId, input: FindDuplicatesInput) => {
     const { transactionType, merchantName, amount, date } = input;
 
-    if (transactionType === "receipt") {
-      return await findDuplicateBankTransactions(
-        userId,
-        merchantName,
-        amount,
-        date
-      );
-    } else {
-      return await findDuplicateReceipts(userId, merchantName, amount, date);
-    }
+    const result =
+      transactionType === "receipt"
+        ? await findDuplicateBankTransactions(
+            userId,
+            merchantName,
+            amount,
+            date
+          )
+        : await findDuplicateReceipts(userId, merchantName, amount, date);
+
+    return { success: true, data: result };
   }
 );
 
@@ -129,6 +132,8 @@ export const markAsDuplicate = createAuthenticatedAction(
       linkedTransactionType,
       userId
     );
+
+    return { success: true };
   }
 );
 
@@ -143,6 +148,8 @@ export const unmarkAsDuplicate = createAuthenticatedAction(
     const { transactionId, transactionType } = input;
 
     await unmarkAsDuplicateService(transactionId, transactionType, userId);
+
+    return { success: true };
   }
 );
 
@@ -157,6 +164,8 @@ export const markAsInternalTransfer = createAuthenticatedAction(
     const { transactionId, transferType = "internal" } = input;
 
     await markAsInternalTransferService(transactionId, userId, transferType);
+
+    return { success: true };
   }
 );
 
@@ -170,6 +179,8 @@ export const unmarkAsInternalTransfer = createAuthenticatedAction(
     const { transactionId } = input;
 
     await unmarkAsInternalTransferService(transactionId, userId);
+
+    return { success: true };
   }
 );
 
@@ -191,12 +202,12 @@ export const detectTransfer = createAuthenticatedAction(
       amount
     );
     if (creditCardResult.isTransfer) {
-      return creditCardResult;
+      return { success: true, data: creditCardResult };
     }
 
     const transferResult = detectInternalTransferByDescription(description);
     if (transferResult.isTransfer) {
-      return transferResult;
+      return { success: true, data: transferResult };
     }
 
     // Check for matching transfers
@@ -207,16 +218,29 @@ export const detectTransfer = createAuthenticatedAction(
         date,
         transactionId
       );
-      return matchingResult;
+      return { success: true, data: matchingResult };
     }
 
     return {
-      isTransfer: false,
-      matches: [],
-      autoDetected: false,
+      success: true,
+      data: {
+        isTransfer: false,
+        matches: [],
+        autoDetected: false,
+      },
     };
   }
 );
+
+const VALID_BNPL_PROVIDERS = [
+  "affirm",
+  "klarna",
+  "afterpay",
+  "apple_pay_later",
+  "other",
+] as const;
+
+type BnplProvider = (typeof VALID_BNPL_PROVIDERS)[number];
 
 type MarkAsBnplInput = {
   transactionId: string;
@@ -237,11 +261,17 @@ export const markAsBnpl = createAuthenticatedAction(
       provider,
     } = input;
 
+    const validProvider: BnplProvider = VALID_BNPL_PROVIDERS.includes(
+      provider as BnplProvider
+    )
+      ? (provider as BnplProvider)
+      : "other";
+
     const flags: TransactionFlags = {
       isBnplPurchase: true,
       bnplOriginalAmount: originalAmount,
       bnplRemainingInstallments: remainingInstallments,
-      bnplProvider: provider as any,
+      bnplProvider: validProvider,
       userVerified: true,
       verifiedAt: new Date().toISOString(),
     };
@@ -278,5 +308,7 @@ export const markAsBnpl = createAuthenticatedAction(
           .where(eq(bankStatementTransactions.id, transactionId));
       }
     }
+
+    return { success: true };
   }
 );

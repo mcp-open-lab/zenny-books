@@ -253,19 +253,25 @@ export async function syncPlaidTransactionUpdate(
 
   // Update main fields if any
   if (Object.keys(updateFields).length > 0) {
-    const setClause = Object.entries(updateFields)
-      .map(([key, value]) => sql`${sql.raw(key)} = ${value}`)
-      .reduce((prev, curr) => sql`${prev}, ${curr}`);
-
-    await db.execute(sql`
-      UPDATE ${bankStatementTransactions}
-      SET ${setClause}
-      FROM ${bankStatements}, ${documents}
+    // Find the transaction first
+    const txResult = await db.execute(sql`
+      SELECT ${bankStatementTransactions.id} as id
+      FROM ${bankStatementTransactions}
+      INNER JOIN ${bankStatements} ON ${bankStatementTransactions.bankStatementId} = ${bankStatements.id}
+      INNER JOIN ${documents} ON ${bankStatements.documentId} = ${documents.id}
       WHERE (${bankStatementTransactions.transactionFlags}->>'plaidTransactionId')::text = ${plaidTransactionId}
-        AND ${bankStatementTransactions.bankStatementId} = ${bankStatements.id}
-        AND ${bankStatements.documentId} = ${documents.id}
         AND ${documents.userId} = ${userId}
+      LIMIT 1
     `);
+
+    if (txResult.rows.length > 0) {
+      const txId = (txResult.rows[0] as any).id;
+
+      await db
+        .update(bankStatementTransactions)
+        .set(updateFields)
+        .where(eq(bankStatementTransactions.id, txId));
+    }
   }
 }
 

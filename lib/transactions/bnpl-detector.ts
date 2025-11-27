@@ -7,7 +7,6 @@ import { db } from "@/lib/db";
 import { receipts, bankStatementTransactions, bankStatements, documents } from "@/lib/db/schema";
 import { sql, and, eq, or } from "drizzle-orm";
 import type { TransactionFlags } from "@/lib/constants/transaction-flags";
-import { BNPL_MERCHANT_PATTERNS, detectBnplMerchant } from "@/lib/constants/transaction-flags";
 
 export interface BnplTransaction {
   id: string;
@@ -26,6 +25,22 @@ export interface BnplDetectionResult {
   confidence: number;
 }
 
+// Provider patterns with confidence scores
+const BNPL_PROVIDER_PATTERNS: Array<{
+  pattern: RegExp;
+  provider: "affirm" | "klarna" | "afterpay" | "apple_pay_later" | "other";
+  confidence: number;
+}> = [
+  { pattern: /affirm/i, provider: "affirm", confidence: 1.0 },
+  { pattern: /klarna/i, provider: "klarna", confidence: 1.0 },
+  { pattern: /afterpay/i, provider: "afterpay", confidence: 1.0 },
+  { pattern: /apple\s*pay\s*later/i, provider: "apple_pay_later", confidence: 1.0 },
+  { pattern: /sezzle/i, provider: "other", confidence: 0.9 },
+  { pattern: /zip\s*pay/i, provider: "other", confidence: 0.9 },
+  { pattern: /quadpay/i, provider: "other", confidence: 0.9 },
+  { pattern: /splitit/i, provider: "other", confidence: 0.9 },
+];
+
 /**
  * Detect BNPL provider from merchant name
  */
@@ -34,38 +49,10 @@ export function detectBnplProvider(merchantName: string): BnplDetectionResult {
     return { isBnpl: false, confidence: 0 };
   }
 
-  const lowerName = merchantName.toLowerCase();
-
-  if (/affirm/i.test(lowerName)) {
-    return { isBnpl: true, provider: "affirm", confidence: 1.0 };
-  }
-  
-  if (/klarna/i.test(lowerName)) {
-    return { isBnpl: true, provider: "klarna", confidence: 1.0 };
-  }
-  
-  if (/afterpay/i.test(lowerName)) {
-    return { isBnpl: true, provider: "afterpay", confidence: 1.0 };
-  }
-  
-  if (/apple\s*pay\s*later/i.test(lowerName)) {
-    return { isBnpl: true, provider: "apple_pay_later", confidence: 1.0 };
-  }
-  
-  if (/sezzle/i.test(lowerName)) {
-    return { isBnpl: true, provider: "other", confidence: 0.9 };
-  }
-  
-  if (/zip\s*pay/i.test(lowerName)) {
-    return { isBnpl: true, provider: "other", confidence: 0.9 };
-  }
-  
-  if (/quadpay/i.test(lowerName)) {
-    return { isBnpl: true, provider: "other", confidence: 0.9 };
-  }
-  
-  if (/splitit/i.test(lowerName)) {
-    return { isBnpl: true, provider: "other", confidence: 0.9 };
+  for (const { pattern, provider, confidence } of BNPL_PROVIDER_PATTERNS) {
+    if (pattern.test(merchantName)) {
+      return { isBnpl: true, provider, confidence };
+    }
   }
 
   return { isBnpl: false, confidence: 0 };

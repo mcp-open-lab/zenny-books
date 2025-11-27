@@ -4,8 +4,12 @@
  */
 
 import { db } from "@/lib/db";
-import { bankStatementTransactions, bankStatements, documents } from "@/lib/db/schema";
-import { sql, and, eq, or } from "drizzle-orm";
+import {
+  bankStatementTransactions,
+  bankStatements,
+  documents,
+} from "@/lib/db/schema";
+import { sql, and, eq } from "drizzle-orm";
 import type { TransactionFlags } from "@/lib/constants/transaction-flags";
 import {
   detectInternalTransfer,
@@ -38,7 +42,7 @@ const DATE_WINDOW_DAYS = 2; // Look within 2 days
 function amountsExactMatch(amount1: string, amount2: string): boolean {
   const a1 = Math.abs(parseFloat(amount1) || 0);
   const a2 = Math.abs(parseFloat(amount2) || 0);
-  
+
   return Math.abs(a1 - a2) <= AMOUNT_EXACT_MATCH_TOLERANCE;
 }
 
@@ -128,12 +132,19 @@ export async function findMatchingTransfers(
   }
 
   const amount = parseFloat(txAmount);
+  if (isNaN(amount)) {
+    return {
+      isTransfer: false,
+      matches: [],
+      autoDetected: false,
+    };
+  }
   const oppositeAmount = -amount; // Look for opposite sign
 
   // Calculate date range
   const startDate = new Date(txDate);
   startDate.setDate(startDate.getDate() - DATE_WINDOW_DAYS);
-  
+
   const endDate = new Date(txDate);
   endDate.setDate(endDate.getDate() + DATE_WINDOW_DAYS);
 
@@ -144,20 +155,36 @@ export async function findMatchingTransfers(
       ${bankStatementTransactions.description} as description,
       ${bankStatementTransactions.amount} as amount,
       ${bankStatementTransactions.transactionDate} as date,
-      ABS(CAST(${bankStatementTransactions.amount} AS NUMERIC) - ${oppositeAmount}) as amount_diff
+      ABS(CAST(${
+        bankStatementTransactions.amount
+      } AS NUMERIC) - ${oppositeAmount}) as amount_diff
     FROM ${bankStatementTransactions}
-    INNER JOIN ${bankStatements} ON ${bankStatementTransactions.bankStatementId} = ${bankStatements.id}
+    INNER JOIN ${bankStatements} ON ${
+    bankStatementTransactions.bankStatementId
+  } = ${bankStatements.id}
     INNER JOIN ${documents} ON ${bankStatements.documentId} = ${documents.id}
     WHERE ${documents.userId} = ${userId}
       AND ${bankStatementTransactions.transactionDate} >= ${startDate}
       AND ${bankStatementTransactions.transactionDate} <= ${endDate}
-      AND ABS(CAST(${bankStatementTransactions.amount} AS NUMERIC) - ${oppositeAmount}) <= ${AMOUNT_EXACT_MATCH_TOLERANCE}
-      ${excludeTransactionId ? sql`AND ${bankStatementTransactions.id} != ${excludeTransactionId}` : sql``}
+      AND ABS(CAST(${
+        bankStatementTransactions.amount
+      } AS NUMERIC) - ${oppositeAmount}) <= ${AMOUNT_EXACT_MATCH_TOLERANCE}
+      ${
+        excludeTransactionId
+          ? sql`AND ${bankStatementTransactions.id} != ${excludeTransactionId}`
+          : sql``
+      }
       AND (
-        ${bankStatementTransactions.transactionFlags}->>'isInternalTransfer' IS NULL
-        OR ${bankStatementTransactions.transactionFlags}->>'isInternalTransfer' = 'false'
+        ${
+          bankStatementTransactions.transactionFlags
+        }->>'isInternalTransfer' IS NULL
+        OR ${
+          bankStatementTransactions.transactionFlags
+        }->>'isInternalTransfer' = 'false'
       )
-    ORDER BY amount_diff ASC, ABS(EXTRACT(EPOCH FROM (${bankStatementTransactions.transactionDate} - ${txDate}))) ASC
+    ORDER BY amount_diff ASC, ABS(EXTRACT(EPOCH FROM (${
+      bankStatementTransactions.transactionDate
+    } - ${txDate}))) ASC
     LIMIT 5
   `);
 
@@ -166,7 +193,7 @@ export async function findMatchingTransfers(
   for (const row of results.rows as any[]) {
     const amountDiff = row.amount_diff || 0;
     const isExactMatch = amountDiff <= AMOUNT_EXACT_MATCH_TOLERANCE;
-    
+
     if (isExactMatch) {
       matches.push({
         id: row.id,
@@ -199,7 +226,10 @@ export async function markAsInternalTransfer(
   const flags: TransactionFlags = {
     isInternalTransfer: true,
     isExcludedFromAnalytics: true,
-    exclusionReason: transferType === "credit_card_payment" ? "credit_card_payment" : "internal_transfer",
+    exclusionReason:
+      transferType === "credit_card_payment"
+        ? "credit_card_payment"
+        : "internal_transfer",
     userVerified: true,
     verifiedAt: new Date().toISOString(),
     detectionMethod: "user_manual",
@@ -261,7 +291,10 @@ export async function autoDetectInternalTransfers(userId: string): Promise<{
 
   for (const row of transactions.rows as any[]) {
     // Check description patterns
-    const creditCardResult = detectCreditCardPaymentTransaction(row.description, row.amount);
+    const creditCardResult = detectCreditCardPaymentTransaction(
+      row.description,
+      row.amount
+    );
     const transferResult = detectInternalTransferByDescription(row.description);
 
     if (creditCardResult.isTransfer) {
@@ -304,20 +337,48 @@ export async function autoDetectInternalTransfers(userId: string): Promise<{
 }
 
 /**
- * Remove internal transfer flag from a transaction
+ * Remove internal transfer flag from a transaction (preserves other flags)
  */
 export async function unmarkAsInternalTransfer(
   transactionId: string,
   userId: string
 ): Promise<void> {
-  await db.execute(sql`
-    UPDATE ${bankStatementTransactions}
-    SET transaction_flags = NULL
-    FROM ${bankStatements}, ${documents}
-    WHERE ${bankStatementTransactions.id} = ${transactionId}
-      AND ${bankStatementTransactions.bankStatementId} = ${bankStatements.id}
-      AND ${bankStatements.documentId} = ${documents.id}
-      AND ${documents.userId} = ${userId}
-  `);
-}
+  // Verify ownership and get existing flags
+  const existing = await db
+    .select({
+      id: bankStatementTransactions.id,
+      transactionFlags: bankStatementTransactions.transactionFlags,
+    })
+    .from(bankStatementTransactions)
+    .innerJoin(
+      bankStatements,
+      eq(bankStatementTransactions.bankStatementId, bankStatements.id)
+    )
+    .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+    .where(
+      and(
+        eq(bankStatementTransactions.id, transactionId),
+        eq(documents.userId, userId)
+      )
+    )
+    .limit(1);
 
+  if (existing.length > 0) {
+    const flags = (existing[0].transactionFlags as TransactionFlags) || {};
+    delete flags.isInternalTransfer;
+    delete flags.transferToAccountId;
+    if (
+      flags.exclusionReason === "internal_transfer" ||
+      flags.exclusionReason === "credit_card_payment"
+    ) {
+      delete flags.isExcludedFromAnalytics;
+      delete flags.exclusionReason;
+    }
+
+    const hasFlags = Object.keys(flags).length > 0;
+    await db
+      .update(bankStatementTransactions)
+      .set({ transactionFlags: hasFlags ? flags : null })
+      .where(eq(bankStatementTransactions.id, transactionId));
+  }
+}
