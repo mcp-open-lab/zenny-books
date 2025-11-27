@@ -15,9 +15,15 @@ export const ourFileRouter = {
     image: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_SINGLE },
     pdf: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_SINGLE },
   })
-    .middleware(async () => {
+    .middleware(async ({ req }) => {
       const { userId } = await auth();
-      if (!userId) throw new Error("Unauthorized");
+      if (!userId) {
+        devLogger.error("UploadThing unauthorized", { 
+          hasRequest: !!req,
+          action: "receiptUploader" 
+        });
+        throw new Error("Unauthorized");
+      }
       return { userId };
     })
     .onUploadComplete(({ metadata, file }) => {
@@ -39,9 +45,15 @@ export const ourFileRouter = {
     text: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_BATCH }, // CSV files
     blob: { maxFileSize: MAX_FILE_SIZE, maxFileCount: MAX_FILE_COUNT_BATCH }, // XLSX/XLS files
   })
-    .middleware(async () => {
+    .middleware(async ({ req }) => {
       const { userId } = await auth();
-      if (!userId) throw new Error("Unauthorized");
+      if (!userId) {
+        devLogger.error("UploadThing unauthorized", { 
+          hasRequest: !!req,
+          action: "batchUploader" 
+        });
+        throw new Error("Unauthorized");
+      }
       return { userId };
     })
     .onUploadComplete(({ metadata, file }) => {
