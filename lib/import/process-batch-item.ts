@@ -47,7 +47,7 @@ export async function processBatchItem(
 
     if (importType === "receipts") {
       // Call handler directly to avoid Server Action wrapper issues in queue context
-      await scanReceiptHandler(fileUrl, batchId, userId);
+      await scanReceiptHandler(fileUrl, batchId, userId, payload.fileName);
 
       // Find the created document
       const createdDoc = await db

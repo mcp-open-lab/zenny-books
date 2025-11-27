@@ -32,7 +32,8 @@ function getFileName(url: string): string | null {
 async function scanReceiptHandler(
   imageUrl: string,
   batchId?: string,
-  userId?: string
+  userId?: string,
+  fileName?: string
 ) {
   const authResult = userId ? { userId } : await auth();
   const finalUserId = userId || authResult.userId;
@@ -59,11 +60,33 @@ async function scanReceiptHandler(
       currency,
     });
 
-    const fileName = getFileName(imageUrl) || "receipt.jpg";
+    // Use provided fileName or get from batch item, fallback only for single uploads
+    let displayFileName = fileName;
+    if (!displayFileName && batchId) {
+      const existingItem = await db
+        .select({ fileName: importBatchItems.fileName })
+        .from(importBatchItems)
+        .where(
+          and(
+            eq(importBatchItems.batchId, batchId),
+            eq(importBatchItems.fileUrl, imageUrl)
+          )
+        )
+        .limit(1);
+      
+      if (existingItem.length > 0 && existingItem[0].fileName) {
+        displayFileName = existingItem[0].fileName;
+      }
+    }
+    
+    // Fallback only for non-batch uploads (single file uploads)
+    if (!displayFileName) {
+      displayFileName = getFileName(imageUrl) || "receipt.jpg";
+    }
 
     // Log AI extraction start
     if (batchId && batchItem) {
-      await ActivityLogger.aiExtractionStart(batchId, batchItem.id, fileName);
+      await ActivityLogger.aiExtractionStart(batchId, batchItem.id, displayFileName);
     }
 
     // Check for duplicate file first
@@ -81,7 +104,7 @@ async function scanReceiptHandler(
         await ActivityLogger.duplicateDetected(
           batchId,
           batchItem.id,
-          fileName,
+          displayFileName,
           "exact_file_hash"
         );
       }
@@ -100,18 +123,18 @@ async function scanReceiptHandler(
       currency,
     });
 
-    const extractedData = await processor.processDocument(imageUrl, fileName);
+    const extractedData = await processor.processDocument(imageUrl, displayFileName);
 
     // Log AI extraction complete
     if (batchId && batchItem) {
       const extractionDuration = Date.now() - startTime;
-      await ActivityLogger.aiExtractionComplete(batchId, batchItem.id, fileName, extractionDuration, {
+      await ActivityLogger.aiExtractionComplete(batchId, batchItem.id, displayFileName, extractionDuration, {
         merchantName: extractedData.merchantName || undefined,
         amount: extractedData.totalAmount || undefined,
       });
 
       // Log categorization start
-      await ActivityLogger.aiCategorizationStart(batchId, batchItem.id, fileName);
+      await ActivityLogger.aiCategorizationStart(batchId, batchItem.id, displayFileName);
     }
 
     // Only create document record AFTER successful extraction
@@ -124,7 +147,7 @@ async function scanReceiptHandler(
         userId: finalUserId,
         documentType: "receipt",
         fileFormat,
-        fileName,
+        fileName: displayFileName,
         fileUrl: imageUrl,
         mimeType,
         fileHash,
@@ -135,7 +158,7 @@ async function scanReceiptHandler(
       })
       .returning();
 
-    // Create batch item if batchId provided
+    // Create or update batch item if batchId provided
     if (batchId) {
       const existingItem = await db
         .select()
@@ -161,7 +184,7 @@ async function scanReceiptHandler(
           .values({
             batchId,
             documentId: document.id,
-            fileName,
+            fileName: displayFileName,
             fileUrl: imageUrl,
             status: "processing",
             order: 0,
@@ -187,7 +210,7 @@ async function scanReceiptHandler(
       await ActivityLogger.aiCategorizationComplete(
         batchId,
         batchItem.id,
-        fileName,
+        displayFileName,
         extractedData.category || "Uncategorized",
         "ai",
         extractedData.businessId ? "Business" : undefined
@@ -232,7 +255,7 @@ async function scanReceiptHandler(
         .where(eq(importBatchItems.id, batchItem.id));
       
       // Log item completion
-      await ActivityLogger.itemCompleted(batchId, batchItem.id, fileName, totalDuration);
+      await ActivityLogger.itemCompleted(batchId, batchItem.id, displayFileName, totalDuration);
     }
 
     revalidatePath("/app");
@@ -242,7 +265,6 @@ async function scanReceiptHandler(
     });
     return { success: true };
   } catch (error) {
-    const fileName = getFileName(imageUrl) || "receipt.jpg";
     
     // Update batch item on error
     if (batchId && typeof batchItem !== "undefined") {

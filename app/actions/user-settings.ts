@@ -120,33 +120,33 @@ export const saveUserSettings = createAuthenticatedAction(
  * Use this for server-side/background jobs where auth() isn't available
  */
 export async function getUserSettingsByUserId(userId: string) {
-  const settings = await db
-    .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, userId))
-    .limit(1);
+    const settings = await db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId))
+      .limit(1);
 
-  if (settings.length === 0) {
-    return null;
-  }
+    if (settings.length === 0) {
+      return null;
+    }
 
-  const setting = settings[0];
-  return {
-    ...setting,
-    visibleFields: setting.visibleFields
-      ? JSON.parse(setting.visibleFields)
-      : {},
-    requiredFields: setting.requiredFields
-      ? JSON.parse(setting.requiredFields)
-      : {},
-    defaultValues: setting.defaultValues
-      ? JSON.parse(setting.defaultValues)
-      : {
-          isBusinessExpense: null,
-          businessPurpose: null,
-          paymentMethod: null,
-        },
-  };
+    const setting = settings[0];
+    return {
+      ...setting,
+      visibleFields: setting.visibleFields
+        ? JSON.parse(setting.visibleFields)
+        : {},
+      requiredFields: setting.requiredFields
+        ? JSON.parse(setting.requiredFields)
+        : {},
+      defaultValues: setting.defaultValues
+        ? JSON.parse(setting.defaultValues)
+        : {
+            isBusinessExpense: null,
+            businessPurpose: null,
+            paymentMethod: null,
+          },
+    };
 }
 
 export const getUserSettings = createAuthenticatedAction(
