@@ -104,7 +104,7 @@ export function createAuthenticatedAction<TArgs extends any[], TResult>(
 /**
  * Creates a public server action that doesn't require authentication.
  * Use this for actions that should be accessible without login.
- * 
+ *
  * @example
  * export const getPublicData = createPublicAction(
  *   "getPublicData",

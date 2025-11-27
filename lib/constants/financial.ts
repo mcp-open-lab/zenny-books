@@ -89,7 +89,12 @@ export const CANADIAN_PROVINCES = [
 export type CanadianProvince = (typeof CANADIAN_PROVINCES)[number];
 
 // Account Types
-export const ACCOUNT_TYPES = ["checking", "savings", "credit", "other"] as const;
+export const ACCOUNT_TYPES = [
+  "checking",
+  "savings",
+  "credit",
+  "other",
+] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 // Transaction Directions
@@ -100,3 +105,6 @@ export type TransactionDirection = (typeof TRANSACTION_DIRECTIONS)[number];
 export const BUSINESS_TYPES = ["business", "contract"] as const;
 export type BusinessType = (typeof BUSINESS_TYPES)[number];
 
+// Similarity matching threshold (PostgreSQL pg_trgm)
+// Used for finding similar transactions based on merchant name
+export const SIMILARITY_THRESHOLD = 0.3;
