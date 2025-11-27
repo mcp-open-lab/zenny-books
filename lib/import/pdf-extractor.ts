@@ -6,6 +6,29 @@
 import { PDFParse } from "pdf-parse";
 import { devLogger } from "@/lib/dev-logger";
 
+// Configure pdfjs-dist to disable workers for server-side usage
+// This must be done before any PDFParse instances are created
+// Solution: Set GlobalWorkerOptions.workerSrc to undefined for server-side code
+if (typeof window === "undefined") {
+  try {
+    // Import pdfjs-dist directly to configure GlobalWorkerOptions
+    // This prevents the worker file loading error in Next.js server environment
+    const pdfjsDist = await import("pdfjs-dist");
+    if (pdfjsDist.GlobalWorkerOptions) {
+      // Set to undefined to disable worker (TypeScript requires type assertion)
+      (pdfjsDist.GlobalWorkerOptions as any).workerSrc = undefined;
+    }
+  } catch (error) {
+    // If import fails, use PDFParse.setWorker as fallback
+    devLogger.debug("Direct pdfjs-dist configuration failed, using PDFParse.setWorker", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (PDFParse.isNodeJS) {
+      PDFParse.setWorker("");
+    }
+  }
+}
+
 export interface PdfExtractionResult {
   text: string;
   pages: string[];
@@ -29,7 +52,14 @@ export async function extractPdfText(
   
   try {
     // Create parser with buffer data
-    parser = new PDFParse({ data: buffer });
+    // Worker is disabled via static setWorker() call above for Node.js environments
+    // Additional options to prevent worker usage
+    parser = new PDFParse({ 
+      data: buffer,
+      useWorkerFetch: false,
+      isOffscreenCanvasSupported: false,
+      disableFontFace: true,
+    });
     
     // Get text and info in parallel
     const [textResult, infoResult] = await Promise.all([
