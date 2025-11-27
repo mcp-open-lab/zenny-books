@@ -9,9 +9,9 @@ import {
   categories,
   businesses,
 } from "@/lib/db/schema";
-import { auth } from "@clerk/nextjs/server";
-import { sql, eq, and, gte, lte, isNull, desc, inArray } from "drizzle-orm";
-import { startOfMonth, subMonths, format } from "date-fns";
+import { sql, eq, and, gte, lte, inArray } from "drizzle-orm";
+import { startOfMonth, subMonths } from "date-fns";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 
 export interface SpendingTrend {
   month: string;
@@ -62,46 +62,44 @@ export interface AnalyticsData {
   topMerchants: TopMerchant[];
 }
 
-/**
- * Get comprehensive analytics data for the user
- */
-export async function getAnalyticsData(
-  startDate?: Date,
-  endDate?: Date
-): Promise<AnalyticsData> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+type AnalyticsInput = {
+  startDate?: Date;
+  endDate?: Date;
+};
 
-  // Default to last 12 months if no date range provided
-  const defaultStartDate = startOfMonth(subMonths(new Date(), 11));
-  const defaultEndDate = new Date();
+export const getAnalyticsData = createAuthenticatedAction(
+  "getAnalyticsData",
+  async (userId, input: AnalyticsInput = {}): Promise<AnalyticsData> => {
+    const { startDate, endDate } = input;
+    const defaultStartDate = startOfMonth(subMonths(new Date(), 11));
+    const defaultEndDate = new Date();
 
-  const finalStartDate = startDate || defaultStartDate;
-  const finalEndDate = endDate || defaultEndDate;
+    const finalStartDate = startDate || defaultStartDate;
+    const finalEndDate = endDate || defaultEndDate;
 
-  // Fetch all data in parallel
-  const [
-    spendingTrends,
-    categoryBreakdown,
-    businessSplit,
-    topMerchants,
-    summary,
-  ] = await Promise.all([
-    getSpendingTrends(userId, finalStartDate, finalEndDate),
-    getCategoryBreakdown(userId, finalStartDate, finalEndDate),
-    getBusinessSplit(userId, finalStartDate, finalEndDate),
-    getTopMerchants(userId, finalStartDate, finalEndDate),
-    getAnalyticsSummary(userId, finalStartDate, finalEndDate),
-  ]);
+    const [
+      spendingTrends,
+      categoryBreakdown,
+      businessSplit,
+      topMerchants,
+      summary,
+    ] = await Promise.all([
+      getSpendingTrends(userId, finalStartDate, finalEndDate),
+      getCategoryBreakdown(userId, finalStartDate, finalEndDate),
+      getBusinessSplit(userId, finalStartDate, finalEndDate),
+      getTopMerchants(userId, finalStartDate, finalEndDate),
+      getAnalyticsSummary(userId, finalStartDate, finalEndDate),
+    ]);
 
-  return {
-    summary,
-    spendingTrends,
-    categoryBreakdown,
-    businessSplit,
-    topMerchants,
-  };
-}
+    return {
+      summary,
+      spendingTrends,
+      categoryBreakdown,
+      businessSplit,
+      topMerchants,
+    };
+  }
+);
 
 /**
  * Get monthly spending trends

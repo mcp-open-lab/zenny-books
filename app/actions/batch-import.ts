@@ -1,7 +1,6 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
-import { createSafeAction } from "@/lib/safe-action";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 import { z } from "zod";
 import { createImportBatch } from "@/app/actions/import-batch";
 import { createBatchItem } from "@/app/actions/import-batch-items";
@@ -23,146 +22,128 @@ const batchImportSchema = z.object({
       fileSizeBytes: z.number().int().optional(),
     })
   ),
-  // Critical processing options
   defaultBusinessId: z.string().nullable().optional(),
-  dateRangeStart: z.string().optional(), // ISO date string
-  dateRangeEnd: z.string().optional(),   // ISO date string
+  dateRangeStart: z.string().optional(),
+  dateRangeEnd: z.string().optional(),
 });
 
-/**
- * Complete batch import flow:
- * 1. Create batch record
- * 2. Create batch items for each file
- * 3. Enqueue all items to Vercel Queue
- * 4. Return batch ID for status tracking
- */
-async function batchImportHandler(
-  input: z.infer<typeof batchImportSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  if (input.files.length === 0) {
-    throw new Error("No files provided");
-  }
-
-  // Step 1: Create batch record
-  const batchResult = await createImportBatch({
-    importType: input.importType,
-    sourceFormat: input.sourceFormat,
-    totalFiles: input.files.length,
-  });
-
-  if (!batchResult.success || !batchResult.batchId) {
-    throw new Error("Failed to create batch");
-  }
-
-  const batchId = batchResult.batchId;
-
-  // Log batch creation
-  await ActivityLogger.batchCreated(batchId, input.files.length);
-
-  // Step 2: Create batch items
-  const batchItems: Array<{ id: string; fileName: string; fileUrl: string; order: number }> = [];
-
-  for (let i = 0; i < input.files.length; i++) {
-    const file = input.files[i];
-    const itemResult = await createBatchItem({
-      batchId,
-      fileName: file.fileName,
-      fileUrl: file.fileUrl,
-      fileSizeBytes: file.fileSizeBytes,
-      order: i,
-    });
-
-    if (itemResult.success && itemResult.itemId) {
-      batchItems.push({
-        id: itemResult.itemId,
-        fileName: file.fileName,
-        fileUrl: file.fileUrl,
-        order: i,
-      });
-      
-      // Log file upload
-      await ActivityLogger.fileUploaded(
-        batchId,
-        itemResult.itemId,
-        file.fileName,
-        file.fileSizeBytes || 0
-      );
-    }
-  }
-
-  if (batchItems.length === 0) {
-    throw new Error("Failed to create batch items");
-  }
-
-  // Step 3: Prepare queue jobs
-  const getFileFormat = (url: string): ImportJobPayload["fileFormat"] => {
-    const ext = url.split(".").pop()?.toLowerCase() || "";
-    const formatMap: Record<string, ImportJobPayload["fileFormat"]> = {
-      jpg: "jpg",
-      jpeg: "jpg",
-      png: "png",
-      webp: "webp",
-      gif: "gif",
-      pdf: "pdf",
-      csv: "csv",
-      xlsx: "xlsx",
-      xls: "xls",
-    };
-    return formatMap[ext] || "jpg";
+function getFileFormat(url: string): ImportJobPayload["fileFormat"] {
+  const ext = url.split(".").pop()?.toLowerCase() || "";
+  const formatMap: Record<string, ImportJobPayload["fileFormat"]> = {
+    jpg: "jpg",
+    jpeg: "jpg",
+    png: "png",
+    webp: "webp",
+    gif: "gif",
+    pdf: "pdf",
+    csv: "csv",
+    xlsx: "xlsx",
+    xls: "xls",
   };
-
-  const jobs: ImportJobPayload[] = batchItems.map((item) => ({
-    batchId,
-    batchItemId: item.id,
-    fileUrl: item.fileUrl,
-    fileName: item.fileName,
-    fileFormat: getFileFormat(item.fileUrl),
-    userId,
-    importType: input.importType,
-    sourceFormat: input.sourceFormat,
-    statementType: input.statementType,
-    currency: input.currency,
-    order: item.order,
-  }));
-
-  // Step 4: Enqueue all jobs
-  const enqueueResult = await enqueueBatch(jobs);
-
-  if (!enqueueResult.success) {
-    devLogger.error("Failed to enqueue some batch items", {
-      batchId,
-      enqueued: enqueueResult.enqueued,
-      failed: enqueueResult.failed,
-      errors: enqueueResult.errors,
-    });
-    // Continue anyway - some items may have been enqueued
-  }
-
-  devLogger.info("Batch import initiated", {
-    batchId,
-    totalFiles: input.files.length,
-    itemsCreated: batchItems.length,
-    jobsEnqueued: enqueueResult.enqueued,
-    jobsFailed: enqueueResult.failed,
-  });
-
-  return {
-    success: true,
-    batchId,
-    itemsCreated: batchItems.length,
-    jobsEnqueued: enqueueResult.enqueued,
-    jobsFailed: enqueueResult.failed,
-  };
+  return formatMap[ext] || "jpg";
 }
 
-export const batchImport = createSafeAction(
+export const batchImport = createAuthenticatedAction(
   "batchImport",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof batchImportSchema>) => {
     const validated = batchImportSchema.parse(input);
-    return batchImportHandler(validated);
+
+    if (validated.files.length === 0) {
+      throw new Error("No files provided");
+    }
+
+    const batchResult = await createImportBatch({
+      importType: validated.importType,
+      sourceFormat: validated.sourceFormat,
+      totalFiles: validated.files.length,
+    });
+
+    if (!batchResult.success || !batchResult.batchId) {
+      throw new Error("Failed to create batch");
+    }
+
+    const batchId = batchResult.batchId;
+
+    await ActivityLogger.batchCreated(batchId, validated.files.length);
+
+    const batchItems: Array<{
+      id: string;
+      fileName: string;
+      fileUrl: string;
+      order: number;
+    }> = [];
+
+    for (let i = 0; i < validated.files.length; i++) {
+      const file = validated.files[i];
+      const itemResult = await createBatchItem({
+        batchId,
+        fileName: file.fileName,
+        fileUrl: file.fileUrl,
+        fileSizeBytes: file.fileSizeBytes,
+        order: i,
+      });
+
+      if (itemResult.success && itemResult.itemId) {
+        batchItems.push({
+          id: itemResult.itemId,
+          fileName: file.fileName,
+          fileUrl: file.fileUrl,
+          order: i,
+        });
+
+        await ActivityLogger.fileUploaded(
+          batchId,
+          itemResult.itemId,
+          file.fileName,
+          file.fileSizeBytes || 0
+        );
+      }
+    }
+
+    if (batchItems.length === 0) {
+      throw new Error("Failed to create batch items");
+    }
+
+    const jobs: ImportJobPayload[] = batchItems.map((item) => ({
+      batchId,
+      batchItemId: item.id,
+      fileUrl: item.fileUrl,
+      fileName: item.fileName,
+      fileFormat: getFileFormat(item.fileUrl),
+      userId,
+      importType: validated.importType,
+      sourceFormat: validated.sourceFormat,
+      statementType: validated.statementType,
+      currency: validated.currency,
+      order: item.order,
+    }));
+
+    const enqueueResult = await enqueueBatch(jobs);
+
+    if (!enqueueResult.success) {
+      devLogger.error("Failed to enqueue some batch items", {
+        batchId,
+        enqueued: enqueueResult.enqueued,
+        failed: enqueueResult.failed,
+        errors: enqueueResult.errors,
+      });
+    }
+
+    devLogger.info("Batch import initiated", {
+      batchId,
+      totalFiles: validated.files.length,
+      itemsCreated: batchItems.length,
+      jobsEnqueued: enqueueResult.enqueued,
+      jobsFailed: enqueueResult.failed,
+    });
+
+    return {
+      success: true,
+      batchId,
+      itemsCreated: batchItems.length,
+      jobsEnqueued: enqueueResult.enqueued,
+      jobsFailed: enqueueResult.failed,
+    };
   }
 );
 

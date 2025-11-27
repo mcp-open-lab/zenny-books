@@ -8,11 +8,10 @@ import {
   bankStatementTransactions,
 } from "@/lib/db/schema";
 import { eq, and, or, inArray } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { createId } from "@paralleldrive/cuid2";
 import { z } from "zod";
-import { createSafeAction } from "@/lib/safe-action";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 import { devLogger } from "@/lib/dev-logger";
 import { TransactionRepository } from "@/lib/categorization/repositories/transaction-repository";
 import {
@@ -22,20 +21,16 @@ import {
   RULE_FIELDS,
 } from "@/lib/constants";
 
-// Get all categories for a user (system + user-defined)
-export async function getUserCategories() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+export const getUserCategories = createAuthenticatedAction(
+  "getUserCategories",
+  async (userId) => {
+    return db
+      .select()
+      .from(categories)
+      .where(or(eq(categories.type, "system"), eq(categories.userId, userId)));
+  }
+);
 
-  const allCategories = await db
-    .select()
-    .from(categories)
-    .where(or(eq(categories.type, "system"), eq(categories.userId, userId)));
-
-  return allCategories;
-}
-
-// Create a new user category
 const CreateCategorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(50),
   transactionType: z.enum(TRANSACTION_TYPES),
@@ -43,37 +38,21 @@ const CreateCategorySchema = z.object({
   description: z.string().optional(),
 });
 
-export const createUserCategory = createSafeAction(
+export const createUserCategory = createAuthenticatedAction(
   "createUserCategory",
-  async (data: z.infer<typeof CreateCategorySchema>) => {
-    // Validate input
+  async (userId, data: z.infer<typeof CreateCategorySchema>) => {
     const validated = CreateCategorySchema.parse(data);
 
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
-
-    devLogger.info("Creating user category", {
-      context: { categoryName: validated.name, userId },
-    });
-
-    // Check if a category with this name already exists (system or user's own)
     const existingCategories = await db
       .select()
       .from(categories)
       .where(eq(categories.name, validated.name));
 
-    // Check if any matching category is a system category or belongs to this user
     const isDuplicate = existingCategories.some(
       (cat) => cat.type === "system" || cat.userId === userId
     );
 
     if (isDuplicate) {
-      devLogger.warn("Category creation failed - duplicate name", {
-        context: {
-          categoryName: validated.name,
-          existingCount: existingCategories.length,
-        },
-      });
       throw new Error("A category with this name already exists");
     }
 
@@ -90,31 +69,20 @@ export const createUserCategory = createSafeAction(
       })
       .returning();
 
-    devLogger.info("Category created successfully", {
-      context: {
-        categoryId: newCategory[0].id,
-        categoryName: newCategory[0].name,
-      },
-    });
-
     revalidatePath("/app/settings/categories");
     return newCategory[0];
   }
 );
 
-// Delete a user category
 const DeleteCategorySchema = z.object({
   categoryId: z.string(),
 });
 
-export const deleteUserCategory = createSafeAction(
+export const deleteUserCategory = createAuthenticatedAction(
   "deleteUserCategory",
-  async (data: z.infer<typeof DeleteCategorySchema>) => {
+  async (userId, data: z.infer<typeof DeleteCategorySchema>) => {
     const validated = DeleteCategorySchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify ownership
     const category = await db
       .select()
       .from(categories)
@@ -136,24 +104,20 @@ export const deleteUserCategory = createSafeAction(
   }
 );
 
-// Get all rules for a user
-export async function getUserRules() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+export const getUserRules = createAuthenticatedAction(
+  "getUserRules",
+  async (userId) => {
+    return db
+      .select({
+        rule: categoryRules,
+        category: categories,
+      })
+      .from(categoryRules)
+      .innerJoin(categories, eq(categoryRules.categoryId, categories.id))
+      .where(eq(categoryRules.userId, userId));
+  }
+);
 
-  const rules = await db
-    .select({
-      rule: categoryRules,
-      category: categories,
-    })
-    .from(categoryRules)
-    .innerJoin(categories, eq(categoryRules.categoryId, categories.id))
-    .where(eq(categoryRules.userId, userId));
-
-  return rules;
-}
-
-// Create a new rule
 const CreateRuleSchema = z.object({
   categoryId: z.string(),
   matchType: z.enum(MATCH_TYPES),
@@ -161,14 +125,11 @@ const CreateRuleSchema = z.object({
   value: z.string().min(1, "Pattern is required"),
 });
 
-export const createCategoryRule = createSafeAction(
+export const createCategoryRule = createAuthenticatedAction(
   "createCategoryRule",
-  async (data: z.infer<typeof CreateRuleSchema>) => {
+  async (userId, data: z.infer<typeof CreateRuleSchema>) => {
     const validated = CreateRuleSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify category exists and user has access
     const category = await db
       .select()
       .from(categories)
@@ -200,24 +161,20 @@ export const createCategoryRule = createSafeAction(
   }
 );
 
-// Update a category rule
 const UpdateRuleSchema = z.object({
   ruleId: z.string(),
   categoryId: z.string(),
-  businessId: z.string().optional(), // Optional business assignment
+  businessId: z.string().optional(),
   matchType: z.enum(MATCH_TYPES),
   field: z.enum(RULE_FIELDS),
   value: z.string().min(1, "Pattern is required"),
 });
 
-export const updateCategoryRule = createSafeAction(
+export const updateCategoryRule = createAuthenticatedAction(
   "updateCategoryRule",
-  async (data: z.infer<typeof UpdateRuleSchema>) => {
+  async (userId, data: z.infer<typeof UpdateRuleSchema>) => {
     const validated = UpdateRuleSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify ownership
     const rule = await db
       .select()
       .from(categoryRules)
@@ -228,7 +185,6 @@ export const updateCategoryRule = createSafeAction(
       throw new Error("Rule not found or unauthorized");
     }
 
-    // Verify category exists
     const category = await db
       .select()
       .from(categories)
@@ -255,28 +211,20 @@ export const updateCategoryRule = createSafeAction(
       })
       .where(eq(categoryRules.id, validated.ruleId));
 
-    devLogger.info("Category rule updated", {
-      context: { ruleId: validated.ruleId },
-    });
-
     revalidatePath("/app/settings/categories");
     return { success: true };
   }
 );
 
-// Delete a rule
 const DeleteRuleSchema = z.object({
   ruleId: z.string(),
 });
 
-export const deleteCategoryRule = createSafeAction(
+export const deleteCategoryRule = createAuthenticatedAction(
   "deleteCategoryRule",
-  async (data: z.infer<typeof DeleteRuleSchema>) => {
+  async (userId, data: z.infer<typeof DeleteRuleSchema>) => {
     const validated = DeleteRuleSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify ownership
     const rule = await db
       .select()
       .from(categoryRules)
@@ -287,128 +235,85 @@ export const deleteCategoryRule = createSafeAction(
       throw new Error("Rule not found or unauthorized");
     }
 
-    /**
-     * IMPLICATIONS OF DELETING A RULE:
-     *
-     * 1. Future Transactions:
-     *    - New transactions matching this rule will NO LONGER be auto-categorized
-     *    - They will fall back to History Matcher (if past transactions exist)
-     *    - Or AI Matcher (if enabled and no history)
-     *    - Or remain uncategorized
-     *
-     * 2. Existing Transactions:
-     *    - Transactions already categorized by this rule KEEP their categoryId
-     *    - No cascade delete - existing data is NOT affected
-     *    - The categoryId is stored on the transaction record itself
-     *
-     * 3. Categorization Priority:
-     *    - Rules have Priority 1 (highest - checked first)
-     *    - After deletion, History Matcher (Priority 2) may take over
-     *    - Or AI Matcher (Priority 100) as fallback
-     *
-     * 4. No Transaction Count:
-     *    - We don't track which transactions were categorized by which rule
-     *    - Cannot show "X transactions will be affected" warning
-     *    - Deletion is immediate and affects future categorization only
-     */
-
     await db
       .delete(categoryRules)
       .where(eq(categoryRules.id, validated.ruleId));
-
-    devLogger.info("Category rule deleted", {
-      context: { ruleId: validated.ruleId },
-    });
 
     revalidatePath("/app/settings/categories");
     return { success: true };
   }
 );
 
-// Get merchant statistics from transaction history
-export async function getMerchantStatistics(
-  page: number = 1,
-  pageSize: number = 25
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+type MerchantStatsInput = {
+  page?: number;
+  pageSize?: number;
+};
 
-  devLogger.info("Getting merchant statistics", {
-    context: { userId, page, pageSize },
-  });
+export const getMerchantStatistics = createAuthenticatedAction(
+  "getMerchantStatistics",
+  async (userId, input: MerchantStatsInput = {}) => {
+    const { page = 1, pageSize = 25 } = input;
 
-  const repository = new TransactionRepository();
-  const result = await repository.getMerchantStatistics(userId, page, pageSize);
-
-  // Check which merchants have existing rules
-  const merchantRules = await db
-    .select({
-      id: categoryRules.id,
-      value: categoryRules.value,
-      categoryId: categoryRules.categoryId,
-      displayName: categoryRules.displayName,
-      field: categoryRules.field,
-      matchType: categoryRules.matchType,
-    })
-    .from(categoryRules)
-    .where(
-      and(
-        eq(categoryRules.userId, userId),
-        eq(categoryRules.field, "merchantName"),
-        eq(categoryRules.matchType, "exact")
-      )
+    const repository = new TransactionRepository();
+    const result = await repository.getMerchantStatistics(
+      userId,
+      page,
+      pageSize
     );
 
-  // Create a map of merchant name -> rule data
-  const rulesMap = new Map(
-    merchantRules.map((r) => [r.value.toLowerCase(), r])
-  );
+    const merchantRules = await db
+      .select({
+        id: categoryRules.id,
+        value: categoryRules.value,
+        categoryId: categoryRules.categoryId,
+        displayName: categoryRules.displayName,
+        field: categoryRules.field,
+        matchType: categoryRules.matchType,
+      })
+      .from(categoryRules)
+      .where(
+        and(
+          eq(categoryRules.userId, userId),
+          eq(categoryRules.field, "merchantName"),
+          eq(categoryRules.matchType, "exact")
+        )
+      );
 
-  result.stats.forEach((stat) => {
-    const rule = rulesMap.get(stat.merchantName.toLowerCase());
-    if (rule) {
-      stat.hasRule = true;
-      stat.ruleId = rule.id;
-      stat.ruleCategoryId = rule.categoryId;
-      stat.ruleDisplayName = rule.displayName;
-    } else {
-      stat.hasRule = false;
-      stat.ruleId = null;
-      stat.ruleCategoryId = null;
-      stat.ruleDisplayName = null;
-    }
-  });
+    const rulesMap = new Map(
+      merchantRules.map((r) => [r.value.toLowerCase(), r])
+    );
 
-  devLogger.info("Merchant statistics retrieved", {
-    context: { count: result.stats.length, totalCount: result.totalCount },
-  });
+    result.stats.forEach((stat) => {
+      const rule = rulesMap.get(stat.merchantName.toLowerCase());
+      if (rule) {
+        stat.hasRule = true;
+        stat.ruleId = rule.id;
+        stat.ruleCategoryId = rule.categoryId;
+        stat.ruleDisplayName = rule.displayName;
+      } else {
+        stat.hasRule = false;
+        stat.ruleId = null;
+        stat.ruleCategoryId = null;
+        stat.ruleDisplayName = null;
+      }
+    });
 
-  return result;
-}
+    return result;
+  }
+);
 
-// Create a merchant rule from transaction history
 const CreateMerchantRuleSchema = z.object({
   merchantName: z.string().min(1, "Merchant name is required"),
   categoryId: z.string(),
   displayName: z.string().optional(),
-  businessId: z.string().optional(), // Optional business assignment for this rule
+  businessId: z.string().optional(),
 });
 
-export const createMerchantRule = createSafeAction(
+export const createMerchantRule = createAuthenticatedAction(
   "createMerchantRule",
-  async (data: z.infer<typeof CreateMerchantRuleSchema>) => {
+  async (userId, data: z.infer<typeof CreateMerchantRuleSchema>) => {
     const validated = CreateMerchantRuleSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    devLogger.info("Creating merchant rule", {
-      context: {
-        merchantName: validated.merchantName,
-        categoryId: validated.categoryId,
-      },
-    });
-
-    // Verify category exists and user has access
     const category = await db
       .select()
       .from(categories)
@@ -423,7 +328,6 @@ export const createMerchantRule = createSafeAction(
       throw new Error("Unauthorized to create rules for this category");
     }
 
-    // Check if a rule already exists for this merchant
     const existingRule = await db
       .select()
       .from(categoryRules)
@@ -455,31 +359,23 @@ export const createMerchantRule = createSafeAction(
       })
       .returning();
 
-    devLogger.info("Merchant rule created successfully", {
-      context: { ruleId: newRule[0].id, merchantName: validated.merchantName },
-    });
-
     revalidatePath("/app/settings/categories");
     return newRule[0];
   }
 );
 
-// Update a merchant rule
 const UpdateMerchantRuleSchema = z.object({
   ruleId: z.string(),
   categoryId: z.string(),
   displayName: z.string().optional(),
-  businessId: z.string().optional(), // Optional business assignment
+  businessId: z.string().optional(),
 });
 
-export const updateMerchantRule = createSafeAction(
+export const updateMerchantRule = createAuthenticatedAction(
   "updateMerchantRule",
-  async (data: z.infer<typeof UpdateMerchantRuleSchema>) => {
+  async (userId, data: z.infer<typeof UpdateMerchantRuleSchema>) => {
     const validated = UpdateMerchantRuleSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify ownership and rule type
     const rule = await db
       .select()
       .from(categoryRules)
@@ -495,7 +391,6 @@ export const updateMerchantRule = createSafeAction(
       throw new Error("Rule not found or unauthorized");
     }
 
-    // Verify category exists
     const category = await db
       .select()
       .from(categories)
@@ -516,29 +411,21 @@ export const updateMerchantRule = createSafeAction(
       })
       .where(eq(categoryRules.id, validated.ruleId));
 
-    devLogger.info("Merchant rule updated", {
-      context: { ruleId: validated.ruleId, categoryId: validated.categoryId },
-    });
-
     revalidatePath("/app/settings/categories");
     return { success: true };
   }
 );
 
-// Update display name for a merchant rule
 const UpdateRuleDisplayNameSchema = z.object({
   ruleId: z.string(),
   displayName: z.string().min(1, "Display name is required").max(100),
 });
 
-export const updateRuleDisplayName = createSafeAction(
+export const updateRuleDisplayName = createAuthenticatedAction(
   "updateRuleDisplayName",
-  async (data: z.infer<typeof UpdateRuleDisplayNameSchema>) => {
+  async (userId, data: z.infer<typeof UpdateRuleDisplayNameSchema>) => {
     const validated = UpdateRuleDisplayNameSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify ownership
     const rule = await db
       .select()
       .from(categoryRules)
@@ -557,54 +444,51 @@ export const updateRuleDisplayName = createSafeAction(
       })
       .where(eq(categoryRules.id, validated.ruleId));
 
-    devLogger.info("Rule display name updated", {
-      context: { ruleId: validated.ruleId, displayName: validated.displayName },
-    });
-
     revalidatePath("/app/settings/categories");
     return { success: true };
   }
 );
 
-// Get all transactions for a specific merchant
-export async function getMerchantTransactions(
-  merchantName: string,
-  page: number = 1,
-  pageSize: number = 25
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+type MerchantTxInput = {
+  merchantName: string;
+  page?: number;
+  pageSize?: number;
+};
 
-  const repository = new TransactionRepository();
-  const result = await repository.getMerchantTransactions(
-    merchantName,
-    userId,
-    page,
-    pageSize
-  );
+export const getMerchantTransactions = createAuthenticatedAction(
+  "getMerchantTransactions",
+  async (userId, input: MerchantTxInput) => {
+    const { merchantName, page = 1, pageSize = 25 } = input;
 
-  return result;
-}
+    const repository = new TransactionRepository();
+    return repository.getMerchantTransactions(
+      merchantName,
+      userId,
+      page,
+      pageSize
+    );
+  }
+);
 
-export async function bulkUpdateMerchantCategory(
-  merchantName: string,
-  categoryId: string,
-  businessId?: string | null
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+type BulkUpdateInput = {
+  merchantName: string;
+  categoryId: string;
+  businessId?: string | null;
+};
 
-  try {
-    // Get all transactions for this merchant (without pagination)
+export const bulkUpdateMerchantCategory = createAuthenticatedAction(
+  "bulkUpdateMerchantCategory",
+  async (userId, input: BulkUpdateInput) => {
+    const { merchantName, categoryId, businessId } = input;
+
     const repository = new TransactionRepository();
     const { transactions } = await repository.getMerchantTransactions(
       merchantName,
       userId,
       1,
-      10000 // Large number to get all
+      10000
     );
 
-    // Get category name for denormalization
     const categoryResult = await db
       .select()
       .from(categories)
@@ -612,7 +496,6 @@ export async function bulkUpdateMerchantCategory(
       .limit(1);
     const categoryName = categoryResult[0]?.name ?? null;
 
-    // Update receipts
     const receiptIds = transactions
       .filter((t) => t.source === "receipt")
       .map((t) => t.id);
@@ -632,7 +515,6 @@ export async function bulkUpdateMerchantCategory(
         );
     }
 
-    // Update bank transactions
     const bankTxIds = transactions
       .filter((t) => t.source === "bank_transaction")
       .map((t) => t.id);
@@ -653,12 +535,5 @@ export async function bulkUpdateMerchantCategory(
       success: true,
       updatedCount: transactions.length,
     };
-  } catch (error) {
-    devLogger.error("Error bulk updating merchant category", {
-      error,
-      merchantName,
-      userId,
-    });
-    throw new Error("Failed to update merchant transactions");
   }
-}
+);

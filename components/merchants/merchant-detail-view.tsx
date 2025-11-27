@@ -76,11 +76,11 @@ export function MerchantDetailView({
 
     startTransition(async () => {
       try {
-        const result = await bulkUpdateMerchantCategory(
+        const result = await bulkUpdateMerchantCategory({
           merchantName,
-          bulkCategoryId,
-          bulkBusinessId
-        );
+          categoryId: bulkCategoryId,
+          businessId: bulkBusinessId,
+        });
 
         toast.success(`Updated ${result.updatedCount} transaction(s) for ${merchantName}`);
         setBulkEditOpen(false);

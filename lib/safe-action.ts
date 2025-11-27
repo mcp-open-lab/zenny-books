@@ -8,6 +8,11 @@ type ActionHandler<TArgs extends any[], TResult> = (
   ...args: TArgs
 ) => Promise<TResult>;
 
+type AuthenticatedHandler<TArgs extends any[], TResult> = (
+  userId: string,
+  ...args: TArgs
+) => Promise<TResult>;
+
 interface SafeActionOptions {
   /**
    * Whether to require authentication. If false, skips auth() call entirely.
@@ -22,18 +27,83 @@ interface SafeActionOptions {
 }
 
 /**
- * Wraps a server action with automatic logging and error handling
+ * Creates an authenticated server action that automatically handles auth and logging.
+ * The handler receives userId as the first argument - no need to call auth() manually.
  *
- * Features:
- * - Logs action start with arguments (dev only, safely serialized)
- * - Logs action success with result (dev only, safely serialized)
- * - Logs errors to both dev (full context) and prod loggers
- * - Automatically captures userId if authenticated (optional)
- * - Generates correlation ID for tracing across logs
- *
- * @param actionName Name of the action for logging context
- * @param handler The server action function implementation
- * @param options Optional configuration for auth behavior
+ * @example
+ * export const getReceipts = createAuthenticatedAction(
+ *   "getReceipts",
+ *   async (userId, filters: { limit?: number }) => {
+ *     return db.select().from(receipts).where(eq(receipts.userId, userId));
+ *   }
+ * );
+ */
+export function createAuthenticatedAction<TArgs extends any[], TResult>(
+  actionName: string,
+  handler: AuthenticatedHandler<TArgs, TResult>
+): ActionHandler<TArgs, TResult> {
+  return async (...args: TArgs): Promise<TResult> => {
+    const correlationId = createId();
+
+    const { userId } = await auth();
+    if (!userId) {
+      logger.error(`Action unauthorized: ${actionName}`, null, {
+        action: actionName,
+        correlationId,
+        statusCode: 401,
+      });
+      throw new Error("Unauthorized");
+    }
+
+    try {
+      const serializedArgs = safeSerialize(args);
+
+      devLogger.action(actionName, {
+        userId,
+        correlationId,
+        status: "started",
+        args: serializedArgs,
+      });
+
+      const startTime = Date.now();
+      const result = await handler(userId, ...args);
+      const duration = Date.now() - startTime;
+
+      const serializedResult = safeSerialize(result);
+
+      devLogger.action(actionName, {
+        userId,
+        correlationId,
+        status: "completed",
+        duration: `${duration}ms`,
+        result: serializedResult,
+      });
+
+      return result;
+    } catch (error) {
+      const serializedArgs = safeSerialize(args);
+
+      logger.error(`Action failed: ${actionName}`, error, {
+        action: actionName,
+        correlationId,
+        statusCode: 500,
+      });
+
+      devLogger.error(`Action failed: ${actionName}`, error, {
+        userId,
+        correlationId,
+        action: actionName,
+        args: serializedArgs,
+      });
+
+      throw error;
+    }
+  };
+}
+
+/**
+ * @deprecated Use createAuthenticatedAction instead for actions that require auth.
+ * This function is kept for backwards compatibility with public actions.
  */
 export function createSafeAction<TArgs extends any[], TResult>(
   actionName: string,
@@ -45,24 +115,19 @@ export function createSafeAction<TArgs extends any[], TResult>(
     let userId: string | undefined;
 
     try {
-      // Get userId based on options
       if (options.getUserId) {
         userId = await options.getUserId();
       } else if (options.requireAuth !== false) {
-        // Try to get userId for context, but don't fail if auth throws or returns null
-        // (some actions might be public)
         try {
           const authResult = await auth();
           userId = authResult.userId || undefined;
         } catch (e) {
-          // Ignore auth errors here, let the handler handle auth requirements
+          // Ignore auth errors for logging context
         }
       }
 
-      // Safely serialize args for logging
       const serializedArgs = safeSerialize(args);
 
-      // Log start (dev only - devLogger checks NODE_ENV internally)
       devLogger.action(actionName, {
         userId,
         correlationId,
@@ -74,10 +139,8 @@ export function createSafeAction<TArgs extends any[], TResult>(
       const result = await handler(...args);
       const duration = Date.now() - startTime;
 
-      // Safely serialize result for logging
       const serializedResult = safeSerialize(result);
 
-      // Log success (dev only - devLogger checks NODE_ENV internally)
       devLogger.action(actionName, {
         userId,
         correlationId,
@@ -88,17 +151,14 @@ export function createSafeAction<TArgs extends any[], TResult>(
 
       return result;
     } catch (error) {
-      // Safely serialize args for error logging
       const serializedArgs = safeSerialize(args);
 
-      // Log error to production logger
       logger.error(`Action failed: ${actionName}`, error, {
         action: actionName,
         correlationId,
         statusCode: 500,
       });
 
-      // Log error to dev logger (dev only - devLogger checks NODE_ENV internally)
       devLogger.error(`Action failed: ${actionName}`, error, {
         userId,
         correlationId,
@@ -106,7 +166,6 @@ export function createSafeAction<TArgs extends any[], TResult>(
         args: serializedArgs,
       });
 
-      // Re-throw the error so the client can handle it
       throw error;
     }
   };

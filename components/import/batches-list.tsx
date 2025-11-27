@@ -24,6 +24,7 @@ import {
 import { Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { ImportBatch } from "@/lib/import/batch-types";
+import type { BatchStatus } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 
 interface BatchesListProps {
@@ -40,7 +41,7 @@ export function BatchesList({
   const [batches, setBatches] = useState<ImportBatch[]>(initialBatches);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [hasMore, setHasMore] = useState(initialHasMore);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | BatchStatus>("all");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [activeBatchIds, setActiveBatchIds] = useState<Set<string>>(
@@ -91,7 +92,7 @@ export function BatchesList({
     }
   };
 
-  const handleStatusFilterChange = async (value: string) => {
+  const handleStatusFilterChange = async (value: "all" | BatchStatus) => {
     setStatusFilter(value);
     setLoading(true);
     try {

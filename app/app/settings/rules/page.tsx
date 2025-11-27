@@ -27,7 +27,7 @@ export default async function RulesPage({
   const [categories, rules, merchantStatsResult, businesses] = await Promise.all([
     getUserCategories(),
     getUserRules(),
-    getMerchantStatistics(page, pageSize),
+    getMerchantStatistics({ page, pageSize }),
     getUserBusinesses(),
   ]);
 

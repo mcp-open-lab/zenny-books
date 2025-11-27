@@ -3,8 +3,7 @@
 import { db } from "@/lib/db";
 import { importBatches } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { createSafeAction } from "@/lib/safe-action";
-import { auth } from "@clerk/nextjs/server";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 import { z } from "zod";
 import {
   getBatchStatusSummary,
@@ -12,11 +11,7 @@ import {
   getBatchItemsStatus,
   listBatches,
 } from "@/lib/import/batch-tracker";
-import {
-  IMPORT_TYPES,
-  SOURCE_FORMATS,
-  BATCH_STATUSES,
-} from "@/lib/constants";
+import { IMPORT_TYPES, SOURCE_FORMATS, BATCH_STATUSES } from "@/lib/constants";
 
 const createImportBatchSchema = z.object({
   importType: z.enum(IMPORT_TYPES),
@@ -24,35 +19,27 @@ const createImportBatchSchema = z.object({
   totalFiles: z.number().int().positive(),
 });
 
-async function createImportBatchHandler(
-  input: z.infer<typeof createImportBatchSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const batch = await db
-    .insert(importBatches)
-    .values({
-      userId,
-      importType: input.importType,
-      sourceFormat: input.sourceFormat || null,
-      totalFiles: input.totalFiles,
-      status: "pending",
-      processedFiles: 0,
-      successfulFiles: 0,
-      failedFiles: 0,
-      duplicateFiles: 0,
-    })
-    .returning();
-
-  return { success: true, batchId: batch[0].id };
-}
-
-export const createImportBatch = createSafeAction(
+export const createImportBatch = createAuthenticatedAction(
   "createImportBatch",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof createImportBatchSchema>) => {
     const validated = createImportBatchSchema.parse(input);
-    return createImportBatchHandler(validated);
+
+    const batch = await db
+      .insert(importBatches)
+      .values({
+        userId,
+        importType: validated.importType,
+        sourceFormat: validated.sourceFormat || null,
+        totalFiles: validated.totalFiles,
+        status: "pending",
+        processedFiles: 0,
+        successfulFiles: 0,
+        failedFiles: 0,
+        duplicateFiles: 0,
+      })
+      .returning();
+
+    return { success: true, batchId: batch[0].id };
   }
 );
 
@@ -68,45 +55,46 @@ const updateBatchStatusSchema = z.object({
   errors: z.array(z.string()).optional(),
 });
 
-async function updateBatchStatusHandler(
-  input: z.infer<typeof updateBatchStatusSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const updateData: Partial<typeof importBatches.$inferInsert> = {};
-
-  if (input.status !== undefined) updateData.status = input.status;
-  if (input.processedFiles !== undefined) updateData.processedFiles = input.processedFiles;
-  if (input.successfulFiles !== undefined) updateData.successfulFiles = input.successfulFiles;
-  if (input.failedFiles !== undefined) updateData.failedFiles = input.failedFiles;
-  if (input.duplicateFiles !== undefined) updateData.duplicateFiles = input.duplicateFiles;
-  if (input.startedAt !== undefined) updateData.startedAt = input.startedAt;
-  if (input.completedAt !== undefined) updateData.completedAt = input.completedAt;
-  if (input.errors !== undefined) updateData.errors = JSON.stringify(input.errors);
-
-  updateData.updatedAt = new Date();
-
-  const updated = await db
-    .update(importBatches)
-    .set(updateData)
-    .where(
-      and(eq(importBatches.id, input.batchId), eq(importBatches.userId, userId))
-    )
-    .returning();
-
-  if (updated.length === 0) {
-    throw new Error("Batch not found or unauthorized");
-  }
-
-  return { success: true, batch: updated[0] };
-}
-
-export const updateBatchStatus = createSafeAction(
+export const updateBatchStatus = createAuthenticatedAction(
   "updateBatchStatus",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof updateBatchStatusSchema>) => {
     const validated = updateBatchStatusSchema.parse(input);
-    return updateBatchStatusHandler(validated);
+    const updateData: Partial<typeof importBatches.$inferInsert> = {};
+
+    if (validated.status !== undefined) updateData.status = validated.status;
+    if (validated.processedFiles !== undefined)
+      updateData.processedFiles = validated.processedFiles;
+    if (validated.successfulFiles !== undefined)
+      updateData.successfulFiles = validated.successfulFiles;
+    if (validated.failedFiles !== undefined)
+      updateData.failedFiles = validated.failedFiles;
+    if (validated.duplicateFiles !== undefined)
+      updateData.duplicateFiles = validated.duplicateFiles;
+    if (validated.startedAt !== undefined)
+      updateData.startedAt = validated.startedAt;
+    if (validated.completedAt !== undefined)
+      updateData.completedAt = validated.completedAt;
+    if (validated.errors !== undefined)
+      updateData.errors = JSON.stringify(validated.errors);
+
+    updateData.updatedAt = new Date();
+
+    const updated = await db
+      .update(importBatches)
+      .set(updateData)
+      .where(
+        and(
+          eq(importBatches.id, validated.batchId),
+          eq(importBatches.userId, userId)
+        )
+      )
+      .returning();
+
+    if (updated.length === 0) {
+      throw new Error("Batch not found or unauthorized");
+    }
+
+    return { success: true, batch: updated[0] };
   }
 );
 
@@ -114,25 +102,12 @@ const getBatchStatusSchema = z.object({
   batchId: z.string(),
 });
 
-async function getBatchStatusHandler(
-  input: z.infer<typeof getBatchStatusSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const batch = await getBatchStatusSummary(input.batchId, userId);
-
-  return {
-    success: true,
-    batch,
-  };
-}
-
-export const getBatchStatus = createSafeAction(
+export const getBatchStatus = createAuthenticatedAction(
   "getBatchStatus",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof getBatchStatusSchema>) => {
     const validated = getBatchStatusSchema.parse(input);
-    return getBatchStatusHandler(validated);
+    const batch = await getBatchStatusSummary(validated.batchId, userId);
+    return { success: true, batch };
   }
 );
 
@@ -140,25 +115,12 @@ const getBatchProgressSchema = z.object({
   batchId: z.string(),
 });
 
-async function getBatchProgressHandler(
-  input: z.infer<typeof getBatchProgressSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const progress = await getBatchProgress(input.batchId, userId);
-
-  return {
-    success: true,
-    progress,
-  };
-}
-
-export const getBatchProgressAction = createSafeAction(
+export const getBatchProgressAction = createAuthenticatedAction(
   "getBatchProgress",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof getBatchProgressSchema>) => {
     const validated = getBatchProgressSchema.parse(input);
-    return getBatchProgressHandler(validated);
+    const progress = await getBatchProgress(validated.batchId, userId);
+    return { success: true, progress };
   }
 );
 
@@ -166,25 +128,12 @@ const getBatchItemsSchema = z.object({
   batchId: z.string(),
 });
 
-async function getBatchItemsHandler(
-  input: z.infer<typeof getBatchItemsSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const items = await getBatchItemsStatus(input.batchId, userId);
-
-  return {
-    success: true,
-    items,
-  };
-}
-
-export const getBatchItems = createSafeAction(
+export const getBatchItems = createAuthenticatedAction(
   "getBatchItems",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof getBatchItemsSchema>) => {
     const validated = getBatchItemsSchema.parse(input);
-    return getBatchItemsHandler(validated);
+    const items = await getBatchItemsStatus(validated.batchId, userId);
+    return { success: true, items };
   }
 );
 
@@ -194,42 +143,37 @@ const completeBatchSchema = z.object({
   errors: z.array(z.string()).optional(),
 });
 
-async function completeBatchHandler(
-  input: z.infer<typeof completeBatchSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const updateData: Partial<typeof importBatches.$inferInsert> = {
-    status: input.status,
-    completedAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  if (input.errors !== undefined) {
-    updateData.errors = JSON.stringify(input.errors);
-  }
-
-  const updated = await db
-    .update(importBatches)
-    .set(updateData)
-    .where(
-      and(eq(importBatches.id, input.batchId), eq(importBatches.userId, userId))
-    )
-    .returning();
-
-  if (updated.length === 0) {
-    throw new Error("Batch not found or unauthorized");
-  }
-
-  return { success: true, batch: updated[0] };
-}
-
-export const completeBatch = createSafeAction(
+export const completeBatch = createAuthenticatedAction(
   "completeBatch",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof completeBatchSchema>) => {
     const validated = completeBatchSchema.parse(input);
-    return completeBatchHandler(validated);
+
+    const updateData: Partial<typeof importBatches.$inferInsert> = {
+      status: validated.status,
+      completedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (validated.errors !== undefined) {
+      updateData.errors = JSON.stringify(validated.errors);
+    }
+
+    const updated = await db
+      .update(importBatches)
+      .set(updateData)
+      .where(
+        and(
+          eq(importBatches.id, validated.batchId),
+          eq(importBatches.userId, userId)
+        )
+      )
+      .returning();
+
+    if (updated.length === 0) {
+      throw new Error("Batch not found or unauthorized");
+    }
+
+    return { success: true, batch: updated[0] };
   }
 );
 
@@ -239,30 +183,22 @@ const listBatchesSchema = z.object({
   status: z.enum(BATCH_STATUSES).optional(),
 });
 
-async function listBatchesHandler(
-  input: z.infer<typeof listBatchesSchema>
-) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const result = await listBatches(userId, {
-    limit: input.limit,
-    cursor: input.cursor,
-    status: input.status,
-  });
-
-  return {
-    success: true,
-    batches: result.batches,
-    nextCursor: result.nextCursor,
-    hasMore: result.hasMore,
-  };
-}
-
-export const listBatchesAction = createSafeAction(
+export const listBatchesAction = createAuthenticatedAction(
   "listBatches",
-  async (input: unknown) => {
+  async (userId, input: z.infer<typeof listBatchesSchema>) => {
     const validated = listBatchesSchema.parse(input);
-    return listBatchesHandler(validated);
+
+    const result = await listBatches(userId, {
+      limit: validated.limit,
+      cursor: validated.cursor,
+      status: validated.status,
+    });
+
+    return {
+      success: true,
+      batches: result.batches,
+      nextCursor: result.nextCursor,
+      hasMore: result.hasMore,
+    };
   }
 );

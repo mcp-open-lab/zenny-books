@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import {
   receipts,
@@ -11,15 +10,13 @@ import {
   businesses,
   categoryRules,
 } from "@/lib/db/schema";
-import { eq, and, sql, desc, gte, lte, isNotNull, inArray } from "drizzle-orm";
+import { eq, sql, inArray, and } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { devLogger } from "@/lib/dev-logger";
 import { z } from "zod";
 import { SIMILARITY_THRESHOLD } from "@/lib/constants";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 
-/**
- * Similar transaction from history
- */
 export interface SimilarTransaction {
   id: string;
   merchantName: string;
@@ -32,9 +29,6 @@ export interface SimilarTransaction {
   type: "receipt" | "bank_transaction";
 }
 
-/**
- * Build SQL conditions to exclude merchants that match existing rules
- */
 function buildRuleExclusionConditions(
   merchantNameColumn: any,
   rules: Array<{ matchType: string; field: string; value: string }>
@@ -54,7 +48,6 @@ function buildRuleExclusionConditions(
       );
     } else if (rule.matchType === "regex") {
       try {
-        // Validate regex before using
         new RegExp(rule.value, "i");
         conditions.push(sql`NOT (${merchantNameColumn} ~* ${rule.value})`);
       } catch {
@@ -66,34 +59,35 @@ function buildRuleExclusionConditions(
   return conditions;
 }
 
-/**
- * Get similar transactions based on merchant name
- * Uses PostgreSQL's pg_trgm similarity and excludes transactions that match existing rules
- */
-export async function getSimilarTransactions(
-  merchantName: string,
-  dateRange?: { startDate: Date; endDate: Date },
-  excludeTransactionId?: string,
-  excludeEntityType?: "receipt" | "bank_transaction"
-): Promise<SimilarTransaction[]> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+type SimilarTransactionsInput = {
+  merchantName: string;
+  dateRange?: { startDate: Date; endDate: Date };
+  excludeTransactionId?: string;
+  excludeEntityType?: "receipt" | "bank_transaction";
+};
 
-  if (!merchantName || merchantName.trim().length === 0) {
-    return [];
-  }
+export const getSimilarTransactions = createAuthenticatedAction(
+  "getSimilarTransactions",
+  async (
+    userId,
+    input: SimilarTransactionsInput
+  ): Promise<SimilarTransaction[]> => {
+    const { merchantName, dateRange, excludeTransactionId, excludeEntityType } =
+      input;
 
-  const now = new Date();
-  const defaultStartDate = new Date(now);
-  defaultStartDate.setDate(now.getDate() - 90);
-  const defaultEndDate = new Date(now);
-  defaultEndDate.setDate(now.getDate() + 90);
+    if (!merchantName || merchantName.trim().length === 0) {
+      return [];
+    }
 
-  const startDate = dateRange?.startDate || defaultStartDate;
-  const endDate = dateRange?.endDate || defaultEndDate;
+    const now = new Date();
+    const defaultStartDate = new Date(now);
+    defaultStartDate.setDate(now.getDate() - 90);
+    const defaultEndDate = new Date(now);
+    defaultEndDate.setDate(now.getDate() + 90);
 
-  try {
-    // Fetch existing rules to filter out transactions that already have rules
+    const startDate = dateRange?.startDate || defaultStartDate;
+    const endDate = dateRange?.endDate || defaultEndDate;
+
     const existingRules = await db
       .select({
         matchType: categoryRules.matchType,
@@ -112,7 +106,6 @@ export async function getSimilarTransactions(
       existingRules
     );
 
-    // Search receipts using PostgreSQL similarity
     const receiptResults = await db.execute(sql`
       SELECT 
         ${receipts.id} as id,
@@ -140,7 +133,6 @@ export async function getSimilarTransactions(
       LIMIT 20
     `);
 
-    // Search bank transactions using PostgreSQL similarity
     const bankTxResults = await db.execute(sql`
       SELECT 
         ${bankStatementTransactions.id} as id,
@@ -174,13 +166,11 @@ export async function getSimilarTransactions(
       LIMIT 20
     `);
 
-    // Combine results
     const allResults = [
       ...(receiptResults.rows as any[]),
       ...(bankTxResults.rows as any[]),
     ]
       .sort((a, b) => {
-        // Sort by similarity first, then by date
         if (Math.abs(b.sim_score - a.sim_score) > 0.1) {
           return b.sim_score - a.sim_score;
         }
@@ -188,7 +178,6 @@ export async function getSimilarTransactions(
       })
       .slice(0, 20);
 
-    // Get category and business names
     const allCategoryIds = allResults
       .map((t) => t.categoryId)
       .filter(Boolean) as string[];
@@ -215,7 +204,6 @@ export async function getSimilarTransactions(
     const categoryMap = new Map(categoryData.map((c) => [c.id, c.name]));
     const businessMap = new Map(businessData.map((b) => [b.id, b.name]));
 
-    // Format final results
     const similarTransactions: SimilarTransaction[] = allResults.map((tx) => ({
       id: tx.id,
       merchantName: tx.merchantName || "Unknown",
@@ -232,7 +220,6 @@ export async function getSimilarTransactions(
       type: tx.type,
     }));
 
-    // Filter out the current transaction if specified
     const filteredTransactions =
       excludeTransactionId && excludeEntityType
         ? similarTransactions.filter(
@@ -241,38 +228,10 @@ export async function getSimilarTransactions(
           )
         : similarTransactions;
 
-    devLogger.debug("Found similar transactions (pg_trgm)", {
-      merchantName,
-      count: filteredTransactions.length,
-      threshold: SIMILARITY_THRESHOLD,
-      userId,
-    });
-
     return filteredTransactions;
-  } catch (error) {
-    const errorDetails =
-      error instanceof Error
-        ? {
-            message: error.message,
-            stack: error.stack,
-            name: error.name,
-          }
-        : String(error);
-
-    devLogger.error("Error fetching similar transactions", {
-      error: errorDetails,
-      merchantName,
-      userId,
-    });
-
-    // Re-throw with more context
-    throw error;
   }
-}
+);
 
-/**
- * Create a rule from a transaction's data
- */
 const CreateRuleFromTransactionSchema = z.object({
   merchantName: z.string().min(1, "Merchant name is required"),
   categoryId: z.string().min(1, "Category is required"),
@@ -281,106 +240,87 @@ const CreateRuleFromTransactionSchema = z.object({
   matchType: z.enum(["exact", "contains"] as const).default("contains"),
 });
 
-export async function createRuleFromTransaction(
-  input: z.infer<typeof CreateRuleFromTransactionSchema>
-): Promise<{ success: boolean; ruleId?: string; error?: string }> {
-  const { userId } = await auth();
-  if (!userId) {
-    return { success: false, error: "Unauthorized" };
-  }
+export const createRuleFromTransaction = createAuthenticatedAction(
+  "createRuleFromTransaction",
+  async (
+    userId,
+    input: z.infer<typeof CreateRuleFromTransactionSchema>
+  ): Promise<{ success: boolean; ruleId?: string; error?: string }> => {
+    try {
+      const validatedInput = CreateRuleFromTransactionSchema.parse(input);
 
-  try {
-    const validatedInput = CreateRuleFromTransactionSchema.parse(input);
-
-    // Check if rule already exists for this merchant/category combo
-    const existingRules = await db
-      .select()
-      .from(categoryRules)
-      .where(
-        and(
-          eq(categoryRules.userId, userId),
-          eq(categoryRules.field, "merchantName"),
-          sql`LOWER(${categoryRules.value}) = LOWER(${validatedInput.merchantName})`
+      const existingRules = await db
+        .select()
+        .from(categoryRules)
+        .where(
+          and(
+            eq(categoryRules.userId, userId),
+            eq(categoryRules.field, "merchantName"),
+            sql`LOWER(${categoryRules.value}) = LOWER(${validatedInput.merchantName})`
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    if (existingRules.length > 0) {
-      return {
-        success: false,
-        error: "A rule for this merchant already exists",
-      };
+      if (existingRules.length > 0) {
+        return {
+          success: false,
+          error: "A rule for this merchant already exists",
+        };
+      }
+
+      const ruleId = createId();
+      await db.insert(categoryRules).values({
+        id: ruleId,
+        userId,
+        categoryId: validatedInput.categoryId,
+        businessId: validatedInput.businessId || null,
+        matchType: validatedInput.matchType,
+        field: "merchantName",
+        value: validatedInput.merchantName.trim(),
+        displayName:
+          validatedInput.displayName?.trim() ||
+          validatedInput.merchantName.trim(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return { success: true, ruleId };
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return { success: false, error: error.errors[0].message };
+      }
+      return { success: false, error: "Failed to create rule" };
     }
-
-    // Create the rule
-    const ruleId = createId();
-    await db.insert(categoryRules).values({
-      id: ruleId,
-      userId,
-      categoryId: validatedInput.categoryId,
-      businessId: validatedInput.businessId || null,
-      matchType: validatedInput.matchType,
-      field: "merchantName",
-      value: validatedInput.merchantName.trim(),
-      displayName:
-        validatedInput.displayName?.trim() ||
-        validatedInput.merchantName.trim(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    devLogger.info("Created rule from transaction", {
-      ruleId,
-      merchantName: validatedInput.merchantName,
-      categoryId: validatedInput.categoryId,
-      businessId: validatedInput.businessId,
-      userId,
-    });
-
-    return { success: true, ruleId };
-  } catch (error) {
-    devLogger.error("Error creating rule from transaction", {
-      error,
-      input,
-      userId,
-    });
-
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
-    }
-
-    return { success: false, error: "Failed to create rule" };
   }
-}
+);
 
-/**
- * Get statistics about similar transactions to help with rule creation
- * Uses PostgreSQL's pg_trgm similarity and excludes transactions that match existing rules
- */
-export async function getSimilarTransactionStats(
-  merchantName: string,
-  excludeTransactionId?: string,
-  excludeEntityType?: "receipt" | "bank_transaction"
-): Promise<{
+type SimilarStatsInput = {
+  merchantName: string;
+  excludeTransactionId?: string;
+  excludeEntityType?: "receipt" | "bank_transaction";
+};
+
+type SimilarStatsResult = {
   totalCount: number;
   categorizedCount: number;
   mostCommonCategory: { id: string; name: string; count: number } | null;
   mostCommonBusiness: { id: string; name: string; count: number } | null;
-}> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+};
 
-  if (!merchantName || merchantName.trim().length === 0) {
-    return {
-      totalCount: 0,
-      categorizedCount: 0,
-      mostCommonCategory: null,
-      mostCommonBusiness: null,
-    };
-  }
+export const getSimilarTransactionStats = createAuthenticatedAction(
+  "getSimilarTransactionStats",
+  async (userId, input: SimilarStatsInput): Promise<SimilarStatsResult> => {
+    const { merchantName, excludeTransactionId, excludeEntityType } = input;
 
-  try {
-    // Fetch existing rules
+    if (!merchantName || merchantName.trim().length === 0) {
+      return {
+        totalCount: 0,
+        categorizedCount: 0,
+        mostCommonCategory: null,
+        mostCommonBusiness: null,
+      };
+    }
+
     const existingRules = await db
       .select({
         matchType: categoryRules.matchType,
@@ -399,7 +339,6 @@ export async function getSimilarTransactionStats(
       existingRules
     );
 
-    // Get counts and most common category/business using PostgreSQL similarity
     const statsQuery = await db.execute(sql`
       WITH similar_transactions AS (
         SELECT 
@@ -544,12 +483,5 @@ export async function getSimilarTransactionStats(
       mostCommonCategory,
       mostCommonBusiness,
     };
-  } catch (error) {
-    devLogger.error("Error fetching similar transaction stats", {
-      error,
-      merchantName,
-      userId,
-    });
-    throw new Error("Failed to fetch transaction statistics");
   }
-}
+);

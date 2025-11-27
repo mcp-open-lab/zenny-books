@@ -1,70 +1,70 @@
 /**
  * Safe Action Wrapper - Usage Examples
  *
- * This wrapper automatically adds logging to all server actions without
- * requiring manual logging calls in each action.
+ * Use createAuthenticatedAction for actions that require auth (most actions).
+ * Use createSafeAction for public actions that don't require auth.
  */
 
-import { createSafeAction } from "@/lib/safe-action";
+import { createAuthenticatedAction, createSafeAction } from "@/lib/safe-action";
 
-// Example 1: Simple action with one parameter
-async function updateReceiptHandler(
-  receiptId: string,
-  data: { merchantName: string }
-) {
-  // Your action logic here
-  // No need to add logging - it's automatic!
-  return { success: true };
-}
+// ============================================================================
+// RECOMMENDED: createAuthenticatedAction
+// - Automatically handles auth and throws "Unauthorized" if not logged in
+// - Passes userId as the first argument to your handler
+// - No need to call auth() manually!
+// ============================================================================
 
-export const updateReceipt = createSafeAction(
-  "updateReceipt",
-  updateReceiptHandler
+// Example 1: Simple authenticated action
+export const getReceipts = createAuthenticatedAction(
+  "getReceipts",
+  async (userId, filters: { category?: string; limit?: number }) => {
+    // userId is automatically available - no auth() call needed!
+    // return db.select().from(receipts).where(eq(receipts.userId, userId));
+    return [{ id: "1", merchantName: "Starbucks" }];
+  }
 );
 
-// Example 2: Action with multiple parameters
-async function bulkUpdateHandler(
-  receiptIds: string[],
-  updates: Record<string, unknown>
-) {
-  // Your action logic here
-  return { updated: receiptIds.length };
-}
-
-export const bulkUpdate = createSafeAction("bulkUpdate", bulkUpdateHandler);
-
-// Example 3: Action that returns data
-async function getReceiptsHandler(filters: { category?: string }) {
-  // Your action logic here
-  return [{ id: "1", merchantName: "Starbucks" }];
-}
-
-export const getReceipts = createSafeAction("getReceipts", getReceiptsHandler);
-
-// Example 4: Public action (skip auth lookup)
-async function publicHandler() {
-  // Public action - no auth required
-  return { data: "public" };
-}
-
-export const publicAction = createSafeAction("publicAction", publicHandler, {
-  requireAuth: false,
-});
-
-// Example 5: Custom userId getter
-async function customAuthHandler() {
-  return { success: true };
-}
-
-export const customAction = createSafeAction(
-  "customAction",
-  customAuthHandler,
-  {
-    getUserId: async () => {
-      // Custom logic to get userId
-      return "custom-user-id";
-    },
+// Example 2: Action with no additional parameters
+export const getUserSettings = createAuthenticatedAction(
+  "getUserSettings",
+  async (userId) => {
+    // return db.select().from(userSettings).where(eq(userSettings.userId, userId));
+    return { theme: "dark", currency: "USD" };
   }
+);
+
+// Example 3: Action with multiple parameters
+export const updateReceipt = createAuthenticatedAction(
+  "updateReceipt",
+  async (userId, receiptId: string, data: { merchantName: string }) => {
+    // return db.update(receipts)
+    //   .set(data)
+    //   .where(and(eq(receipts.id, receiptId), eq(receipts.userId, userId)));
+    return { success: true };
+  }
+);
+
+// Example 4: Bulk operations
+export const bulkUpdate = createAuthenticatedAction(
+  "bulkUpdate",
+  async (userId, receiptIds: string[], updates: Record<string, unknown>) => {
+    // Your bulk update logic using userId for ownership checks
+    return { updated: receiptIds.length };
+  }
+);
+
+// ============================================================================
+// LEGACY: createSafeAction (for public actions only)
+// - Use when you need a public action that doesn't require authentication
+// ============================================================================
+
+// Example: Public action (no auth required)
+export const publicAction = createSafeAction(
+  "publicAction",
+  async () => {
+    return { data: "public" };
+  },
+  { requireAuth: false }
 );
 
 /**
@@ -89,6 +89,5 @@ export const customAction = createSafeAction(
  * Features:
  * - Safe serialization handles non-serializable values, circular refs, large objects
  * - Correlation IDs enable tracing across logs
- * - Optional auth for public actions
- * - TOON format with automatic JSON fallback for nested structures
+ * - createAuthenticatedAction enforces auth and provides userId automatically
  */

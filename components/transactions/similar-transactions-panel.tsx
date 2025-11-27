@@ -54,8 +54,16 @@ export function SimilarTransactionsPanel({
       setIsLoading(true);
       try {
         const [txData, statsData] = await Promise.all([
-          getSimilarTransactions(merchantName, undefined, transactionId, entityType),
-          getSimilarTransactionStats(merchantName, transactionId, entityType),
+          getSimilarTransactions({
+            merchantName,
+            excludeTransactionId: transactionId,
+            excludeEntityType: entityType,
+          }),
+          getSimilarTransactionStats({
+            merchantName,
+            excludeTransactionId: transactionId,
+            excludeEntityType: entityType,
+          }),
         ]);
         setTransactions(txData);
         setStats(statsData);

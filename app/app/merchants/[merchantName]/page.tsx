@@ -27,7 +27,7 @@ export default async function MerchantDetailPage({
   const pageSize = parseInt(pageSizeParam || "25", 10);
 
   const [result, categories, businesses] = await Promise.all([
-    getMerchantTransactions(decodedMerchantName, page, pageSize),
+    getMerchantTransactions({ merchantName: decodedMerchantName, page, pageSize }),
     getUserCategories(),
     getUserBusinesses(),
   ]);

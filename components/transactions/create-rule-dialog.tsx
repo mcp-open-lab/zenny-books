@@ -64,7 +64,7 @@ export function CreateRuleDialog({
     onOpenChange(newOpen);
     if (newOpen && merchantName) {
       try {
-        const statsData = await getSimilarTransactionStats(merchantName);
+        const statsData = await getSimilarTransactionStats({ merchantName });
         setStats(statsData);
       } catch (error) {
         console.error("Failed to fetch stats:", error);

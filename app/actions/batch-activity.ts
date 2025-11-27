@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { batchActivityLogs, importBatches } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 
 export interface BatchActivityLog {
   id: string;
@@ -17,54 +17,44 @@ export interface BatchActivityLog {
   createdAt: Date;
 }
 
-export async function getBatchActivityLogs(
-  batchId: string
-): Promise<BatchActivityLog[]> {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      console.log("[Activity Log] No userId found");
+export const getBatchActivityLogs = createAuthenticatedAction(
+  "getBatchActivityLogs",
+  async (userId, batchId: string): Promise<BatchActivityLog[]> => {
+    try {
+      const batch = await db
+        .select()
+        .from(importBatches)
+        .where(
+          and(eq(importBatches.id, batchId), eq(importBatches.userId, userId))
+        )
+        .limit(1);
+
+      if (batch.length === 0) {
+        return [];
+      }
+
+      const logs = await db
+        .select()
+        .from(batchActivityLogs)
+        .where(eq(batchActivityLogs.batchId, batchId))
+        .orderBy(desc(batchActivityLogs.createdAt))
+        .limit(100);
+
+      return logs.map((log) => ({
+        id: log.id,
+        batchId: log.batchId,
+        batchItemId: log.batchItemId,
+        activityType: log.activityType,
+        message: log.message,
+        details: log.details ? JSON.parse(log.details) : null,
+        fileName: log.fileName,
+        duration: log.duration,
+        createdAt: log.createdAt,
+      }));
+    } catch (error) {
+      console.error("[Activity Log] Error fetching logs:", error);
       return [];
     }
-
-    // Verify batch belongs to user
-    const batch = await db
-      .select()
-      .from(importBatches)
-      .where(and(eq(importBatches.id, batchId), eq(importBatches.userId, userId)))
-      .limit(1);
-
-    if (batch.length === 0) {
-      console.log("[Activity Log] Batch not found:", batchId, "for user:", userId);
-      // Return empty array instead of throwing - batch might not exist yet
-      return [];
-    }
-
-    // Fetch activity logs ordered by most recent first
-    const logs = await db
-      .select()
-      .from(batchActivityLogs)
-      .where(eq(batchActivityLogs.batchId, batchId))
-      .orderBy(desc(batchActivityLogs.createdAt))
-      .limit(100); // Limit to last 100 activities
-
-    console.log("[Activity Log] Found", logs.length, "logs for batch:", batchId);
-
-    return logs.map((log) => ({
-      id: log.id,
-      batchId: log.batchId,
-      batchItemId: log.batchItemId,
-      activityType: log.activityType,
-      message: log.message,
-      details: log.details ? JSON.parse(log.details) : null,
-      fileName: log.fileName,
-      duration: log.duration,
-      createdAt: log.createdAt,
-    }));
-  } catch (error) {
-    // Log error but don't fail the page load
-    console.error("[Activity Log] Error fetching logs:", error);
-    return [];
   }
-}
+);
 

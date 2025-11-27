@@ -2,30 +2,24 @@
 
 import { db } from "@/lib/db";
 import { businesses } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createId } from "@paralleldrive/cuid2";
 import { z } from "zod";
-import { createSafeAction } from "@/lib/safe-action";
-import { devLogger } from "@/lib/dev-logger";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 import { BUSINESS_TYPES } from "@/lib/constants";
 
-// Get all businesses for the current user
-export async function getUserBusinesses() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+export const getUserBusinesses = createAuthenticatedAction(
+  "getUserBusinesses",
+  async (userId) => {
+    return db
+      .select()
+      .from(businesses)
+      .where(eq(businesses.userId, userId))
+      .orderBy(businesses.name);
+  }
+);
 
-  const userBusinesses = await db
-    .select()
-    .from(businesses)
-    .where(eq(businesses.userId, userId))
-    .orderBy(businesses.name);
-
-  return userBusinesses;
-}
-
-// Create a new business
 const CreateBusinessSchema = z.object({
   name: z.string().min(1, "Business name is required").max(100),
   type: z.enum(BUSINESS_TYPES),
@@ -36,16 +30,10 @@ const CreateBusinessSchema = z.object({
   icon: z.string().optional(),
 });
 
-export const createBusiness = createSafeAction(
+export const createBusiness = createAuthenticatedAction(
   "createBusiness",
-  async (data: z.infer<typeof CreateBusinessSchema>) => {
+  async (userId, data: z.infer<typeof CreateBusinessSchema>) => {
     const validated = CreateBusinessSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
-
-    devLogger.info("Creating business", {
-      context: { businessName: validated.name, type: validated.type, userId },
-    });
 
     const newBusiness = await db
       .insert(businesses)
@@ -62,19 +50,11 @@ export const createBusiness = createSafeAction(
       })
       .returning();
 
-    devLogger.info("Business created successfully", {
-      context: {
-        businessId: newBusiness[0].id,
-        businessName: newBusiness[0].name,
-      },
-    });
-
     revalidatePath("/app/settings/businesses");
     return newBusiness[0];
   }
 );
 
-// Update a business
 const UpdateBusinessSchema = z.object({
   businessId: z.string(),
   name: z.string().min(1, "Business name is required").max(100),
@@ -86,14 +66,11 @@ const UpdateBusinessSchema = z.object({
   icon: z.string().optional(),
 });
 
-export const updateBusiness = createSafeAction(
+export const updateBusiness = createAuthenticatedAction(
   "updateBusiness",
-  async (data: z.infer<typeof UpdateBusinessSchema>) => {
+  async (userId, data: z.infer<typeof UpdateBusinessSchema>) => {
     const validated = UpdateBusinessSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify ownership
     const business = await db
       .select()
       .from(businesses)
@@ -118,28 +95,20 @@ export const updateBusiness = createSafeAction(
       })
       .where(eq(businesses.id, validated.businessId));
 
-    devLogger.info("Business updated", {
-      context: { businessId: validated.businessId },
-    });
-
     revalidatePath("/app/settings/businesses");
     return { success: true };
   }
 );
 
-// Delete a business
 const DeleteBusinessSchema = z.object({
   businessId: z.string(),
 });
 
-export const deleteBusiness = createSafeAction(
+export const deleteBusiness = createAuthenticatedAction(
   "deleteBusiness",
-  async (data: z.infer<typeof DeleteBusinessSchema>) => {
+  async (userId, data: z.infer<typeof DeleteBusinessSchema>) => {
     const validated = DeleteBusinessSchema.parse(data);
-    const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
 
-    // Verify ownership
     const business = await db
       .select()
       .from(businesses)
@@ -150,30 +119,7 @@ export const deleteBusiness = createSafeAction(
       throw new Error("Business not found or unauthorized");
     }
 
-    /**
-     * IMPLICATIONS OF DELETING A BUSINESS:
-     *
-     * 1. Existing Transactions:
-     *    - Transactions linked to this business will still have the businessId
-     *    - They will become "orphaned" references
-     *    - Consider updating them to businessId=null (personal) before deleting
-     *
-     * 2. Reporting:
-     *    - Historical reports may show invalid business references
-     *    - Consider archiving instead of deleting
-     *
-     * 3. No Cascade:
-     *    - businessId is nullable, so no foreign key constraints
-     *    - Deletion is immediate and permanent
-     */
-
-    await db
-      .delete(businesses)
-      .where(eq(businesses.id, validated.businessId));
-
-    devLogger.info("Business deleted", {
-      context: { businessId: validated.businessId },
-    });
+    await db.delete(businesses).where(eq(businesses.id, validated.businessId));
 
     revalidatePath("/app/settings/businesses");
     return { success: true };

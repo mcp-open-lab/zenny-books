@@ -87,9 +87,13 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
     startTransition(async () => {
       const nextPage = page + 1;
       const filters = buildFilters();
-      
-      const result = await fetchTimelineItems(nextPage, 20, filters);
-      
+
+      const result = await fetchTimelineItems({
+        page: nextPage,
+        limit: 20,
+        filters,
+      });
+
       if (result.items.length > 0) {
         setItems((prev) => [...prev, ...result.items]);
         setPage(nextPage);
@@ -102,8 +106,7 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
     startTransition(async () => {
       const filters = buildFilters();
 
-      // Reset to page 1
-      const result = await fetchTimelineItems(1, 20, filters);
+      const result = await fetchTimelineItems({ page: 1, limit: 20, filters });
       setItems(result.items);
       setHasMore(result.hasMore);
       setPage(1);
@@ -152,9 +155,8 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
     setAmountMax("");
     // We need to trigger fetch with empty filters
     // Ideally call applyFilters() but state updates are async.
-    // So we call fetch directly with empty object
     startTransition(async () => {
-      const result = await fetchTimelineItems(1, 20, {});
+      const result = await fetchTimelineItems({ page: 1, limit: 20, filters: {} });
       setItems(result.items);
       setHasMore(result.hasMore);
       setPage(1);

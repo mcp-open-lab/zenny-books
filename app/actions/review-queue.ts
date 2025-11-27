@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import {
   receipts,
@@ -10,7 +9,8 @@ import {
   categories,
   businesses,
 } from "@/lib/db/schema";
-import { sql, and, or, eq, isNull, inArray } from "drizzle-orm";
+import { sql, and, eq, inArray } from "drizzle-orm";
+import { createAuthenticatedAction } from "@/lib/safe-action";
 
 export type ReviewQueueItem = {
   id: string;
@@ -25,15 +25,12 @@ export type ReviewQueueItem = {
   businessId: string | null;
   businessName: string | null;
   status: string | null;
-  reason: string; // Why it needs review: "uncategorized", "other_category", "needs_review", "no_business"
+  reason: string;
 };
 
-export async function getReviewQueueItems(): Promise<{
-  items: ReviewQueueItem[];
-  totalCount: number;
-}> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+export const getReviewQueueItems = createAuthenticatedAction(
+  "getReviewQueueItems",
+  async (userId): Promise<{ items: ReviewQueueItem[]; totalCount: number }> => {
 
   // Check if user has businesses
   const userBusinesses = await db
@@ -150,88 +147,91 @@ export async function getReviewQueueItems(): Promise<{
     reason: item.reason,
   }));
 
-  return {
-    items,
-    totalCount: items.length,
-  };
-}
+    return {
+      items,
+      totalCount: items.length,
+    };
+  }
+);
 
-export async function bulkUpdateTransactions(updates: Array<{
+type BulkUpdateInput = Array<{
   id: string;
   type: "receipt" | "bank_transaction";
   categoryId: string;
   businessId?: string | null;
-}>): Promise<{ success: boolean; error?: string }> {
-  const { userId } = await auth();
-  if (!userId) {
-    return { success: false, error: "Unauthorized" };
-  }
+}>;
 
-  try {
-    // Group updates by type
-    const receiptUpdates = updates.filter(u => u.type === "receipt");
-    const bankTxUpdates = updates.filter(u => u.type === "bank_transaction");
+export const bulkUpdateTransactions = createAuthenticatedAction(
+  "bulkUpdateTransactions",
+  async (
+    userId,
+    updates: BulkUpdateInput
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const receiptUpdates = updates.filter((u) => u.type === "receipt");
+      const bankTxUpdates = updates.filter((u) => u.type === "bank_transaction");
 
-    // Get category names for denormalization
-    const categoryIds = [...new Set(updates.map(u => u.categoryId))];
-    const categoryData = await db
-      .select()
-      .from(categories)
-      .where(inArray(categories.id, categoryIds));
-    
-    const categoryMap = new Map(categoryData.map(c => [c.id, c.name]));
+      const categoryIds = [...new Set(updates.map((u) => u.categoryId))];
+      const categoryData = await db
+        .select()
+        .from(categories)
+        .where(inArray(categories.id, categoryIds));
 
-    // Update receipts
-    for (const update of receiptUpdates) {
-      const categoryName = categoryMap.get(update.categoryId) || null;
-      await db
-        .update(receipts)
-        .set({
-          categoryId: update.categoryId,
-          category: categoryName,
-          businessId: update.businessId !== undefined ? update.businessId : undefined,
-          status: "approved",
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(receipts.id, update.id),
-          eq(receipts.userId, userId)
-        ));
-    }
+      const categoryMap = new Map(categoryData.map((c) => [c.id, c.name]));
 
-    // Update bank transactions
-    for (const update of bankTxUpdates) {
-      const categoryName = categoryMap.get(update.categoryId) || null;
-      
-      // Verify ownership through joins
-      const txCheck = await db
-        .select({ id: bankStatementTransactions.id })
-        .from(bankStatementTransactions)
-        .innerJoin(bankStatements, eq(bankStatementTransactions.bankStatementId, bankStatements.id))
-        .innerJoin(documents, eq(bankStatements.documentId, documents.id))
-        .where(and(
-          eq(bankStatementTransactions.id, update.id),
-          eq(documents.userId, userId)
-        ))
-        .limit(1);
-
-      if (txCheck.length > 0) {
+      for (const update of receiptUpdates) {
+        const categoryName = categoryMap.get(update.categoryId) || null;
         await db
-          .update(bankStatementTransactions)
+          .update(receipts)
           .set({
             categoryId: update.categoryId,
             category: categoryName,
-            businessId: update.businessId !== undefined ? update.businessId : undefined,
+            businessId:
+              update.businessId !== undefined ? update.businessId : undefined,
+            status: "approved",
             updatedAt: new Date(),
           })
-          .where(eq(bankStatementTransactions.id, update.id));
+          .where(and(eq(receipts.id, update.id), eq(receipts.userId, userId)));
       }
-    }
 
-    return { success: true };
-  } catch (error) {
-    console.error("Bulk update error:", error);
-    return { success: false, error: "Failed to update transactions" };
+      for (const update of bankTxUpdates) {
+        const categoryName = categoryMap.get(update.categoryId) || null;
+
+        const txCheck = await db
+          .select({ id: bankStatementTransactions.id })
+          .from(bankStatementTransactions)
+          .innerJoin(
+            bankStatements,
+            eq(bankStatementTransactions.bankStatementId, bankStatements.id)
+          )
+          .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+          .where(
+            and(
+              eq(bankStatementTransactions.id, update.id),
+              eq(documents.userId, userId)
+            )
+          )
+          .limit(1);
+
+        if (txCheck.length > 0) {
+          await db
+            .update(bankStatementTransactions)
+            .set({
+              categoryId: update.categoryId,
+              category: categoryName,
+              businessId:
+                update.businessId !== undefined ? update.businessId : undefined,
+              updatedAt: new Date(),
+            })
+            .where(eq(bankStatementTransactions.id, update.id));
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Bulk update error:", error);
+      return { success: false, error: "Failed to update transactions" };
+    }
   }
-}
+);
 
