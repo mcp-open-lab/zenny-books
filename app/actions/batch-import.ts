@@ -9,11 +9,12 @@ import { enqueueBatch } from "@/lib/import/queue-sender";
 import type { ImportJobPayload } from "@/lib/import/queue-types";
 import { devLogger } from "@/lib/dev-logger";
 import { ActivityLogger } from "@/lib/import/activity-logger";
+import { IMPORT_TYPES, SOURCE_FORMATS } from "@/lib/constants";
 
 const batchImportSchema = z.object({
-  importType: z.enum(["receipts", "bank_statements", "mixed"]),
-  sourceFormat: z.enum(["pdf", "csv", "xlsx", "images"]).optional(),
-  statementType: z.enum(["bank_account", "credit_card"]).optional(),
+  importType: z.enum(IMPORT_TYPES),
+  sourceFormat: z.enum(SOURCE_FORMATS).optional(),
+  statementType: z.enum(["bank_account", "credit_card"] as const).optional(),
   currency: z.string().optional(),
   files: z.array(
     z.object({

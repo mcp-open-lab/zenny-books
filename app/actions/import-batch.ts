@@ -12,10 +12,15 @@ import {
   getBatchItemsStatus,
   listBatches,
 } from "@/lib/import/batch-tracker";
+import {
+  IMPORT_TYPES,
+  SOURCE_FORMATS,
+  BATCH_STATUSES,
+} from "@/lib/constants";
 
 const createImportBatchSchema = z.object({
-  importType: z.enum(["receipts", "bank_statements", "mixed"]),
-  sourceFormat: z.enum(["pdf", "csv", "xlsx", "images"]).optional(),
+  importType: z.enum(IMPORT_TYPES),
+  sourceFormat: z.enum(SOURCE_FORMATS).optional(),
   totalFiles: z.number().int().positive(),
 });
 
@@ -53,7 +58,7 @@ export const createImportBatch = createSafeAction(
 
 const updateBatchStatusSchema = z.object({
   batchId: z.string(),
-  status: z.enum(["pending", "processing", "completed", "failed", "cancelled"]).optional(),
+  status: z.enum(BATCH_STATUSES).optional(),
   processedFiles: z.number().int().min(0).optional(),
   successfulFiles: z.number().int().min(0).optional(),
   failedFiles: z.number().int().min(0).optional(),
@@ -185,7 +190,7 @@ export const getBatchItems = createSafeAction(
 
 const completeBatchSchema = z.object({
   batchId: z.string(),
-  status: z.enum(["completed", "failed"]),
+  status: z.enum(["completed", "failed"] as const),
   errors: z.array(z.string()).optional(),
 });
 
@@ -231,7 +236,7 @@ export const completeBatch = createSafeAction(
 const listBatchesSchema = z.object({
   limit: z.number().int().min(1).max(100).optional().default(20),
   cursor: z.string().optional(),
-  status: z.enum(["pending", "processing", "completed", "failed", "cancelled"]).optional(),
+  status: z.enum(BATCH_STATUSES).optional(),
 });
 
 async function listBatchesHandler(

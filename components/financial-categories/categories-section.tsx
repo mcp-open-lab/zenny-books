@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Tag, TrendingUp, TrendingDown } from "lucide-react";
 import type { categories } from "@/lib/db/schema";
+import type { TransactionType, UsageScope } from "@/lib/constants";
 
 type Category = typeof categories.$inferSelect;
 
@@ -36,10 +37,10 @@ type CategoriesSectionProps = {
   isPending: boolean;
   newCategoryName: string;
   setNewCategoryName: (name: string) => void;
-  newCategoryTransactionType: "income" | "expense";
-  setNewCategoryTransactionType: (type: "income" | "expense") => void;
-  newCategoryUsageScope: "personal" | "business" | "both";
-  setNewCategoryUsageScope: (scope: "personal" | "business" | "both") => void;
+  newCategoryTransactionType: TransactionType;
+  setNewCategoryTransactionType: (type: TransactionType) => void;
+  newCategoryUsageScope: UsageScope;
+  setNewCategoryUsageScope: (scope: UsageScope) => void;
   newCategoryDescription: string;
   setNewCategoryDescription: (description: string) => void;
   categoryDialogOpen: boolean;

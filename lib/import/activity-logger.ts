@@ -5,19 +5,7 @@
 
 import { db } from "@/lib/db";
 import { batchActivityLogs } from "@/lib/db/schema";
-import { createId } from "@paralleldrive/cuid2";
-
-export type ActivityType =
-  | "batch_created"
-  | "file_uploaded"
-  | "ai_extraction_start"
-  | "ai_extraction_complete"
-  | "ai_categorization_start"
-  | "ai_categorization_complete"
-  | "duplicate_detected"
-  | "item_completed"
-  | "item_failed"
-  | "batch_completed";
+import type { ActivityType } from "@/lib/constants";
 
 interface LogActivityParams {
   batchId: string;
@@ -40,7 +28,6 @@ export async function logBatchActivity({
 }: LogActivityParams): Promise<void> {
   try {
     await db.insert(batchActivityLogs).values({
-      id: createId(),
       batchId,
       batchItemId: batchItemId || null,
       activityType,
@@ -107,7 +94,7 @@ export const ActivityLogger = {
     logBatchActivity({
       batchId,
       batchItemId,
-      activityType: "ai_categorization_start",
+      activityType: "categorization_start",
       message: `🧠 AI categorizing transaction...`,
       fileName,
     }),
@@ -123,7 +110,7 @@ export const ActivityLogger = {
     logBatchActivity({
       batchId,
       batchItemId,
-      activityType: "ai_categorization_complete",
+      activityType: "categorization_complete",
       message: `🏷️ Categorized as "${category}" (${method})${
         businessName ? ` for ${businessName}` : ""
       }`,

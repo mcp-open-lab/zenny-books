@@ -19,7 +19,7 @@ import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { devLogger } from "@/lib/dev-logger";
 import { ReceiptExtractionPrompt } from "@/lib/ai/prompts";
-import { AI_TEMPERATURES, CONFIDENCE_DEFAULTS } from "@/lib/ai/constants";
+import { AI_TEMPERATURES, CONFIDENCE_DEFAULTS } from "@/lib/constants";
 
 export class ReceiptProcessor extends BaseDocumentProcessor {
   constructor(config: DocumentProcessorConfig) {

@@ -126,7 +126,7 @@ async function scanReceiptHandler(
         mimeType,
         fileHash,
         status: "extracted", // Set to extracted immediately since we already succeeded
-        extractionMethod: "ai_structured",
+        extractionMethod: "ai_gemini",
         extractedAt: new Date(),
         importBatchId: batchId || null,
       })

@@ -15,6 +15,7 @@ import { eq, and, sql, desc, gte, lte, isNotNull, inArray } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { devLogger } from "@/lib/dev-logger";
 import { z } from "zod";
+import { SIMILARITY_THRESHOLD } from "@/lib/constants";
 
 /**
  * Similar transaction from history
@@ -82,9 +83,6 @@ export async function getSimilarTransactions(
     return [];
   }
 
-  const SIMILARITY_THRESHOLD = 0.3; // PostgreSQL trigram similarity threshold (0-1)
-
-  // Default to ±90 days if no date range provided
   const now = new Date();
   const defaultStartDate = new Date(now);
   defaultStartDate.setDate(now.getDate() - 90);
@@ -280,7 +278,7 @@ const CreateRuleFromTransactionSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
   businessId: z.string().optional().nullable(),
   displayName: z.string().optional(),
-  matchType: z.enum(["exact", "contains"]).default("contains"),
+  matchType: z.enum(["exact", "contains"] as const).default("contains"),
 });
 
 export async function createRuleFromTransaction(
@@ -380,8 +378,6 @@ export async function getSimilarTransactionStats(
       mostCommonBusiness: null,
     };
   }
-
-  const SIMILARITY_THRESHOLD = 0.3;
 
   try {
     // Fetch existing rules

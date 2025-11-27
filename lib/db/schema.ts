@@ -153,22 +153,26 @@ export const batchActivityLogs = pgTable(
       .$defaultFn(() => createId()),
     batchId: text("batch_id").notNull(), // FK to import_batches
     batchItemId: text("batch_item_id"), // FK to import_batch_items (null for batch-level events)
-    
+
     // Activity details
-    activityType: text("activity_type").notNull(), // 'batch_created' | 'file_uploaded' | 'ai_extraction_start' | 'ai_extraction_complete' | 'categorization_start' | 'categorization_complete' | 'duplicate_detected' | 'item_completed' | 'item_failed' | 'batch_completed'
+    activityType: text("activity_type").notNull(), // 'batch_created' | 'file_uploaded' | 'ai_extraction_start' | etc.
     message: text("message").notNull(),
     details: text("details"), // JSON string for additional context
-    
+
     // Metadata
     fileName: text("file_name"), // For item-level activities
     duration: integer("duration_ms"), // Processing duration in ms
-    
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     batchIdIdx: index("batch_activity_logs_batch_id_idx").on(table.batchId),
-    batchItemIdIdx: index("batch_activity_logs_batch_item_id_idx").on(table.batchItemId),
-    createdAtIdx: index("batch_activity_logs_created_at_idx").on(table.createdAt),
+    batchItemIdIdx: index("batch_activity_logs_batch_item_id_idx").on(
+      table.batchItemId
+    ),
+    createdAtIdx: index("batch_activity_logs_created_at_idx").on(
+      table.createdAt
+    ),
   })
 );
 
@@ -273,9 +277,9 @@ export const receipts = pgTable(
     description: text("description"),
     businessPurpose: text("business_purpose"), // Why this expense (for tax deductions)
     isBusinessExpense: text("is_business_expense").default("true"), // 'true' | 'false' (deprecated, use businessId)
-    paymentMethod: text("payment_method"), // 'cash' | 'card' | 'check' | 'other'
+    paymentMethod: text("payment_method").default("other"), // 'cash' | 'card' | 'check' | 'other'
 
-    status: text("status").default("needs_review"),
+    status: text("status").default("needs_review"), // 'needs_review' | 'approved'
     type: text("type").default("receipt"), // 'receipt' | 'invoice'
     direction: text("direction").default("out"), // 'in' | 'out'
 
@@ -342,7 +346,7 @@ export const bankStatementTransactions = pgTable(
 
     // Amounts
     amount: decimal("amount", { precision: 12, scale: 2 }).notNull(), // Negative for debits, positive for credits
-    currency: text("currency"),
+    currency: text("currency"), // 'USD' | 'CAD'
 
     // Classification
     category: text("category"), // Denormalized for display/fallback
@@ -350,7 +354,7 @@ export const bankStatementTransactions = pgTable(
     businessId: text("business_id"), // FK to businesses (null = personal transaction)
     isBusinessExpense: text("is_business_expense"), // 'true' | 'false' (deprecated, use businessId)
     businessPurpose: text("business_purpose"),
-    paymentMethod: text("payment_method"), // 'cash' | 'card' | 'check' | 'other' | null
+    paymentMethod: text("payment_method"), // 'cash' | 'card' | 'check' | 'other'
 
     // Matching
     matchedReceiptId: text("matched_receipt_id"), // FK to receipts
@@ -407,7 +411,7 @@ export const invoices = pgTable("invoices", {
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
   amountPaid: decimal("amount_paid", { precision: 12, scale: 2 }),
   amountDue: decimal("amount_due", { precision: 12, scale: 2 }),
-  currency: text("currency"),
+  currency: text("currency"), // 'USD' | 'CAD'
 
   // Status
   status: text("status"), // 'draft' | 'sent' | 'paid' | 'overdue'
@@ -429,19 +433,19 @@ export const businesses = pgTable("businesses", {
     .primaryKey()
     .$defaultFn(() => createId()),
   userId: text("user_id").notNull(),
-  
+
   name: text("name").notNull(),
   type: text("type").notNull(), // 'business' | 'contract'
   description: text("description"),
-  
+
   // Tax/legal information
   taxId: text("tax_id"), // EIN, GST/HST number, etc.
   address: text("address"),
-  
+
   // Display
   color: text("color"), // Hex color for UI
   icon: text("icon"), // Optional icon identifier
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -457,19 +461,19 @@ export const categories = pgTable("categories", {
   name: text("name").notNull(),
   type: text("type").notNull(), // 'system' | 'user'
   userId: text("user_id"), // null for system categories, populated for user categories
-  
+
   // Financial classification (with defaults for existing data)
   transactionType: text("transaction_type").notNull().default("expense"), // 'income' | 'expense'
   usageScope: text("usage_scope").notNull().default("both"), // 'personal' | 'business' | 'both'
-  
+
   // Hierarchy
   parentId: text("parent_id"), // For future hierarchical categories
-  
+
   // Display
   description: text("description"), // Optional description for user categories
   icon: text("icon"), // Optional icon identifier
   color: text("color"), // Optional hex color for UI
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -499,17 +503,17 @@ export const userSettings = pgTable("user_settings", {
   country: text("country"), // 'US' | 'CA'
   province: text("province"), // State/Province code
   currency: text("currency").default("USD"), // 'USD' | 'CAD'
-  
+
   // Legacy fields (for backward compatibility)
   visibleFields: text("visible_fields"), // JSON string of field visibility preferences
   requiredFields: text("required_fields"), // JSON string of required field preferences
   defaultValues: text("default_values"), // JSON string of default field values (isBusinessExpense, businessPurpose, paymentMethod)
-  
+
   // Document-type-specific settings
   receiptSettings: text("receipt_settings"), // JSON: { visibleFields, requiredFields, defaultValues }
   bankStatementSettings: text("bank_statement_settings"), // JSON: { autoCategorize, matchingRules }
   invoiceSettings: text("invoice_settings"), // JSON: future invoice-specific settings
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -8,20 +8,21 @@ import { llmLogs } from "@/lib/db/schema";
 import { calculateCost } from "./costs";
 import type { LLMProvider } from "./types";
 import { devLogger } from "@/lib/dev-logger";
+import type { EntityType, PromptType, LlmLogStatus } from "@/lib/constants";
 
 export interface LogLLMInteractionParams {
   userId: string;
   entityId?: string | null;
-  entityType?: "receipt" | "transaction" | "batch" | "document" | null;
+  entityType?: EntityType | null;
   provider: LLMProvider;
   model: string;
-  promptType: "extraction" | "categorization" | "mapping";
+  promptType: PromptType;
   inputTokens: number;
   outputTokens: number;
   durationMs: number;
   inputJson?: any;
   outputJson?: any;
-  status: "success" | "failed";
+  status: LlmLogStatus;
   errorMessage?: string;
 }
 

@@ -1,12 +1,13 @@
 import { z } from "zod";
+import type { AiProvider, EntityType, PromptType } from "@/lib/constants";
 
-export type LLMProvider = "gemini" | "openai";
+export type LLMProvider = AiProvider;
 
 export interface LoggingContext {
   userId: string;
   entityId?: string | null;
-  entityType?: "receipt" | "transaction" | "batch" | "document" | null;
-  promptType: "extraction" | "categorization" | "mapping";
+  entityType?: EntityType | null;
+  promptType: PromptType;
   inputData?: any; // For storing in inputJson
 }
 

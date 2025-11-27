@@ -1,5 +1,12 @@
 import { z } from "zod";
 import { DEFAULT_REQUIRED_FIELDS, type DefaultValues } from "@/lib/consts";
+import {
+  RECEIPT_STATUSES,
+  USAGE_TYPES,
+  COUNTRIES,
+  PAYMENT_METHODS,
+  CURRENCIES,
+} from "@/lib/constants";
 
 // Create dynamic schema based on required fields
 export function createEditReceiptSchema(
@@ -37,7 +44,7 @@ export function createEditReceiptSchema(
     businessId: requiredFields.businessId
       ? z.string().min(1, "Business is required").nullable()
       : z.string().optional().nullable(),
-    status: z.enum(["needs_review", "approved"]),
+    status: z.enum(RECEIPT_STATUSES),
   });
 }
 
@@ -45,8 +52,8 @@ export function createEditReceiptSchema(
 export const EditReceiptSchema = createEditReceiptSchema();
 
 export const SettingsSchema = z.object({
-  usageType: z.enum(["personal", "business", "mixed"]),
-  country: z.enum(["US", "CA"]),
+  usageType: z.enum(USAGE_TYPES),
+  country: z.enum(COUNTRIES),
   province: z.string().min(1, "Province/State is required"),
   currency: z.string().min(1, "Currency is required"),
   // visibleFields and requiredFields are Records of booleans.
@@ -78,7 +85,7 @@ export const SettingsSchema = z.object({
       isBusinessExpense: z.boolean().nullable().optional(),
       businessPurpose: z.string().nullable().optional(),
       paymentMethod: z
-        .enum(["cash", "card", "check", "other"])
+        .enum(PAYMENT_METHODS)
         .nullable()
         .optional(),
     })
@@ -87,8 +94,8 @@ export const SettingsSchema = z.object({
 });
 
 export const OnboardingSchema = z.object({
-  usageType: z.enum(["personal", "business", "mixed"]),
-  country: z.enum(["US", "CA"]),
+  usageType: z.enum(USAGE_TYPES),
+  country: z.enum(COUNTRIES),
   province: z.string().min(1, "Province/State is required"),
 });
 

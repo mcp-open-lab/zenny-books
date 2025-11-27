@@ -4,7 +4,7 @@ import type { ConversionConfig } from "./field-converters";
 import { CategoryFilterService } from "@/lib/categorization/category-filter";
 import { devLogger } from "@/lib/dev-logger";
 import { ColumnMappingPrompt } from "@/lib/ai/prompts";
-import { AI_TEMPERATURES, CONFIDENCE_DEFAULTS } from "@/lib/ai/constants";
+import { AI_TEMPERATURES, CONFIDENCE_DEFAULTS } from "@/lib/constants";
 
 /**
  * Schema for column field mapping

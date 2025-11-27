@@ -6,13 +6,14 @@ import { db } from "@/lib/db";
 import { bankStatementTransactions, bankStatements, documents, categories } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { PAYMENT_METHODS } from "@/lib/constants";
 
 const updateBankTransactionSchema = z.object({
   id: z.string(),
   merchantName: z.string().optional(),
   categoryId: z.string().optional(),
   businessId: z.string().optional().nullable(),
-  paymentMethod: z.enum(["cash", "card", "check", "other"]).optional(),
+  paymentMethod: z.enum(PAYMENT_METHODS).optional(),
   notes: z.string().optional(),
 });
 

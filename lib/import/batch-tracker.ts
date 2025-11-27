@@ -10,6 +10,7 @@ import type {
   NewImportBatch,
   NewImportBatchItem,
 } from "@/lib/import/batch-types";
+import type { BatchStatus } from "@/lib/constants";
 
 export type {
   BatchStatusSummary,
@@ -175,7 +176,7 @@ export async function listBatches(
   options?: {
     limit?: number;
     cursor?: string;
-    status?: string;
+    status?: BatchStatus;
   }
 ): Promise<{
   batches: ImportBatch[];

@@ -16,6 +16,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { BankAccountProcessor } from "./processors/bank-account-processor";
 import { CreditCardProcessor } from "./processors/credit-card-processor";
 import type { BaseStatementProcessor } from "./processors/base-statement-processor";
+import { getFileFormatFromUrl } from "@/lib/constants";
 
 /**
  * Download file buffer from URL
@@ -29,17 +30,6 @@ async function downloadFile(url: string): Promise<Buffer> {
 
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
-}
-
-/**
- * Get file format from URL
- */
-function getFileFormat(url: string): "csv" | "xlsx" | "xls" | "other" {
-  const ext = url.split(".").pop()?.toLowerCase();
-  if (ext === "csv") return "csv";
-  if (ext === "xlsx") return "xlsx";
-  if (ext === "xls") return "xls";
-  return "other";
 }
 
 /**
@@ -69,7 +59,7 @@ export async function processBankStatement(
 
   // Download file
   const fileBuffer = await downloadFile(fileUrl);
-  const fileFormat = getFileFormat(fileUrl);
+  const fileFormat = getFileFormatFromUrl(fileUrl);
 
   // Calculate file hash for duplicate detection
   const { calculateFileHash } = await import("@/lib/utils/file-hash");
@@ -130,8 +120,7 @@ export async function processBankStatement(
 
     // Create bank statement record
     const bankStatementId = createId();
-    const currency =
-      importResult.mappingConfig?.currency || defaultCurrency || "USD";
+    const currency = importResult.mappingConfig?.currency || defaultCurrency || "USD";
     await db.insert(bankStatements).values({
       id: bankStatementId,
       documentId,
@@ -167,7 +156,7 @@ export async function processBankStatement(
       merchantName: tx.merchantName,
       referenceNumber: tx.referenceNumber,
       amount: tx.amount,
-      currency: tx.currency,
+      currency: tx.currency || currency,
       category: tx.category,
       categoryId: tx.categoryId,
       businessId: tx.businessId,

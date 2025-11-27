@@ -1,4 +1,5 @@
 import type { categories, categoryRules } from "@/lib/db/schema";
+import type { CategorizationMethod } from "@/lib/constants";
 
 export type Category = typeof categories.$inferSelect;
 export type CategoryRule = typeof categoryRules.$inferSelect;
@@ -15,7 +16,7 @@ export interface CategorizationResult {
   businessId?: string | null; // Optional business assignment
   isBusinessExpense?: boolean; // Whether this is a business expense
   confidence: number; // 0.0 to 1.0
-  method: "rule" | "history" | "ai" | "none";
+  method: CategorizationMethod;
   suggestedCategory?: string; // For new categories suggested by AI
 }
 

@@ -1,11 +1,13 @@
 /**
- * AI Module Constants
+ * AI Constants
  * Centralized configuration values for LLM workflows
  */
 
-/**
- * Default temperature values for different use cases
- */
+// AI Providers
+export const AI_PROVIDERS = ["openai", "gemini"] as const;
+export type AiProvider = (typeof AI_PROVIDERS)[number];
+
+// Temperature values for different use cases
 export const AI_TEMPERATURES = {
   /**
    * Low temperature for structured outputs (extraction, mapping)
@@ -20,13 +22,10 @@ export const AI_TEMPERATURES = {
   TEXT_GENERATION: 0.7,
 } as const;
 
-/**
- * Default confidence values
- */
+// Default confidence values
 export const CONFIDENCE_DEFAULTS = {
   /**
    * Default extraction confidence when not calculated
-   * TODO: Calculate based on field coverage
    */
   EXTRACTION: 0.9,
 
@@ -39,13 +38,5 @@ export const CONFIDENCE_DEFAULTS = {
    * Default categorization confidence for rule-based matches
    */
   CATEGORIZATION_RULE: 0.85,
-} as const;
-
-/**
- * Provider names (for type safety)
- */
-export const PROVIDERS = {
-  OPENAI: "openai",
-  GEMINI: "gemini",
 } as const;
 

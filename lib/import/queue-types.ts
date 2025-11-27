@@ -3,8 +3,9 @@
  * Type-safe job payload structures for Vercel Queues
  */
 
-export type ImportType = "receipts" | "bank_statements" | "mixed";
-export type FileFormat = "pdf" | "csv" | "xlsx" | "xls" | "jpg" | "png" | "webp" | "gif";
+import type { ImportType, FileFormat, SourceFormat } from "@/lib/constants";
+
+export type { ImportType, FileFormat };
 
 /**
  * Job payload for processing a single batch item
@@ -17,7 +18,7 @@ export interface ImportJobPayload {
   fileFormat: FileFormat;
   userId: string;
   importType: ImportType;
-  sourceFormat?: "pdf" | "csv" | "xlsx" | "images";
+  sourceFormat?: SourceFormat;
   statementType?: "bank_account" | "credit_card";
   currency?: string;
   order: number;

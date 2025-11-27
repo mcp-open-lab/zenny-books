@@ -3,7 +3,7 @@ import { generateObjectForCategorization } from "@/lib/ai/client";
 import { devLogger } from "@/lib/dev-logger";
 import type { TransactionToCategorize, CategorizationResult } from "./types";
 import { CategorizationPrompt } from "@/lib/ai/prompts";
-import { AI_TEMPERATURES } from "@/lib/ai/constants";
+import { AI_TEMPERATURES } from "@/lib/constants";
 
 const CategorizationSchema = z.object({
   categoryName: z.string(),

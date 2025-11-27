@@ -1,71 +1,12 @@
-export const US_STATES = [
-  "AL",
-  "AK",
-  "AZ",
-  "AR",
-  "CA",
-  "CO",
-  "CT",
-  "DE",
-  "FL",
-  "GA",
-  "HI",
-  "ID",
-  "IL",
-  "IN",
-  "IA",
-  "KS",
-  "KY",
-  "LA",
-  "ME",
-  "MD",
-  "MA",
-  "MI",
-  "MN",
-  "MS",
-  "MO",
-  "MT",
-  "NE",
-  "NV",
-  "NH",
-  "NJ",
-  "NM",
-  "NY",
-  "NC",
-  "ND",
-  "OH",
-  "OK",
-  "OR",
-  "PA",
-  "RI",
-  "SC",
-  "SD",
-  "TN",
-  "TX",
-  "UT",
-  "VT",
-  "VA",
-  "WA",
-  "WV",
-  "WI",
-  "WY",
-];
+import {
+  US_STATES,
+  CANADIAN_PROVINCES,
+  PAYMENT_METHODS,
+  type PaymentMethod,
+  type UsageType,
+} from "@/lib/constants";
 
-export const CANADIAN_PROVINCES = [
-  "AB",
-  "BC",
-  "MB",
-  "NB",
-  "NL",
-  "NS",
-  "NT",
-  "NU",
-  "ON",
-  "PE",
-  "QC",
-  "SK",
-  "YT",
-];
+export { US_STATES, CANADIAN_PROVINCES };
 
 export const RECEIPT_CATEGORIES = [
   "Food",
@@ -77,7 +18,7 @@ export const RECEIPT_CATEGORIES = [
 
 export const RECEIPT_STATUSES = ["needs_review", "approved"];
 
-export const PAYMENT_METHODS = ["cash", "card", "check", "other"];
+export { PAYMENT_METHODS };
 
 // Default required fields - minimal critical info
 export const DEFAULT_REQUIRED_FIELDS = {
@@ -95,7 +36,7 @@ export const DEFAULT_REQUIRED_FIELDS = {
 
 // Get default visible fields based on usage type
 export function getDefaultVisibleFields(
-  usageType: "personal" | "business" | "mixed"
+  usageType: UsageType
 ): Record<string, boolean> {
   const baseFields = {
     taxAmount: true,
@@ -123,7 +64,7 @@ export function getDefaultVisibleFields(
 
 // Get default required fields based on usage type
 export function getDefaultRequiredFields(
-  usageType: "personal" | "business" | "mixed"
+  usageType: UsageType
 ): Record<string, boolean> {
   const baseFields = {
     merchantName: true,
@@ -191,7 +132,7 @@ export const RECEIPT_FIELDS = [
 export type DefaultValues = {
   isBusinessExpense?: boolean | null;
   businessPurpose?: string | null;
-  paymentMethod?: "cash" | "card" | "check" | "other" | null;
+  paymentMethod?: PaymentMethod | null;
 };
 
 // Get default default values (empty - user must set them)

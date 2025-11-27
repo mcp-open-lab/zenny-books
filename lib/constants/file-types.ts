@@ -11,15 +11,36 @@ export const ALLOWED_MIME_TYPES = {
   "image/webp": [".webp"],
   "image/heic": [".heic"],
   "image/heif": [".heif"],
-  
+
   // Documents
   "application/pdf": [".pdf"],
-  
+
   // Data files (Bank Statements)
   "text/csv": [".csv"],
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+    ".xlsx",
+  ],
   "application/vnd.ms-excel": [".xls"],
 } as const;
+
+// File Formats
+export const FILE_FORMATS = [
+  "pdf",
+  "csv",
+  "xlsx",
+  "xls",
+  "jpg",
+  "png",
+  "webp",
+  "gif",
+  "heic",
+  "heif",
+] as const;
+export type FileFormat = (typeof FILE_FORMATS)[number];
+
+// Source Formats
+export const SOURCE_FORMATS = ["pdf", "csv", "xlsx", "images"] as const;
+export type SourceFormat = (typeof SOURCE_FORMATS)[number];
 
 // File extensions for accept attribute
 export const IMAGE_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.heic,.heif";
@@ -39,13 +60,13 @@ export const MAX_FILE_COUNT_BATCH = 50;
 // Helper function to get MIME type from URL
 export function getMimeTypeFromUrl(url: string): string {
   const extension = url.split(".").pop()?.toLowerCase();
-  
+
   for (const [mimeType, extensions] of Object.entries(ALLOWED_MIME_TYPES)) {
-    if (extensions.some(ext => ext === `.${extension}`)) {
+    if (extensions.some((ext) => ext === `.${extension}`)) {
       return mimeType;
     }
   }
-  
+
   // Default fallback
   return "image/jpeg";
 }

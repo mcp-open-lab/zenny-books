@@ -15,6 +15,12 @@ import { z } from "zod";
 import { createSafeAction } from "@/lib/safe-action";
 import { devLogger } from "@/lib/dev-logger";
 import { TransactionRepository } from "@/lib/categorization/repositories/transaction-repository";
+import {
+  TRANSACTION_TYPES,
+  USAGE_SCOPES,
+  MATCH_TYPES,
+  RULE_FIELDS,
+} from "@/lib/constants";
 
 // Get all categories for a user (system + user-defined)
 export async function getUserCategories() {
@@ -32,8 +38,8 @@ export async function getUserCategories() {
 // Create a new user category
 const CreateCategorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(50),
-  transactionType: z.enum(["income", "expense"]),
-  usageScope: z.enum(["personal", "business", "both"]),
+  transactionType: z.enum(TRANSACTION_TYPES),
+  usageScope: z.enum(USAGE_SCOPES),
   description: z.string().optional(),
 });
 
@@ -150,8 +156,8 @@ export async function getUserRules() {
 // Create a new rule
 const CreateRuleSchema = z.object({
   categoryId: z.string(),
-  matchType: z.enum(["exact", "contains", "regex"]),
-  field: z.enum(["merchantName", "description"]),
+  matchType: z.enum(MATCH_TYPES),
+  field: z.enum(RULE_FIELDS),
   value: z.string().min(1, "Pattern is required"),
 });
 
@@ -199,8 +205,8 @@ const UpdateRuleSchema = z.object({
   ruleId: z.string(),
   categoryId: z.string(),
   businessId: z.string().optional(), // Optional business assignment
-  matchType: z.enum(["exact", "contains", "regex"]),
-  field: z.enum(["merchantName", "description"]),
+  matchType: z.enum(MATCH_TYPES),
+  field: z.enum(RULE_FIELDS),
   value: z.string().min(1, "Pattern is required"),
 });
 

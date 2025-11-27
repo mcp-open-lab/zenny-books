@@ -9,6 +9,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/safe-action";
 import { devLogger } from "@/lib/dev-logger";
+import { BUSINESS_TYPES } from "@/lib/constants";
 
 // Get all businesses for the current user
 export async function getUserBusinesses() {
@@ -27,7 +28,7 @@ export async function getUserBusinesses() {
 // Create a new business
 const CreateBusinessSchema = z.object({
   name: z.string().min(1, "Business name is required").max(100),
-  type: z.enum(["business", "contract"]),
+  type: z.enum(BUSINESS_TYPES),
   description: z.string().optional(),
   taxId: z.string().optional(),
   address: z.string().optional(),
@@ -77,7 +78,7 @@ export const createBusiness = createSafeAction(
 const UpdateBusinessSchema = z.object({
   businessId: z.string(),
   name: z.string().min(1, "Business name is required").max(100),
-  type: z.enum(["business", "contract"]),
+  type: z.enum(BUSINESS_TYPES),
   description: z.string().optional(),
   taxId: z.string().optional(),
   address: z.string().optional(),
