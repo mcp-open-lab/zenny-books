@@ -61,11 +61,20 @@ class DevLogger {
         : "debug";
   }
 
+  private isServerSide(): boolean {
+    return typeof window === "undefined";
+  }
+
   private isTestEnvironment(): boolean {
     return process.env.NODE_ENV === "test";
   }
 
   private shouldLog(level: LogLevel): boolean {
+    // Only log on server side (prevents duplicate logs in browser)
+    if (!this.isServerSide()) {
+      return false;
+    }
+
     // Suppress all logging in test environments
     if (this.isTestEnvironment()) {
       return false;
