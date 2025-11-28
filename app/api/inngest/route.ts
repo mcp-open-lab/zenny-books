@@ -17,7 +17,7 @@ export const processImportJob = inngest.createFunction(
   {
     id: "process-import-job",
     name: "Process Import Job",
-    retries: 3,
+    retries: 0, // Disable retries during development - errors should fail fast
   },
   { event: "import/process.item" },
   async ({ event, step }) => {

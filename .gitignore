@@ -50,3 +50,6 @@ next-env.d.ts
 
 # test documents
 /test-docs
+
+# Test output files
+.output/

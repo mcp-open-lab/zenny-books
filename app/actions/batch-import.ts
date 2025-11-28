@@ -27,8 +27,9 @@ const batchImportSchema = z.object({
   dateRangeEnd: z.string().optional(),
 });
 
-function getFileFormat(url: string): ImportJobPayload["fileFormat"] {
-  const ext = url.split(".").pop()?.toLowerCase() || "";
+function getFileFormat(fileName: string): ImportJobPayload["fileFormat"] {
+  // Use original filename, not URL (UploadThing URLs don't preserve extensions)
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
   const formatMap: Record<string, ImportJobPayload["fileFormat"]> = {
     jpg: "jpg",
     jpeg: "jpg",
@@ -109,7 +110,7 @@ export const batchImport = createAuthenticatedAction(
       batchItemId: item.id,
       fileUrl: item.fileUrl,
       fileName: item.fileName,
-      fileFormat: getFileFormat(item.fileUrl),
+      fileFormat: getFileFormat(item.fileName),
       userId,
       importType: validated.importType,
       sourceFormat: validated.sourceFormat,

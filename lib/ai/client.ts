@@ -148,6 +148,7 @@ export async function generateObjectForCategorization<T>(
 /**
  * Generate structured object output from LLM with GPT-4o-mini primary (for extraction)
  * Uses GPT-4o-mini (cheaper) as primary, GPT-4o as fallback
+ * For PDFs, uses Gemini (OpenAI doesn't support PDFs)
  */
 export async function generateObjectForExtraction<T>(
   prompt: string,
@@ -155,6 +156,73 @@ export async function generateObjectForExtraction<T>(
   options?: CompletionOptions
 ): Promise<LLMResponse<T>> {
   const startTime = Date.now();
+  
+  // Check if input is a PDF - OpenAI doesn't support PDFs, use Gemini instead
+  const isPdf = options?.image?.mimeType === "application/pdf";
+  
+  if (isPdf) {
+    const gemini = getGeminiProvider();
+    
+    if (gemini) {
+      devLogger.info("Attempting PDF extraction with Gemini (OpenAI doesn't support PDFs)", {
+        context: { provider: "gemini" },
+      });
+
+      const result = await gemini.generateObject(prompt, schema, options);
+      const durationMs = Date.now() - startTime;
+
+      if (result.success) {
+        devLogger.info("Gemini PDF extraction successful", {
+          context: { tokensUsed: result.tokensUsed },
+        });
+
+        // Log interaction if context provided
+        if (options?.loggingContext) {
+          await logLLMInteraction({
+            ...options.loggingContext,
+            provider: result.provider,
+            model: result.model || "unknown",
+            inputTokens: result.inputTokens || 0,
+            outputTokens: result.outputTokens || 0,
+            durationMs: result.durationMs || durationMs,
+            inputJson: options.loggingContext.inputData,
+            outputJson: result.data,
+            status: "success",
+          });
+        }
+
+        return result;
+      }
+
+      devLogger.error("Gemini PDF extraction failed", {
+        context: { error: result.error },
+      });
+
+      // Log failure if context provided
+      if (options?.loggingContext) {
+        await logLLMInteraction({
+          ...options.loggingContext,
+          provider: result.provider,
+          model: result.model || "unknown",
+          inputTokens: result.inputTokens || 0,
+          outputTokens: result.outputTokens || 0,
+          durationMs: result.durationMs || durationMs,
+          inputJson: options.loggingContext.inputData,
+          status: "failed",
+          errorMessage: result.error,
+        });
+      }
+
+      return result;
+    }
+
+    return {
+      success: false,
+      error: "PDF extraction requires Gemini. Please configure GOOGLE_AI_API_KEY.",
+      provider: "gemini",
+    };
+  }
+
   const openaiMini = getOpenAIMiniProvider();
 
   if (openaiMini) {

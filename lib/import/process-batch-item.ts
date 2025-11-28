@@ -29,6 +29,13 @@ export async function processBatchItem(
 ): Promise<JobProcessingResult> {
   const { batchId, batchItemId, fileUrl, userId, importType } = payload;
 
+  devLogger.info("Processing batch item", {
+    batchItemId,
+    fileName: payload.fileName,
+    importType,
+    fileFormat: payload.fileFormat,
+  });
+
   try {
     // 1. Update batch item status to processing
     await db
@@ -45,7 +52,12 @@ export async function processBatchItem(
     // 3. Process based on import type
     let documentId: string | undefined;
 
-    if (importType === "receipts") {
+    // For "mixed" type, detect PDFs as bank statements
+    const isPdf = payload.fileFormat === "pdf";
+    const effectiveImportType =
+      importType === "mixed" && isPdf ? "bank_statements" : importType;
+
+    if (effectiveImportType === "receipts") {
       // Call handler directly to avoid Server Action wrapper issues in queue context
       await scanReceiptHandler(fileUrl, batchId, userId, payload.fileName);
 
@@ -66,7 +78,7 @@ export async function processBatchItem(
       if (createdDoc.length > 0) {
         documentId = createdDoc[0].id;
       }
-    } else if (importType === "bank_statements") {
+    } else if (effectiveImportType === "bank_statements") {
       // Process bank statement using AI orchestrator
       const result = await processBankStatement(
         fileUrl,
@@ -85,8 +97,7 @@ export async function processBatchItem(
         transactionCount: result.transactionCount,
       });
     } else {
-      // Mixed - try to detect type from file
-      // For now, treat as receipt
+      // Mixed - non-PDF files default to receipts
       await scanReceiptHandler(fileUrl, batchId, userId, payload.fileName);
 
       const createdDoc = await db
@@ -108,7 +119,7 @@ export async function processBatchItem(
     }
 
     // 4. Check for duplicates after extraction
-    if (documentId && importType === "receipts") {
+    if (documentId && effectiveImportType === "receipts") {
       const duplicateMatch = await checkBatchItemDuplicate(
         batchItemId,
         userId,

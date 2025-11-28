@@ -1,5 +1,5 @@
 /**
- * Process bank statement spreadsheets (CSV, XLSX, XLS)
+ * Process bank statements (CSV, XLSX, XLS, PDF)
  * Uses class-based processors for clean separation of bank vs credit card logic
  */
 
@@ -17,6 +17,12 @@ import { BankAccountProcessor } from "./processors/bank-account-processor";
 import { CreditCardProcessor } from "./processors/credit-card-processor";
 import type { BaseStatementProcessor } from "./processors/base-statement-processor";
 import { getFileFormatFromUrl } from "@/lib/constants";
+import {
+  extractPdfText,
+  parseTransactionsFromPdf,
+  isScannedPdf,
+} from "./pdf-table-extractor";
+import type { NormalizedTransaction } from "./spreadsheet-parser";
 
 /**
  * Download file buffer from URL
@@ -30,6 +36,105 @@ async function downloadFile(url: string): Promise<Buffer> {
 
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
+}
+
+/**
+ * Check if file is a PDF
+ */
+function isPdfFile(fileName: string): boolean {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+  return extension === "pdf";
+}
+
+/**
+ * Check if file is a supported bank statement format
+ */
+function isSupportedStatementFile(fileName: string): boolean {
+  return isSpreadsheetFile(fileName) || isPdfFile(fileName);
+}
+
+/**
+ * Import PDF bank statement using table extraction
+ */
+async function importPdfStatement(
+  fileBuffer: Buffer,
+  fileName: string
+): Promise<{
+  success: boolean;
+  transactions: NormalizedTransaction[];
+  error?: string;
+  metadata?: {
+    totalRows: number;
+    validRows: number;
+    isScanned: boolean;
+    pageCount: number;
+  };
+}> {
+  try {
+    devLogger.info("Starting PDF statement import", { fileName });
+
+    // Extract text from PDF
+    const pdfResult = await extractPdfText(fileBuffer);
+
+    if (isScannedPdf(pdfResult)) {
+      return {
+        success: false,
+        transactions: [],
+        error:
+          "This PDF appears to be scanned. Please use a digital/native PDF statement.",
+      };
+    }
+
+    // Parse into NormalizedTransaction[] using LLM
+    const transactions = await parseTransactionsFromPdf(pdfResult);
+
+    if (transactions.length === 0) {
+      return {
+        success: false,
+        transactions: [],
+        error:
+          "No transactions found in PDF. The statement format may not be supported.",
+      };
+    }
+
+    // Filter valid transactions
+    const validTransactions = transactions.filter((tx) => {
+      const hasDate =
+        tx.transactionDate !== null && tx.transactionDate !== undefined;
+      const hasAmount = tx.amount !== null && tx.amount !== undefined;
+      return hasDate && hasAmount;
+    });
+
+    devLogger.info("PDF statement parsed", {
+      fileName,
+      totalTransactions: transactions.length,
+      validTransactions: validTransactions.length,
+      pageCount: pdfResult.metadata.pageCount,
+    });
+
+    return {
+      success: true,
+      transactions: validTransactions,
+      metadata: {
+        totalRows: transactions.length,
+        validRows: validTransactions.length,
+        isScanned: false,
+        pageCount: pdfResult.metadata.pageCount,
+      },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    devLogger.error("PDF statement import failed", {
+      fileName,
+      error: errorMessage,
+    });
+
+    return {
+      success: false,
+      transactions: [],
+      error: `PDF import failed: ${errorMessage}`,
+    };
+  }
 }
 
 /**
@@ -51,15 +156,16 @@ export async function processBankStatement(
   });
 
   // Validate file type
-  if (!isSpreadsheetFile(fileName)) {
+  if (!isSupportedStatementFile(fileName)) {
     throw new Error(
-      `Unsupported file type. Bank statements must be CSV, XLSX, or XLS files.`
+      `Unsupported file type. Bank statements must be CSV, XLSX, XLS, or PDF files.`
     );
   }
 
   // Download file
   const fileBuffer = await downloadFile(fileUrl);
   const fileFormat = getFileFormatFromUrl(fileUrl);
+  const isPdf = isPdfFile(fileName);
 
   // Calculate file hash for duplicate detection
   const { calculateFileHash } = await import("@/lib/utils/file-hash");
@@ -93,44 +199,73 @@ export async function processBankStatement(
     fileSizeBytes: fileBuffer.length,
     status: "processing",
     importBatchId: batchId,
-    extractionMethod: "excel_parser",
+    extractionMethod: isPdf ? "pdf_table_extraction" : "excel_parser",
   });
 
   try {
-    // Import using AI orchestrator (pass userId for category context)
-    const importResult = await importSpreadsheet(
-      fileBuffer, 
-      fileName, 
-      userId, 
-      statementType
-    );
+    // Import using appropriate method based on file type
+    let transactions: NormalizedTransaction[];
+    let detectedCurrency: string | undefined;
+    let confidence: number | undefined;
 
-    if (!importResult.success || importResult.transactions.length === 0) {
-      throw new Error(
-        importResult.error || "No transactions found in spreadsheet"
+    if (isPdf) {
+      // PDF: Use table extraction
+      const pdfResult = await importPdfStatement(fileBuffer, fileName);
+
+      if (!pdfResult.success || pdfResult.transactions.length === 0) {
+        throw new Error(pdfResult.error || "No transactions found in PDF");
+      }
+
+      transactions = pdfResult.transactions;
+      // PDF doesn't detect currency, use default
+      detectedCurrency = undefined;
+      confidence = undefined;
+
+      devLogger.info("PDF statement parsed successfully", {
+        documentId,
+        transactionCount: transactions.length,
+        pageCount: pdfResult.metadata?.pageCount,
+      });
+    } else {
+      // Spreadsheet: Use AI orchestrator
+      const importResult = await importSpreadsheet(
+        fileBuffer,
+        fileName,
+        userId,
+        statementType
       );
-    }
 
-    devLogger.info("Spreadsheet parsed successfully", {
-      documentId,
-      transactionCount: importResult.transactions.length,
-      mappingConfidence: importResult.mappingConfig?.confidence,
-      currency: importResult.mappingConfig?.currency,
-    });
+      if (!importResult.success || importResult.transactions.length === 0) {
+        throw new Error(
+          importResult.error || "No transactions found in spreadsheet"
+        );
+      }
+
+      transactions = importResult.transactions;
+      detectedCurrency = importResult.mappingConfig?.currency ?? undefined;
+      confidence = importResult.mappingConfig?.confidence;
+
+      devLogger.info("Spreadsheet parsed successfully", {
+        documentId,
+        transactionCount: transactions.length,
+        mappingConfidence: confidence,
+        currency: detectedCurrency,
+      });
+    }
 
     // Create bank statement record
     const bankStatementId = createId();
-    const currency = importResult.mappingConfig?.currency || defaultCurrency || "USD";
+    const currency = detectedCurrency || defaultCurrency || "USD";
     await db.insert(bankStatements).values({
       id: bankStatementId,
       documentId,
       currency,
-      transactionCount: importResult.transactions.length,
+      transactionCount: transactions.length,
       processedTransactionCount: 0,
     });
 
     // Select appropriate processor based on statement type
-    const processor: BaseStatementProcessor = 
+    const processor: BaseStatementProcessor =
       statementType === "credit_card"
         ? new CreditCardProcessor(userId, defaultCurrency || "USD")
         : new BankAccountProcessor(userId, defaultCurrency || "USD");
@@ -142,8 +277,8 @@ export async function processBankStatement(
 
     // Process transactions using the appropriate processor
     const processedTransactions = await processor.processTransactions(
-      importResult.transactions,
-      importResult.mappingConfig?.currency || defaultCurrency || "USD"
+      transactions,
+      currency
     );
 
     // Convert to database records
@@ -173,8 +308,7 @@ export async function processBankStatement(
         status: "completed",
         extractedAt: new Date(),
         processedAt: new Date(),
-        extractionConfidence:
-          importResult.mappingConfig?.confidence?.toString(),
+        extractionConfidence: confidence?.toString(),
       })
       .where(eq(documents.id, documentId));
 
@@ -201,9 +335,15 @@ export async function processBankStatement(
     // Otherwise duplicate detection will block re-uploads
     try {
       await db.delete(documents).where(eq(documents.id, documentId));
-      devLogger.info("Cleaned up failed document", { documentId, reason: "processing_failed" });
+      devLogger.info("Cleaned up failed document", {
+        documentId,
+        reason: "processing_failed",
+      });
     } catch (cleanupError) {
-      devLogger.error("Failed to cleanup failed document", { documentId, error: cleanupError });
+      devLogger.error("Failed to cleanup failed document", {
+        documentId,
+        error: cleanupError,
+      });
     }
 
     throw error;

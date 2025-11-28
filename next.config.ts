@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
     ],
     unoptimized: false,
   },
+  // Keep unpdf external to avoid bundling issues with PDF.js serverless build
+  serverExternalPackages: ["unpdf"],
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",

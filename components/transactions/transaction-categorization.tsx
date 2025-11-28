@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -45,12 +45,31 @@ export function TransactionCategorization({
   // Determine if this is a business transaction based on businessId
   const currentBusinessId = form.watch("businessId");
   const [contextMode, setContextMode] = useState<"personal" | "business">(
-    currentBusinessId ? "business" : "personal"
+    form.getValues("businessId") ? "business" : "personal"
   );
 
+  // Sync contextMode when businessId changes
+  useEffect(() => {
+    if (currentBusinessId) {
+      setContextMode("business");
+    } else if (!currentBusinessId && contextMode === "business" && businesses.length === 0) {
+      // Only switch to personal if no businesses exist
+      setContextMode("personal");
+    }
+  }, [currentBusinessId, businesses.length, contextMode]);
+
+  // Get current categoryId from form
+  const currentCategoryId = form.watch("categoryId");
+
   // Filter categories based on transaction type and context mode
+  // Always include the current category even if it doesn't match filters
   const filteredCategories = useMemo(() => {
-    return categories.filter((cat) => {
+    const filtered = categories.filter((cat) => {
+      // Always include the current category
+      if (currentCategoryId && cat.id === currentCategoryId) {
+        return true;
+      }
+
       // Match transaction type
       if (cat.transactionType !== transactionType) {
         return false;
@@ -63,7 +82,8 @@ export function TransactionCategorization({
         return cat.usageScope === "business" || cat.usageScope === "both";
       }
     });
-  }, [categories, transactionType, contextMode]);
+    return filtered;
+  }, [categories, transactionType, contextMode, currentCategoryId]);
 
   // Handle context mode change
   const handleContextChange = (mode: "personal" | "business") => {

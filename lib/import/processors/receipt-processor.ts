@@ -347,6 +347,8 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
         return "image/webp";
       case "gif":
         return "image/gif";
+      case "pdf":
+        return "application/pdf";
       default:
         return "image/jpeg";
     }

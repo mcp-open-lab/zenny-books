@@ -63,9 +63,9 @@ function validateFilesForImportType(
         return `File "${file.name}" is not supported for Receipts. Please use images (JPG, PNG, HEIC, etc.) or PDF files. For spreadsheets, select "Bank Statements" import type.`;
       }
     } else if (importType === "bank_statements") {
-      // Bank statements: only spreadsheets (CSV, XLSX, XLS)
-      if (!spreadsheetExtensions.includes(ext)) {
-        return `File "${file.name}" is not supported for Bank Statements. Please use CSV or Excel (XLSX/XLS) files.`;
+      // Bank statements: spreadsheets (CSV, XLSX, XLS) and PDFs
+      if (!spreadsheetExtensions.includes(ext) && ext !== pdfExtension) {
+        return `File "${file.name}" is not supported for Bank Statements. Please use CSV, Excel (XLSX/XLS), or PDF files.`;
       }
     }
     // Mixed: allow all types
