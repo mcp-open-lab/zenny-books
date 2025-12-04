@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Receipt, Upload, Settings, Wallet, AlertCircle } from "lucide-react";
+import { Home, FileText, Settings, Wallet, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/app", icon: Home, label: "Timeline" },
-  { href: "/app/review", icon: AlertCircle, label: "Review" },
   { href: "/app/budgets", icon: Wallet, label: "Budget" },
-  { href: "/app/import", icon: Upload, label: "Import" },
+  { href: "/app/invoices", icon: FileText, label: "Invoices" },
+  { href: "/app/review", icon: Database, label: "Data" },
   { href: "/app/settings", icon: Settings, label: "Settings" },
 ];
 
