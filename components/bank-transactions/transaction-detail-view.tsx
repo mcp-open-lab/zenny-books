@@ -96,7 +96,7 @@ export function BankTransactionDetailView({
           {transaction.referenceNumber && (
             <div>
               <p className="text-sm text-muted-foreground">Reference Number</p>
-              <p className="text-base font-medium mt-1">
+              <p className="text-sm font-mono mt-1 break-all">
                 {transaction.referenceNumber}
               </p>
             </div>
