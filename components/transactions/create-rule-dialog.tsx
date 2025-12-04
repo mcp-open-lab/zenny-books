@@ -24,13 +24,20 @@ import { CategoryCombobox } from "@/components/ui/category-combobox";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 
+interface Category {
+  id: string;
+  name: string;
+  transactionType: string;
+  type?: string;
+}
+
 interface CreateRuleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   merchantName: string;
   categoryId: string;
   businessId: string | null;
-  categories: Array<{ id: string; name: string }>;
+  categories: Category[];
   businesses: Array<{ id: string; name: string }>;
   onRuleCreated?: () => void;
 }
