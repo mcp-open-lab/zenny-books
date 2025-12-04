@@ -10,7 +10,7 @@ import type { BudgetStatus } from "@/app/actions/budgets";
 import { BUDGET_STATUS_CONFIG } from "@/lib/budget/constants";
 import { formatBudgetCurrency } from "@/lib/budget/utils";
 import { TransactionList } from "./transaction-list";
-import { getCategoryEmoji } from "@/lib/categories/emoji-map";
+import { getCategoryIcon } from "@/lib/categories/icon-map";
 import type {
   categories as categoriesSchema,
   businesses as businessesSchema,
@@ -122,9 +122,10 @@ export function CategoryBudgetRow({
         className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed hover:border-solid hover:bg-muted/50 transition-colors text-left"
       >
         <div className="flex items-center gap-2">
-          <span className="text-lg flex-shrink-0 leading-none" role="img" aria-label={categoryName}>
-            {getCategoryEmoji(categoryName)}
-          </span>
+          {(() => {
+            const Icon = getCategoryIcon(categoryName);
+            return <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden="true" />;
+          })()}
           <span className="text-sm">{categoryName}</span>
         </div>
         {isEditing ? (
@@ -302,7 +303,7 @@ interface CategoryLabelProps {
 
 function CategoryLabel({ name, color, count, isExpanded, onToggle }: CategoryLabelProps) {
   const hasTransactions = count > 0;
-  const emoji = getCategoryEmoji(name);
+  const Icon = getCategoryIcon(name);
 
   return (
     <button
@@ -312,9 +313,7 @@ function CategoryLabel({ name, color, count, isExpanded, onToggle }: CategoryLab
         hasTransactions && "cursor-pointer hover:opacity-80"
       )}
     >
-      <span className="text-lg flex-shrink-0 leading-none" role="img" aria-label={name}>
-        {emoji}
-      </span>
+      <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden="true" />
       <span className="text-sm truncate">{name}</span>
       {hasTransactions && (
         <>
