@@ -122,7 +122,9 @@ export function CategoryBudgetRow({
         className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed hover:border-solid hover:bg-muted/50 transition-colors text-left"
       >
         <div className="flex items-center gap-2">
-          <span className="text-base flex-shrink-0">{getCategoryEmoji(categoryName)}</span>
+          <span className="text-lg flex-shrink-0 leading-none" role="img" aria-label={categoryName}>
+            {getCategoryEmoji(categoryName)}
+          </span>
           <span className="text-sm">{categoryName}</span>
         </div>
         {isEditing ? (
@@ -310,7 +312,9 @@ function CategoryLabel({ name, color, count, isExpanded, onToggle }: CategoryLab
         hasTransactions && "cursor-pointer hover:opacity-80"
       )}
     >
-      <span className="text-base flex-shrink-0">{emoji}</span>
+      <span className="text-lg flex-shrink-0 leading-none" role="img" aria-label={name}>
+        {emoji}
+      </span>
       <span className="text-sm truncate">{name}</span>
       {hasTransactions && (
         <>
