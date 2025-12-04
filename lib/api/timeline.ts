@@ -6,6 +6,7 @@ import {
   bankStatements,
   documents,
   businesses,
+  categories,
 } from "@/lib/db/schema";
 
 export type TimelineItem = {
@@ -200,7 +201,7 @@ export async function getTimelineItems({
       ${receipts.date} as date,
       ${receipts.totalAmount}::text as amount,
       ${receipts.merchantName} as merchant_name,
-      ${receipts.category} as category,
+      ${categories.name} as category,
       ${receipts.categoryId} as category_id,
       ${receipts.businessId} as business_id,
       ${businesses.name} as business_name,
@@ -210,6 +211,7 @@ export async function getTimelineItems({
       ${receipts.documentId} as document_id
     FROM ${receipts}
     LEFT JOIN ${businesses} ON ${receipts.businessId} = ${businesses.id}
+    LEFT JOIN ${categories} ON ${receipts.categoryId} = ${categories.id}
     WHERE ${receiptWhere}
   `;
 
@@ -220,7 +222,7 @@ export async function getTimelineItems({
       ${bankStatementTransactions.transactionDate} as date,
       ${bankStatementTransactions.amount}::text as amount,
       ${bankStatementTransactions.merchantName} as merchant_name,
-      ${bankStatementTransactions.category} as category,
+      ${categories.name} as category,
       ${bankStatementTransactions.categoryId} as category_id,
       ${bankStatementTransactions.businessId} as business_id,
       ${businesses.name} as business_name,
@@ -232,6 +234,7 @@ export async function getTimelineItems({
     JOIN ${bankStatements} ON ${bankStatementTransactions.bankStatementId} = ${bankStatements.id}
     JOIN ${documents} ON ${bankStatements.documentId} = ${documents.id}
     LEFT JOIN ${businesses} ON ${bankStatementTransactions.businessId} = ${businesses.id}
+    LEFT JOIN ${categories} ON ${bankStatementTransactions.categoryId} = ${categories.id}
     WHERE ${txWhere}
   `;
 
