@@ -9,6 +9,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import { documents, bankStatements, bankStatementTransactions } from '@/lib/db/schema';
 import { mapPlaidTransactions } from '@/lib/plaid/transaction-mapper';
+import { mapPlaidCategoryAsync, initializeCategoryCache } from '@/lib/plaid/category-mapper';
 
 async function syncAllAccountsFull() {
   // Create a fresh Plaid client with the env vars now loaded
@@ -99,11 +100,20 @@ async function syncAllAccountsFull() {
         processedTransactionCount: accountTransactions.length,
       });
 
-      // Map and insert transactions
+      // Initialize category cache for mapping
+      await initializeCategoryCache();
+
+      // Map and insert transactions with auto-categorization
       const normalizedTransactions = mapPlaidTransactions(accountTransactions, account.plaidAccountId);
 
       let order = 0;
       for (const tx of normalizedTransactions) {
+        // Auto-categorize using Plaid's category
+        const categoryId = await mapPlaidCategoryAsync(
+          tx.raw?.plaid_category as string | undefined,
+          tx.raw?.plaid_category_detailed as string | undefined
+        );
+
         await db.insert(bankStatementTransactions).values({
           id: createId(),
           bankStatementId,
@@ -114,6 +124,7 @@ async function syncAllAccountsFull() {
           referenceNumber: tx.referenceNumber,
           amount: (tx.amount ?? 0).toString(),
           currency: tx.currency,
+          categoryId,
           order: order++,
         });
       }
