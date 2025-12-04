@@ -10,6 +10,7 @@ import type { BudgetStatus } from "@/app/actions/budgets";
 import { BUDGET_STATUS_CONFIG } from "@/lib/budget/constants";
 import { formatBudgetCurrency } from "@/lib/budget/utils";
 import { TransactionList } from "./transaction-list";
+import { getCategoryEmoji } from "@/lib/categories/emoji-map";
 import type {
   categories as categoriesSchema,
   businesses as businessesSchema,
@@ -121,7 +122,7 @@ export function CategoryBudgetRow({
         className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed hover:border-solid hover:bg-muted/50 transition-colors text-left"
       >
         <div className="flex items-center gap-2">
-          <CategoryDot color={categoryColor} />
+          <span className="text-base flex-shrink-0">{getCategoryEmoji(categoryName)}</span>
           <span className="text-sm">{categoryName}</span>
         </div>
         {isEditing ? (
@@ -299,6 +300,7 @@ interface CategoryLabelProps {
 
 function CategoryLabel({ name, color, count, isExpanded, onToggle }: CategoryLabelProps) {
   const hasTransactions = count > 0;
+  const emoji = getCategoryEmoji(name);
 
   return (
     <button
@@ -308,7 +310,7 @@ function CategoryLabel({ name, color, count, isExpanded, onToggle }: CategoryLab
         hasTransactions && "cursor-pointer hover:opacity-80"
       )}
     >
-      <CategoryDot color={color} />
+      <span className="text-base flex-shrink-0">{emoji}</span>
       <span className="text-sm truncate">{name}</span>
       {hasTransactions && (
         <>
