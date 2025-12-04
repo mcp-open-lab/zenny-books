@@ -8,7 +8,8 @@ export type ExclusionReason =
   | "internal_transfer"
   | "credit_card_payment"
   | "manual"
-  | "bnpl_installment";
+  | "bnpl_installment"
+  | "installment_plan_credit";
 
 export type TransactionFlags = {
   // Duplicate detection
@@ -21,8 +22,8 @@ export type TransactionFlags = {
   isInternalTransfer?: boolean;
   transferToAccountId?: string; // For future Plaid account linking
 
-  // Analytics exclusion
-  isExcludedFromAnalytics?: boolean;
+  // Budget/totals exclusion
+  isExcludedFromTotals?: boolean;
   exclusionReason?: ExclusionReason;
 
   // Buy Now Pay Later (BNPL)
@@ -79,6 +80,14 @@ export const CREDIT_CARD_PAYMENT_PATTERNS = [
   /^automatic\s*payment/i,
 ] as const;
 
+// Installment plan credit patterns (Amex, etc.)
+// These are credits when converting purchases to installment plans - not real income
+export const INSTALLMENT_PLAN_CREDIT_PATTERNS = [
+  /installment\s*plan/i,
+  /plan\s*it/i,
+  /pay\s*over\s*time/i,
+] as const;
+
 // Helper functions for detection
 export function detectBnplMerchant(merchantName: string): boolean {
   if (!merchantName) return false;
@@ -99,14 +108,32 @@ export function detectCreditCardPayment(description: string): boolean {
   );
 }
 
+/**
+ * Detect installment plan credits (e.g., Amex Plan It credits)
+ * These are credits when converting purchases to installment plans - should be excluded from analytics
+ */
+export function detectInstallmentPlanCredit(
+  merchantName: string | null,
+  description: string | null,
+  amount: number
+): boolean {
+  // Must be a positive amount (credit)
+  if (amount <= 0) return false;
+
+  const text = `${merchantName || ""} ${description || ""}`.toLowerCase();
+  return INSTALLMENT_PLAN_CREDIT_PATTERNS.some((pattern) =>
+    pattern.test(text)
+  );
+}
+
 // Helper to check if transaction should be excluded from analytics
-export function shouldExcludeFromAnalytics(
+export function shouldExcludeFromTotals(
   flags?: TransactionFlags | null
 ): boolean {
   if (!flags) return false;
 
   // Explicit exclusion
-  if (flags.isExcludedFromAnalytics === true) return true;
+  if (flags.isExcludedFromTotals === true) return true;
 
   // Auto-exclude certain types
   if (flags.isDuplicate === true) return true;
@@ -126,6 +153,8 @@ export function getExclusionReasonText(reason?: ExclusionReason): string {
       return "Credit card payment";
     case "bnpl_installment":
       return "BNPL installment";
+    case "installment_plan_credit":
+      return "Installment plan credit";
     case "manual":
       return "Manually excluded";
     default:

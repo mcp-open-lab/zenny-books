@@ -296,7 +296,7 @@ export async function markAsDuplicate(
     isDuplicate: true,
     linkedTransactionId,
     linkedTransactionType,
-    isExcludedFromAnalytics: true,
+    isExcludedFromTotals: true,
     exclusionReason: "duplicate",
     userVerified: true,
     verifiedAt: new Date().toISOString(),
@@ -357,7 +357,7 @@ export async function unmarkAsDuplicate(
       delete flags.linkedTransactionType;
       delete flags.duplicateConfidence;
       if (flags.exclusionReason === "duplicate") {
-        delete flags.isExcludedFromAnalytics;
+        delete flags.isExcludedFromTotals;
         delete flags.exclusionReason;
       }
 
@@ -397,7 +397,7 @@ export async function unmarkAsDuplicate(
       delete flags.linkedTransactionType;
       delete flags.duplicateConfidence;
       if (flags.exclusionReason === "duplicate") {
-        delete flags.isExcludedFromAnalytics;
+        delete flags.isExcludedFromTotals;
         delete flags.exclusionReason;
       }
 

@@ -156,7 +156,7 @@ export function CategoryBudgetRow({
             {format(spent)}
           </div>
         </div>
-
+        
         <ProgressBar show={budgeted > 0} percent={percentUsed} barClass={config.bar} />
 
         <div className="flex justify-between items-center text-xs">
@@ -224,8 +224,8 @@ export function CategoryBudgetRow({
               onClick={() => setIsEditing(true)}
               className={cn(
                 "text-sm rounded px-2 py-0.5 -mx-2 transition-colors",
-                budgeted > 0
-                  ? "hover:bg-muted"
+                budgeted > 0 
+                  ? "hover:bg-muted" 
                   : "text-muted-foreground hover:text-foreground underline decoration-dashed"
               )}
             >
@@ -238,8 +238,8 @@ export function CategoryBudgetRow({
 
         <div
           className={cn(
-            "text-right text-sm",
-            budgeted > 0 ? cn("font-medium", config.text) : "text-muted-foreground"
+          "text-right text-sm",
+          budgeted > 0 ? cn("font-medium", config.text) : "text-muted-foreground"
           )}
         >
           {budgeted > 0 ? format(available) : "—"}

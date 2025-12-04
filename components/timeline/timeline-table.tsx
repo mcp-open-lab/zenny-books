@@ -49,7 +49,7 @@ export function TimelineTable({
 }: TimelineTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
+  
   const {
     selectedIds,
     toggleItem,
@@ -85,12 +85,12 @@ export function TimelineTable({
 
     startTransition(async () => {
       const result = await updateTransaction({
-        id: item.id,
+            id: item.id,
         type: item.type === "receipt" ? "receipt" : "bank_transaction",
         categoryId: editState.categoryId,
         businessId: editState.businessId,
         merchantName: item.merchantName || undefined,
-      });
+          });
 
       if (result.success) {
         toast.success("Updated");
@@ -179,8 +179,8 @@ export function TimelineTable({
               const editing = isEditing(item.id);
               const href =
                 item.type === "transaction"
-                  ? `/app/transactions/${item.id}`
-                  : `/app/receipts/${item.id}`;
+                ? `/app/transactions/${item.id}`
+                : `/app/receipts/${item.id}`;
 
               return (
                 <TableRow

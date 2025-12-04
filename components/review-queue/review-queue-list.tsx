@@ -68,24 +68,24 @@ export function ReviewQueueList({
     startTransition(async () => {
       const updates = Array.from(selectedIds).map((id) => {
         const item = items.find((i) => i.id === id)!;
-        return {
-          id,
+          return {
+            id,
           type: (item.type === "receipt" ? "receipt" : "bank_transaction") as
             | "receipt"
             | "bank_transaction",
           categoryId,
           businessId,
-        };
-      });
+          };
+        });
 
-      const result = await bulkUpdateTransactions(updates);
+        const result = await bulkUpdateTransactions(updates);
 
-      if (result.success) {
+        if (result.success) {
         toast.success(`Updated ${result.updatedCount} transaction(s)`);
         clearSelection();
-        router.refresh();
-      } else {
-        toast.error(result.error || "Failed to update transactions");
+          router.refresh();
+        } else {
+          toast.error(result.error || "Failed to update transactions");
       }
     });
   };

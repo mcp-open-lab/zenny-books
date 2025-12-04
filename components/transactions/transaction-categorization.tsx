@@ -185,7 +185,7 @@ export function TransactionCategorization({
                 </Button>
               )}
             </div>
-            <FormControl>
+              <FormControl>
               <CategoryCombobox
                 value={field.value || ""}
                 onChange={field.onChange}
@@ -198,7 +198,7 @@ export function TransactionCategorization({
                 }
                 disabled={filteredCategories.length === 0}
               />
-            </FormControl>
+              </FormControl>
             <FormMessage />
           </FormItem>
         )}

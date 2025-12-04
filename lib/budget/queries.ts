@@ -34,7 +34,7 @@ export async function getBankTransactionSpending(
         lte(bankStatementTransactions.transactionDate, end),
         sql`${bankStatementTransactions.categoryId} IS NOT NULL`,
         sql`CAST(${bankStatementTransactions.amount} AS NUMERIC) < 0`,
-        sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromAnalytics')::boolean IS NOT TRUE)`
+        sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE)`
       )
     )
     .groupBy(bankStatementTransactions.categoryId);
@@ -56,7 +56,9 @@ export async function getTotalIncome(userId: string, start: Date, end: Date) {
         eq(documents.userId, userId),
         gte(bankStatementTransactions.transactionDate, start),
         lte(bankStatementTransactions.transactionDate, end),
-        sql`CAST(${bankStatementTransactions.amount} AS NUMERIC) > 0`
+        sql`CAST(${bankStatementTransactions.amount} AS NUMERIC) > 0`,
+        // Exclude installment plan credits (not real income)
+        sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE)`
       )
     );
 
@@ -87,7 +89,7 @@ export async function getCategoryReceiptsForMonth(
         eq(receipts.categoryId, categoryId),
         gte(receipts.date, start),
         lte(receipts.date, end),
-        sql`(${receipts.transactionFlags} IS NULL OR (${receipts.transactionFlags}->>'isExcludedFromAnalytics')::boolean IS NOT TRUE)`
+        sql`(${receipts.transactionFlags} IS NULL OR (${receipts.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE)`
       )
     )
     .orderBy(desc(receipts.date));
@@ -123,7 +125,7 @@ export async function getCategoryBankTransactionsForMonth(
         gte(bankStatementTransactions.transactionDate, start),
         lte(bankStatementTransactions.transactionDate, end),
         sql`CAST(${bankStatementTransactions.amount} AS NUMERIC) < 0`,
-        sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromAnalytics')::boolean IS NOT TRUE)`
+        sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE)`
       )
     )
     .orderBy(desc(bankStatementTransactions.transactionDate));

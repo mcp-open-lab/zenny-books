@@ -23,6 +23,10 @@ import {
   detectInternalTransferByDescription,
   findMatchingTransfers,
 } from "@/lib/transactions/transfer-detector";
+import {
+  detectInstallmentPlanCreditTransaction,
+  markAsInstallmentPlanCredit as markAsInstallmentPlanCreditService,
+} from "@/lib/transactions/installment-plan-detector";
 
 type ToggleExclusionInput = {
   transactionId: string;
@@ -30,14 +34,14 @@ type ToggleExclusionInput = {
   exclude: boolean;
 };
 
-export const toggleExcludeFromAnalytics = createAuthenticatedAction(
-  "toggleExcludeFromAnalytics",
+export const toggleExcludeFromTotals = createAuthenticatedAction(
+  "toggleExcludeFromTotals",
   async (userId, input: ToggleExclusionInput) => {
     const { transactionId, transactionType, exclude } = input;
 
     const flags: TransactionFlags | null = exclude
       ? {
-          isExcludedFromAnalytics: true,
+          isExcludedFromTotals: true,
           exclusionReason: "manual",
           userVerified: true,
           verifiedAt: new Date().toISOString(),
@@ -196,7 +200,7 @@ export const detectTransfer = createAuthenticatedAction(
   async (userId, input: DetectTransferInput) => {
     const { description, amount, date, transactionId } = input;
 
-    // Check description patterns first
+    // Check description patterns for transfers
     const creditCardResult = detectCreditCardPaymentTransaction(
       description,
       amount
@@ -229,6 +233,19 @@ export const detectTransfer = createAuthenticatedAction(
         autoDetected: false,
       },
     };
+  }
+);
+
+type MarkAsInstallmentPlanCreditInput = {
+  transactionId: string;
+};
+
+export const markAsInstallmentPlanCredit = createAuthenticatedAction(
+  "markAsInstallmentPlanCredit",
+  async (userId, input: MarkAsInstallmentPlanCreditInput) => {
+    const { transactionId } = input;
+    await markAsInstallmentPlanCreditService(transactionId, userId);
+    return { success: true };
   }
 );
 

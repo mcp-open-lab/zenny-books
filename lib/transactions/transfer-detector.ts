@@ -225,7 +225,7 @@ export async function markAsInternalTransfer(
 ): Promise<void> {
   const flags: TransactionFlags = {
     isInternalTransfer: true,
-    isExcludedFromAnalytics: true,
+    isExcludedFromTotals: true,
     exclusionReason:
       transferType === "credit_card_payment"
         ? "credit_card_payment"
@@ -282,7 +282,7 @@ export async function autoDetectInternalTransfers(userId: string): Promise<{
         ${bankStatementTransactions.transactionFlags} IS NULL
         OR (
           (${bankStatementTransactions.transactionFlags}->>'isInternalTransfer')::boolean IS NOT TRUE
-          AND (${bankStatementTransactions.transactionFlags}->>'isExcludedFromAnalytics')::boolean IS NOT TRUE
+          AND (${bankStatementTransactions.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE
         )
       )
   `);
@@ -290,7 +290,7 @@ export async function autoDetectInternalTransfers(userId: string): Promise<{
   const flaggedIds: string[] = [];
 
   for (const row of transactions.rows as any[]) {
-    // Check description patterns
+    // Check description patterns for transfers
     const creditCardResult = detectCreditCardPaymentTransaction(
       row.description,
       row.amount
@@ -300,7 +300,7 @@ export async function autoDetectInternalTransfers(userId: string): Promise<{
     if (creditCardResult.isTransfer) {
       const flags: TransactionFlags = {
         isInternalTransfer: true,
-        isExcludedFromAnalytics: true,
+        isExcludedFromTotals: true,
         exclusionReason: "credit_card_payment",
         autoDetected: true,
         detectionMethod: "description_pattern",
@@ -315,7 +315,7 @@ export async function autoDetectInternalTransfers(userId: string): Promise<{
     } else if (transferResult.isTransfer) {
       const flags: TransactionFlags = {
         isInternalTransfer: true,
-        isExcludedFromAnalytics: true,
+        isExcludedFromTotals: true,
         exclusionReason: "internal_transfer",
         autoDetected: true,
         detectionMethod: "description_pattern",
@@ -371,7 +371,7 @@ export async function unmarkAsInternalTransfer(
       flags.exclusionReason === "internal_transfer" ||
       flags.exclusionReason === "credit_card_payment"
     ) {
-      delete flags.isExcludedFromAnalytics;
+      delete flags.isExcludedFromTotals;
       delete flags.exclusionReason;
     }
 
