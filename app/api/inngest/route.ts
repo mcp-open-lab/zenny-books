@@ -9,6 +9,10 @@ import type { ImportJobPayload } from "@/lib/import/queue-types";
 import { devLogger } from "@/lib/dev-logger";
 import { inngest } from "@/lib/inngest/client";
 import type { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { linkedBankAccounts } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { syncPlaidTransactions } from "@/lib/plaid/sync";
 
 /**
  * Inngest function to process batch import items
@@ -70,12 +74,86 @@ export const processImportJob = inngest.createFunction(
   }
 );
 
+/**
+ * Daily Plaid sync cron job
+ * Runs once per day at 6 AM UTC to sync all linked bank accounts
+ */
+export const plaidDailySync = inngest.createFunction(
+  {
+    id: "plaid-daily-sync",
+    name: "Plaid Daily Sync",
+    retries: 2,
+  },
+  { cron: "0 6 * * *" }, // 6 AM UTC daily
+  async ({ step }) => {
+    devLogger.info("Starting daily Plaid sync");
+
+    // Get all active linked accounts
+    // Note: We query inside the step but sync outside to avoid JSON serialization issues with Date
+    const accountIds = await step.run("fetch-linked-accounts", async () => {
+      const accounts = await db
+        .select({ id: linkedBankAccounts.id })
+        .from(linkedBankAccounts)
+        .where(eq(linkedBankAccounts.syncStatus, "active"));
+      return accounts.map((a) => a.id);
+    });
+
+    devLogger.info(`Found ${accountIds.length} accounts to sync`);
+
+    const results = {
+      total: accountIds.length,
+      success: 0,
+      failed: 0,
+      transactions: 0,
+    };
+
+    // Sync each account
+    for (const accountId of accountIds) {
+      try {
+        const result = await step.run(`sync-${accountId}`, async () => {
+          // Fetch the full account inside the step to get proper Date types
+          const [account] = await db
+            .select()
+            .from(linkedBankAccounts)
+            .where(eq(linkedBankAccounts.id, accountId))
+            .limit(1);
+
+          if (!account) {
+            return { success: false, error: "Account not found" };
+          }
+
+          return await syncPlaidTransactions(account);
+        });
+
+        if (result.success) {
+          results.success++;
+          results.transactions += result.transactionCount || 0;
+        } else {
+          results.failed++;
+          devLogger.error(`Sync failed for account ${accountId}`, {
+            error: result.error,
+          });
+        }
+      } catch (error) {
+        results.failed++;
+        devLogger.error(`Unexpected error syncing account ${accountId}`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    devLogger.info("Daily Plaid sync completed", results);
+
+    return results;
+  }
+);
+
 // Export the Inngest serve handler
 // The serve function automatically reads INNGEST_SIGNING_KEY from env for authentication
 // Make sure INNGEST_SERVE_URL is set in Inngest dashboard to https://turboinvoice.ai/api/inngest
 const handlers = serve({
   client: inngest,
-  functions: [processImportJob],
+  functions: [processImportJob, plaidDailySync],
 });
 
 // Wrap handlers to catch and log errors gracefully

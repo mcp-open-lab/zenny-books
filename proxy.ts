@@ -12,6 +12,7 @@ const isPublicRoute = createRouteMatcher([
 
 const isUploadThingRoute = createRouteMatcher(["/api/uploadthing(.*)"]);
 const isInngestRoute = createRouteMatcher(["/api/inngest(.*)"]);
+const isPlaidWebhookRoute = createRouteMatcher(["/api/plaid/webhook(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   // Don't bypass UploadThing routes - let them handle auth in their own middleware
@@ -23,6 +24,12 @@ export default clerkMiddleware(async (auth, request) => {
   // Bypass Inngest routes - they're called by Inngest infrastructure
   // These routes need to be publicly accessible for Inngest webhooks
   if (isInngestRoute(request)) {
+    return NextResponse.next();
+  }
+
+  // Bypass Plaid webhook routes - they're called by Plaid infrastructure
+  // Webhook verification is handled in the route handler itself
+  if (isPlaidWebhookRoute(request)) {
     return NextResponse.next();
   }
 

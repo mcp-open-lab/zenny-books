@@ -13,6 +13,11 @@ export default defineConfig({
     env: {
       NODE_ENV: "test",
     },
+    server: {
+      deps: {
+        inline: ["plaid"],
+      },
+    },
   },
   resolve: {
     alias: {

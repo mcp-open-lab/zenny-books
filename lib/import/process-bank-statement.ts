@@ -228,29 +228,29 @@ export async function processBankStatement(
       });
     } else {
       // Spreadsheet: Use AI orchestrator
-      const importResult = await importSpreadsheet(
-        fileBuffer,
-        fileName,
-        userId,
-        statementType
-      );
+    const importResult = await importSpreadsheet(
+      fileBuffer, 
+      fileName, 
+      userId, 
+      statementType
+    );
 
-      if (!importResult.success || importResult.transactions.length === 0) {
-        throw new Error(
-          importResult.error || "No transactions found in spreadsheet"
-        );
-      }
+    if (!importResult.success || importResult.transactions.length === 0) {
+      throw new Error(
+        importResult.error || "No transactions found in spreadsheet"
+      );
+    }
 
       transactions = importResult.transactions;
       detectedCurrency = importResult.mappingConfig?.currency ?? undefined;
       confidence = importResult.mappingConfig?.confidence;
 
-      devLogger.info("Spreadsheet parsed successfully", {
-        documentId,
+    devLogger.info("Spreadsheet parsed successfully", {
+      documentId,
         transactionCount: transactions.length,
         mappingConfidence: confidence,
         currency: detectedCurrency,
-      });
+    });
     }
 
     // Create bank statement record
@@ -265,7 +265,7 @@ export async function processBankStatement(
     });
 
     // Select appropriate processor based on statement type
-    const processor: BaseStatementProcessor =
+    const processor: BaseStatementProcessor = 
       statementType === "credit_card"
         ? new CreditCardProcessor(userId, defaultCurrency || "USD")
         : new BankAccountProcessor(userId, defaultCurrency || "USD");

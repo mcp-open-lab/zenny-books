@@ -566,3 +566,45 @@ export const llmLogs = pgTable(
     index("llm_logs_created_at_idx").on(table.createdAt),
   ]
 );
+
+// ============================================
+// PLAID LINKED BANK ACCOUNTS
+// ============================================
+
+export const linkedBankAccounts = pgTable(
+  "linked_bank_accounts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("user_id").notNull(),
+
+    // Plaid identifiers
+    plaidItemId: text("plaid_item_id").notNull(),
+    plaidAccessToken: text("plaid_access_token").notNull(),
+    plaidAccountId: text("plaid_account_id").notNull(),
+
+    // Institution info
+    institutionId: text("institution_id"),
+    institutionName: text("institution_name"),
+
+    // Account display info
+    accountMask: text("account_mask"), // Last 4 digits (****1234)
+    accountName: text("account_name"), // "Checking", "Visa Platinum"
+    accountType: text("account_type"), // checking, savings, credit, depository
+    accountSubtype: text("account_subtype"), // checking, savings, credit card, etc.
+
+    // Sync state
+    lastSyncedAt: timestamp("last_synced_at"),
+    lastSyncCursor: text("last_sync_cursor"), // Plaid cursor for incremental sync
+    syncStatus: text("sync_status").default("active"), // active, error, disconnected
+    syncErrorMessage: text("sync_error_message"),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("linked_bank_accounts_user_id_idx").on(table.userId),
+    index("linked_bank_accounts_plaid_item_id_idx").on(table.plaidItemId),
+  ]
+);
