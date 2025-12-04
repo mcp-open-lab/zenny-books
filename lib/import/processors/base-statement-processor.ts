@@ -117,7 +117,7 @@ export abstract class BaseStatementProcessor {
 
     const { CategoryEngine } = await import("@/lib/categorization/engine");
     const result = await CategoryEngine.categorizeWithAI(
-      { merchantName, description, amount },
+      { merchantName, description, amount, statementType: this.getStatementType() },
       { userId: this.userId, includeAI: true, minConfidence: 0.7 }
     );
 

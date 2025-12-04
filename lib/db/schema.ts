@@ -491,6 +491,25 @@ export const categoryRules = pgTable("category_rules", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const categoryBudgets = pgTable(
+  "category_budgets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("user_id").notNull(),
+    categoryId: text("category_id").notNull(), // FK to categories
+    month: text("month").notNull(), // Format: "2025-01"
+    budgeted: decimal("budgeted", { precision: 10, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("category_budgets_user_month_idx").on(table.userId, table.month),
+    index("category_budgets_category_idx").on(table.categoryId),
+  ]
+);
+
 // ============================================
 // USER SETTINGS
 // ============================================

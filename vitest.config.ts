@@ -14,8 +14,8 @@ export default defineConfig({
       NODE_ENV: "test",
     },
     server: {
-      deps: {
-        inline: ["plaid"],
+    deps: {
+      inline: ["plaid"],
       },
     },
   },

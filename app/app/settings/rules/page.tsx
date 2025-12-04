@@ -6,7 +6,6 @@ import {
   getMerchantStatistics,
 } from "@/app/actions/financial-categories";
 import { getUserBusinesses } from "@/app/actions/businesses";
-import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { RulesManager } from "./_components/rules-manager";
 
@@ -33,7 +32,6 @@ export default async function RulesPage({
 
   return (
     <PageContainer size="standard">
-      <PageHeader title="Auto-Categorization Rules" backHref="/app/settings" />
       <p className="text-sm text-muted-foreground">
         Create rules to automatically categorize transactions based on merchant
         names or descriptions.

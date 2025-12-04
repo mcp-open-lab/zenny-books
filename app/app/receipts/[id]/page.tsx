@@ -3,7 +3,6 @@ import { receipts } from "@/lib/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { ReceiptDetailView } from "@/components/receipts/receipt-detail-view";
 import { getUserSettings } from "@/app/actions/user-settings";
@@ -40,7 +39,6 @@ export default async function ReceiptDetailPage({
 
   return (
     <PageContainer size="standard">
-      <PageHeader title="Receipt Details" useHistoryBack />
       <ReceiptDetailView
         receipt={receipt[0]}
         categories={categories}

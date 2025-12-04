@@ -24,7 +24,6 @@ import {
   Settings,
   Brain,
   Receipt,
-  BarChart3,
   AlertCircle,
   Sparkles,
   Database,
@@ -47,16 +46,10 @@ const mainItems = [
 
 const insightsItems = [
   {
-    label: "Analytics",
-    href: "/app/analytics",
-    icon: BarChart3,
-    description: "AI-powered insights",
-  },
-  {
-    label: "Budgets",
+    label: "Budget",
     href: "/app/budgets",
     icon: Wallet,
-    description: "Track spending goals",
+    description: "Track spending & budgets",
   },
   {
     label: "Invoices",

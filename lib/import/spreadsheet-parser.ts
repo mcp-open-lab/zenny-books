@@ -109,6 +109,7 @@ export function getSpreadsheetPreview(
     const workbook = XLSX.read(fileBuffer, {
       type: "buffer",
       cellDates: true,
+      raw: true, // Preserve raw values, don't evaluate formulas (fixes =MERCHANT issue)
     });
 
     const sheetName = workbook.SheetNames[0];
@@ -150,6 +151,7 @@ export function parseWithMapping(
     const workbook = XLSX.read(fileBuffer, {
       type: "buffer",
       cellDates: true,
+      raw: true, // Preserve raw values, don't evaluate formulas (fixes =MERCHANT issue)
     });
 
     const sheetName = workbook.SheetNames[0];

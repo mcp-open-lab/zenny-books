@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { ReviewQueueList } from "@/components/review-queue/review-queue-list";
 import { getReviewQueueItems } from "@/app/actions/review-queue";
@@ -23,7 +22,6 @@ export default async function ReviewQueuePage() {
 
   return (
     <PageContainer size="tight">
-      <PageHeader title="Review Queue" />
       <div className="mb-4 text-sm text-muted-foreground">
         Quickly categorize and organize transactions that need your attention
       </div>

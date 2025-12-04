@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getUserCategories } from "@/app/actions/financial-categories";
-import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { CategoriesManager } from "./_components/categories-manager";
 
@@ -15,7 +14,6 @@ export default async function CategoriesPage() {
 
   return (
     <PageContainer size="standard">
-      <PageHeader title="Financial Categories" backHref="/app/settings" />
       <p className="text-sm text-muted-foreground">
         Manage your income and expense categories for transaction classification.
       </p>

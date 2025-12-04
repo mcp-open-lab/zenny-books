@@ -3,7 +3,6 @@ import { redirect, notFound } from "next/navigation";
 import { getMerchantTransactions } from "@/app/actions/financial-categories";
 import { getUserCategories } from "@/app/actions/financial-categories";
 import { getUserBusinesses } from "@/app/actions/businesses";
-import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { MerchantDetailView } from "@/components/merchants/merchant-detail-view";
 
@@ -38,10 +37,6 @@ export default async function MerchantDetailPage({
 
   return (
     <PageContainer size="wide">
-      <PageHeader
-        title={`Merchant: ${decodedMerchantName}`}
-        useHistoryBack
-      />
       <MerchantDetailView
         merchantName={decodedMerchantName}
         transactions={result.transactions}

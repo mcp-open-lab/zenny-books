@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { ImportTabs } from "@/components/import/import-tabs";
 import { listBatches } from "@/lib/import/batch-tracker";
@@ -24,7 +23,6 @@ export default async function ImportPage(props: {
 
   return (
     <PageContainer size="tight">
-      <PageHeader title="Import Documents" />
       <div className="text-sm text-muted-foreground">
         Upload multiple receipts, bank statements, invoices, or other financial
         documents for batch processing.

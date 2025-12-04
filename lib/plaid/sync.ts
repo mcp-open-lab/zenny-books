@@ -14,6 +14,10 @@ import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { plaidClient } from "./client";
 import { mapPlaidTransactions } from "./transaction-mapper";
+import {
+  mapPlaidCategoryAsync,
+  initializeCategoryCache,
+} from "./category-mapper";
 import type { linkedBankAccounts as LinkedBankAccountsTable } from "@/lib/db/schema";
 
 type LinkedBankAccount = typeof LinkedBankAccountsTable.$inferSelect;
@@ -21,7 +25,9 @@ type LinkedBankAccount = typeof LinkedBankAccountsTable.$inferSelect;
 /**
  * Sync transactions for a linked bank account
  */
-export async function syncPlaidTransactions(account: LinkedBankAccount): Promise<{
+export async function syncPlaidTransactions(
+  account: LinkedBankAccount
+): Promise<{
   success: boolean;
   transactionCount?: number;
   error?: string;
@@ -48,7 +54,9 @@ export async function syncPlaidTransactions(account: LinkedBankAccount): Promise
       });
 
       addedTransactions = addedTransactions.concat(response.data.added);
-      modifiedTransactions = modifiedTransactions.concat(response.data.modified);
+      modifiedTransactions = modifiedTransactions.concat(
+        response.data.modified
+      );
       removedTransactionIds = removedTransactionIds.concat(
         response.data.removed.map((t) => t.transaction_id)
       );
@@ -78,7 +86,9 @@ export async function syncPlaidTransactions(account: LinkedBankAccount): Promise
       userId: account.userId,
       documentType: "bank_statement",
       fileFormat: "plaid_sync",
-      fileName: `${account.institutionName || "Bank"} - ${account.accountName || "Account"} Sync`,
+      fileName: `${account.institutionName || "Bank"} - ${
+        account.accountName || "Account"
+      } Sync`,
       fileUrl: `plaid://${account.plaidItemId}/${account.plaidAccountId}`,
       status: "completed",
       extractionMethod: "plaid_sync",
@@ -94,12 +104,17 @@ export async function syncPlaidTransactions(account: LinkedBankAccount): Promise
       documentId,
       bankName: account.institutionName,
       accountType: account.accountType,
-      accountNumber: account.accountMask ? `****${account.accountMask}` : undefined,
+      accountNumber: account.accountMask
+        ? `****${account.accountMask}`
+        : undefined,
       transactionCount: addedTransactions.length,
       processedTransactionCount: addedTransactions.length,
     });
 
-    // Map and insert transactions
+    // Initialize category cache for mapping
+    await initializeCategoryCache();
+
+    // Map and insert transactions with auto-categorization
     const normalizedTransactions = mapPlaidTransactions(
       addedTransactions,
       account.plaidAccountId
@@ -107,6 +122,12 @@ export async function syncPlaidTransactions(account: LinkedBankAccount): Promise
 
     let order = 0;
     for (const tx of normalizedTransactions) {
+      // Auto-categorize using Plaid's category
+      const categoryId = await mapPlaidCategoryAsync(
+        tx.raw?.plaid_category as string | undefined,
+        tx.raw?.plaid_category_detailed as string | undefined
+      );
+
       await db.insert(bankStatementTransactions).values({
         id: createId(),
         bankStatementId,
@@ -117,6 +138,7 @@ export async function syncPlaidTransactions(account: LinkedBankAccount): Promise
         referenceNumber: tx.referenceNumber,
         amount: (tx.amount ?? 0).toString(),
         currency: tx.currency,
+        categoryId,
         order: order++,
       });
     }
@@ -145,7 +167,8 @@ export async function syncPlaidTransactions(account: LinkedBankAccount): Promise
       .update(linkedBankAccounts)
       .set({
         syncStatus: "error",
-        syncErrorMessage: error instanceof Error ? error.message : "Sync failed",
+        syncErrorMessage:
+          error instanceof Error ? error.message : "Sync failed",
         updatedAt: new Date(),
       })
       .where(eq(linkedBankAccounts.id, account.id));
@@ -156,4 +179,3 @@ export async function syncPlaidTransactions(account: LinkedBankAccount): Promise
     };
   }
 }
-

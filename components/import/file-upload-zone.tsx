@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,11 @@ export function FileUploadZone({
   onFilesChange,
   acceptedTypes = ["image/*", "application/pdf"],
   maxFiles = 50,
-  maxSizeBytes = 16 * 1024 * 1024, // 16MB default
+  maxSizeBytes = 16 * 1024 * 1024,
 }: FileUploadZoneProps) {
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
     if (file.size > maxSizeBytes) {
@@ -56,7 +57,6 @@ export function FileUploadZone({
           id: `${file.name}-${Date.now()}-${Math.random()}`,
         }) as FileWithPreview;
 
-        // Create preview for images
         if (file.type.startsWith("image/")) {
           const reader = new FileReader();
           reader.onload = (e) => {
@@ -95,42 +95,25 @@ export function FileUploadZone({
     [files, onFilesChange]
   );
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files) {
-      addFiles(e.dataTransfer.files);
-    }
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      addFiles(e.target.files);
-      e.target.value = ""; // Reset input
-    }
-  };
-
-  const handleClick = () => {
-    document.getElementById("file-upload-input")?.click();
-  };
-
   return (
     <div className="space-y-4">
       <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleClick}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          if (e.dataTransfer.files) {
+            addFiles(e.dataTransfer.files);
+          }
+        }}
+        onClick={() => inputRef.current?.click()}
         className={cn(
           "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
           isDragging
@@ -139,11 +122,16 @@ export function FileUploadZone({
         )}
       >
         <input
-          id="file-upload-input"
+          ref={inputRef}
           type="file"
           multiple
           accept={acceptedTypes.join(",")}
-          onChange={handleFileInput}
+          onChange={(e) => {
+            if (e.target.files) {
+              addFiles(e.target.files);
+              e.target.value = "";
+            }
+          }}
           className="hidden"
         />
         <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -187,4 +175,3 @@ export function FileUploadZone({
     </div>
   );
 }
-

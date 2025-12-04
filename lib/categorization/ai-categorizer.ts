@@ -41,6 +41,7 @@ export async function aiCategorizeTransaction(
     availableCategories,
     userPreferences,
     userBusinesses,
+    statementType: transaction.statementType ?? null,
   });
 
   try {

@@ -7,7 +7,6 @@ import {
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/layouts/page-container";
 import { BankTransactionDetailView } from "@/components/bank-transactions/transaction-detail-view";
 import { getUserSettings } from "@/app/actions/user-settings";
@@ -67,7 +66,6 @@ export default async function BankTransactionDetailPage({
 
   return (
     <PageContainer size="standard">
-      <PageHeader title="Transaction Details" useHistoryBack />
       <BankTransactionDetailView
         transaction={transaction[0]}
         categories={categories}

@@ -414,3 +414,122 @@ export async function syncAccount(accountId: string) {
   }
 }
 
+export interface AccountBalance {
+  accountId: string;
+  institutionName: string | null;
+  accountName: string | null;
+  accountMask: string | null;
+  accountType: string | null;
+  currentBalance: number | null;
+  availableBalance: number | null;
+  lastUpdated: Date | null;
+}
+
+/**
+ * Get account balances from Plaid for all linked accounts
+ */
+export async function getAccountBalances(): Promise<{
+  success: boolean;
+  balances?: AccountBalance[];
+  totalBalance?: number;
+  error?: string;
+}> {
+  const { userId } = await auth();
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (!isPlaidConfigured()) {
+    return { success: false, error: "Plaid is not configured" };
+  }
+
+  try {
+    // Get all linked accounts grouped by item
+    const accounts = await db
+      .select()
+      .from(linkedBankAccounts)
+      .where(eq(linkedBankAccounts.userId, userId));
+
+    if (accounts.length === 0) {
+      return { success: true, balances: [], totalBalance: 0 };
+    }
+
+    // Group by item to minimize API calls
+    const itemMap = new Map<string, typeof accounts>();
+    for (const account of accounts) {
+      const existing = itemMap.get(account.plaidItemId);
+      if (existing) {
+        existing.push(account);
+      } else {
+        itemMap.set(account.plaidItemId, [account]);
+      }
+    }
+
+    const balances: AccountBalance[] = [];
+
+    // Fetch balances for each item
+    for (const [, itemAccounts] of itemMap) {
+      const accessToken = itemAccounts[0].plaidAccessToken;
+
+      try {
+        const response = await plaidClient.accountsBalanceGet({
+          access_token: accessToken,
+        });
+
+        for (const plaidAccount of response.data.accounts) {
+          // Find matching local account
+          const localAccount = itemAccounts.find(
+            (a) => a.plaidAccountId === plaidAccount.account_id
+          );
+
+          if (localAccount) {
+            balances.push({
+              accountId: localAccount.id,
+              institutionName: localAccount.institutionName,
+              accountName: localAccount.accountName,
+              accountMask: localAccount.accountMask,
+              accountType: localAccount.accountType,
+              currentBalance: plaidAccount.balances.current,
+              availableBalance: plaidAccount.balances.available,
+              lastUpdated: new Date(),
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch balances for item:", e);
+        // Add accounts with null balances if fetch fails
+        for (const account of itemAccounts) {
+          balances.push({
+            accountId: account.id,
+            institutionName: account.institutionName,
+            accountName: account.accountName,
+            accountMask: account.accountMask,
+            accountType: account.accountType,
+            currentBalance: null,
+            availableBalance: null,
+            lastUpdated: null,
+          });
+        }
+      }
+    }
+
+    // Calculate total (use current balance, treat credit as negative)
+    const totalBalance = balances.reduce((sum, b) => {
+      if (b.currentBalance === null) return sum;
+      // Credit accounts should be subtracted (they're debts)
+      if (b.accountType === "credit") {
+        return sum - Math.abs(b.currentBalance);
+      }
+      return sum + b.currentBalance;
+    }, 0);
+
+    return { success: true, balances, totalBalance };
+  } catch (error) {
+    console.error("Failed to get account balances:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get balances",
+    };
+  }
+}
+

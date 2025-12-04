@@ -336,19 +336,19 @@ export function LinkedAccounts() {
                             <span className="ml-1">Reconnect</span>
                           </Button>
                         ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSync(account.id)}
-                            disabled={syncingAccountId === account.id}
-                          >
-                            {syncingAccountId === account.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
-                            <span className="ml-1 hidden sm:inline">Sync</span>
-                          </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSync(account.id)}
+                          disabled={syncingAccountId === account.id}
+                        >
+                          {syncingAccountId === account.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                          <span className="ml-1 hidden sm:inline">Sync</span>
+                        </Button>
                         )}
                         <Button
                           variant="ghost"

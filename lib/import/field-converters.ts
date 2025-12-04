@@ -161,6 +161,11 @@ export class DescriptionConverter {
       str = str.trim();
     }
 
+    // Remove leading = (Excel formula prefix artifact from some bank exports)
+    if (str.startsWith("=")) {
+      str = str.slice(1);
+    }
+
     if (config.removeInternalCodes) {
       // Remove common internal codes patterns (e.g., "TXN:12345 - Starbucks" -> "Starbucks")
       str = str.replace(/^[A-Z]{2,}:\s*\d+\s*-\s*/i, "");

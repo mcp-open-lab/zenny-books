@@ -130,6 +130,7 @@ export class CategoryEngine {
         merchantName: transaction.merchantName ?? null,
         description: transaction.description ?? null,
         amount: transaction.amount ?? null,
+        statementType: transaction.statementType ?? null,
       },
       {
         userId,

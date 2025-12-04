@@ -1,18 +1,22 @@
 /**
  * Categorization Prompt Builder
  * Centralized prompt management for transaction categorization
+ * Uses TOON format for token efficiency
  */
+
+import { categoriesToTOON, businessesToTOON } from "../toon";
 
 export interface CategorizationConfig {
   merchantName: string | null;
   description: string | null;
   amount: string | null;
-  availableCategories: Array<{ id: string; name: string }>;
+  availableCategories: Array<{ id: string; name: string; type?: string }>;
   userPreferences?: {
     country?: string | null;
     usageType?: string | null;
   };
   userBusinesses?: Array<{ id: string; name: string }>; // User's businesses for classification
+  statementType?: "credit_card" | "bank_account" | null;
 }
 
 export class CategorizationPrompt {
@@ -24,11 +28,14 @@ export class CategorizationPrompt {
       availableCategories,
       userPreferences,
       userBusinesses,
+      statementType,
     } = config;
 
-    const categoryList = availableCategories.map((c) => c.name).join(", ");
+    // Use TOON format for categories (30-60% token savings)
+    const categoryTOON = categoriesToTOON(availableCategories);
 
     const userContext = this.buildUserContext(userPreferences, userBusinesses);
+    const statementContext = this.buildStatementContext(statementType);
 
     return `You are a financial categorization assistant. Categorize the following transaction into one of the available categories.
 
@@ -36,8 +43,10 @@ Transaction Details:
 - Merchant: ${merchantName || "Unknown"}
 - Description: ${description || "N/A"}
 - Amount: ${amount || "N/A"}
+${statementContext}
 
-Available Categories: ${categoryList}
+Available Categories (TOON format - header row, then values):
+${categoryTOON}
 
 ${userContext}
 
@@ -46,6 +55,7 @@ Important Context:
 - "DELL FINANCIAL", "APPLE FINANCIAL", etc. are financing/loan services, not product purchases
 - "BILL PYMT", "PAYMENT", "AUTO PAY" often indicate bill payments or debt servicing
 - Look for financial service keywords: "FINANCIAL", "CREDIT", "LOAN", "FINANCING", "PAYMENT PLAN"
+- "PAYMENT RECEIVED", "PAYMENT - THANK YOU", "PYMT RECEIVED" on credit card statements = "Credit Card Payment" (NOT Deposits/Income - this is the user paying their credit card bill)
 
 Instructions:
 1. Select the BEST matching category from the available list.
@@ -81,8 +91,9 @@ Return your response as JSON matching this schema:
     }
 
     if (userBusinesses && userBusinesses.length > 0) {
-      const businessList = userBusinesses.map((b) => `${b.name} (ID: ${b.id})`).join(", ");
-      parts.push(`User's Businesses: ${businessList}`);
+      // Use TOON format for businesses
+      const businessTOON = businessesToTOON(userBusinesses);
+      parts.push(`User's Businesses (TOON format):\n${businessTOON}`);
       parts.push(`When identifying a business expense, match it to the most appropriate business by ID.`);
     }
 
@@ -100,6 +111,22 @@ Return your response as JSON matching this schema:
       default:
         return "";
     }
+  }
+
+  private static buildStatementContext(statementType?: "credit_card" | "bank_account" | null): string {
+    if (!statementType) return "";
+
+    if (statementType === "credit_card") {
+      return `- Statement Type: CREDIT CARD
+  CRITICAL: On credit card statements, "PAYMENT RECEIVED", "PAYMENT - THANK YOU", "PYMT RECEIVED" means the user PAID their credit card bill. This is "Credit Card Payment", NOT income or deposits.`;
+    }
+
+    if (statementType === "bank_account") {
+      return `- Statement Type: BANK ACCOUNT (Checking/Savings)
+  Note: On bank statements, deposits and transfers in are actual income. Withdrawals and payments out are expenses.`;
+    }
+
+    return "";
   }
 }
 

@@ -94,7 +94,8 @@ export class CategoryRepository {
 
   /**
    * Get formatted category list for AI/strategies
-   * Returns: [{ id: string, name: string }, ...]
+   * Returns: [{ id: string, name: string, type: string }, ...]
+   * Includes transaction type for better AI context
    */
   async getCategoriesForAI(
     userId: string,
@@ -102,7 +103,7 @@ export class CategoryRepository {
       transactionType?: "income" | "expense";
       includeUserCategories?: boolean;
     }
-  ): Promise<Array<{ id: string; name: string }>> {
+  ): Promise<Array<{ id: string; name: string; type?: string }>> {
     const availableCategories = await this.getAvailableCategories(
       userId,
       options
@@ -111,6 +112,7 @@ export class CategoryRepository {
     return availableCategories.map((cat) => ({
       id: cat.id,
       name: cat.name,
+      type: cat.transactionType || undefined,
     }));
   }
 

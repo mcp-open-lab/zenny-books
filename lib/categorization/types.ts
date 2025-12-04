@@ -8,6 +8,7 @@ export interface TransactionToCategorize {
   merchantName?: string | null;
   description?: string | null;
   amount?: string | null;
+  statementType?: "credit_card" | "bank_account" | null;
 }
 
 export interface CategorizationResult {
