@@ -4,11 +4,8 @@
  */
 
 import { db } from "@/lib/db";
-import { importBatchItems, documents, receipts } from "@/lib/db/schema";
+import { importBatchItems, documents } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-// Import the handler directly to avoid Server Action wrapper issues in queue context
-// We'll need to call the internal logic directly
-import { scanReceiptHandler } from "@/app/actions/scan-receipt";
 import { processBankStatement } from "@/lib/import/process-bank-statement";
 import type {
   ImportJobPayload,
@@ -20,6 +17,8 @@ import {
   checkBatchItemDuplicate,
   markBatchItemAsDuplicate,
 } from "@/lib/import/duplicate-detector";
+import { processReceipt } from "@/lib/services/receipts";
+import { DuplicateFileError } from "@/lib/errors";
 
 /**
  * Process a single batch item based on import type
@@ -37,6 +36,27 @@ export async function processBatchItem(
   });
 
   try {
+    // Idempotency: if already completed/duplicate, return early
+    const existingItem = await db
+      .select()
+      .from(importBatchItems)
+      .where(eq(importBatchItems.id, batchItemId))
+      .limit(1);
+
+    if (
+      existingItem.length > 0 &&
+      (existingItem[0].status === "completed" ||
+        existingItem[0].status === "duplicate")
+    ) {
+      return {
+        success: true,
+        batchItemId,
+        documentId: existingItem[0].documentId || undefined,
+        isDuplicate: existingItem[0].status === "duplicate",
+        duplicateOfDocumentId: existingItem[0].duplicateOfDocumentId || undefined,
+      };
+    }
+
     // 1. Update batch item status to processing
     await db
       .update(importBatchItems)
@@ -58,26 +78,15 @@ export async function processBatchItem(
       importType === "mixed" && isPdf ? "bank_statements" : importType;
 
     if (effectiveImportType === "receipts") {
-      // Call handler directly to avoid Server Action wrapper issues in queue context
-      await scanReceiptHandler(fileUrl, batchId, userId, payload.fileName);
+      // Use service layer for receipt processing
+      const receiptResult = await processReceipt({
+        imageUrl: fileUrl,
+        batchId,
+        userId,
+        fileName: payload.fileName,
+      });
 
-      // Find the created document
-      const createdDoc = await db
-        .select()
-        .from(documents)
-        .where(
-          and(
-            eq(documents.fileUrl, fileUrl),
-            eq(documents.userId, userId),
-            eq(documents.importBatchId, batchId)
-          )
-        )
-        .orderBy(documents.createdAt)
-        .limit(1);
-
-      if (createdDoc.length > 0) {
-        documentId = createdDoc[0].id;
-      }
+      documentId = receiptResult.documentId;
     } else if (effectiveImportType === "bank_statements") {
       // Process bank statement using AI orchestrator
       const result = await processBankStatement(
@@ -98,24 +107,13 @@ export async function processBatchItem(
       });
     } else {
       // Mixed - non-PDF files default to receipts
-      await scanReceiptHandler(fileUrl, batchId, userId, payload.fileName);
-
-      const createdDoc = await db
-        .select()
-        .from(documents)
-        .where(
-          and(
-            eq(documents.fileUrl, fileUrl),
-            eq(documents.userId, userId),
-            eq(documents.importBatchId, batchId)
-          )
-        )
-        .orderBy(documents.createdAt)
-        .limit(1);
-
-      if (createdDoc.length > 0) {
-        documentId = createdDoc[0].id;
-      }
+      const receiptResult = await processReceipt({
+        imageUrl: fileUrl,
+        batchId,
+        userId,
+        fileName: payload.fileName,
+      });
+      documentId = receiptResult.documentId;
     }
 
     // 4. Check for duplicates after extraction
@@ -184,6 +182,25 @@ export async function processBatchItem(
       } catch {
         errorMessage = String(error);
       }
+    }
+
+    if (error instanceof DuplicateFileError) {
+      await db
+        .update(importBatchItems)
+        .set({
+          status: "duplicate",
+          errorMessage,
+          errorCode: "DUPLICATE_FILE",
+        })
+        .where(eq(importBatchItems.id, batchItemId));
+
+      await updateBatchStats(batchId);
+
+      return {
+        success: true,
+        batchItemId,
+        isDuplicate: true,
+      };
     }
 
     // 4. Update batch item to failed
