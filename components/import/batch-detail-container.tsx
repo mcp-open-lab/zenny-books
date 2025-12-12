@@ -1,6 +1,6 @@
 "use client";
 
-import { useBatchPolling } from "@/hooks/use-batch-polling";
+import { useBatchPolling } from "@/lib/hooks/use-batch-polling";
 import { BatchSummaryCard } from "./batch-summary-card";
 import { BatchItemsTable } from "./batch-items-table";
 import { BatchActivityLog } from "./batch-activity-log";

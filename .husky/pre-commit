@@ -1,6 +1,5 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
+# Husky v9+ simple hook (no husky.sh shim)
 # Run tests (unit/integration only, not E2E)
 npm test -- --run || exit 1
 
