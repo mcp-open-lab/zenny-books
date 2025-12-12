@@ -6,17 +6,16 @@
 import type { Transaction as PlaidTransaction } from "plaid";
 import type { NormalizedTransaction } from "@/lib/import/spreadsheet-parser";
 import type { TransactionFlags } from "@/lib/constants/transaction-flags";
-import {
-  detectCreditCardPayment,
-  detectInternalTransfer,
-} from "@/lib/constants/transaction-flags";
 
 export interface PlaidNormalizedTransaction extends NormalizedTransaction {
   currency: string;
   flags?: TransactionFlags;
 }
 
-function buildPlaidFlags(tx: PlaidTransaction, accountId: string): TransactionFlags {
+function buildPlaidFlags(
+  tx: PlaidTransaction,
+  accountId: string
+): TransactionFlags {
   return {
     isPlaidImported: true,
     plaidTransactionId: tx.transaction_id,
@@ -25,21 +24,22 @@ function buildPlaidFlags(tx: PlaidTransaction, accountId: string): TransactionFl
   };
 }
 
-function detectTransferFlags(tx: PlaidTransaction, accountId: string): TransactionFlags | undefined {
-  const description = tx.name || tx.original_description || "";
+function detectTransferFlags(
+  tx: PlaidTransaction,
+  accountId: string
+): TransactionFlags | undefined {
   const primary = tx.personal_finance_category?.primary;
   const detailed = tx.personal_finance_category?.detailed;
 
-  const isTransferCategory = primary === "TRANSFER_IN" || primary === "TRANSFER_OUT";
+  const isTransferCategory =
+    primary === "TRANSFER_IN" || primary === "TRANSFER_OUT";
   const isCreditCardPaymentCategory =
-    primary === "LOAN_PAYMENTS" && (detailed || "").includes("CREDIT_CARD_PAYMENT");
+    primary === "LOAN_PAYMENTS" &&
+    (detailed || "").includes("CREDIT_CARD_PAYMENT");
 
-  const isCreditCardPaymentByText = detectCreditCardPayment(description);
-  const isInternalTransferByText = detectInternalTransfer(description);
-
-  const isCreditCardPayment =
-    isCreditCardPaymentCategory || isCreditCardPaymentByText;
-  const isInternalTransfer = isTransferCategory || isInternalTransferByText;
+  // Plaid-native: only rely on Plaid category signals (no description heuristics)
+  const isCreditCardPayment = isCreditCardPaymentCategory;
+  const isInternalTransfer = isTransferCategory;
 
   if (!isCreditCardPayment && !isInternalTransfer) return undefined;
 
@@ -51,9 +51,7 @@ function detectTransferFlags(tx: PlaidTransaction, accountId: string): Transacti
       ? "credit_card_payment"
       : "internal_transfer",
     autoDetected: true,
-    detectionMethod: isCreditCardPaymentCategory || isTransferCategory
-      ? "plaid_category"
-      : "description_pattern",
+    detectionMethod: "plaid_category",
   };
 }
 
@@ -78,7 +76,8 @@ export function mapPlaidTransactions(
         transactionDate: tx.date ? new Date(tx.date) : null,
         postedDate: tx.authorized_date ? new Date(tx.authorized_date) : null,
         description: tx.name || tx.original_description || "",
-        merchantName: tx.merchant_name || extractMerchantFromName(tx.name || ""),
+        merchantName:
+          tx.merchant_name || extractMerchantFromName(tx.name || ""),
         amount,
         referenceNumber: tx.transaction_id,
         currency: tx.iso_currency_code || tx.unofficial_currency_code || "USD",
@@ -123,4 +122,3 @@ function extractMerchantFromName(name: string): string | undefined {
     )
     .join(" ");
 }
-

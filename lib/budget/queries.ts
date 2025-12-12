@@ -4,6 +4,7 @@ import {
   bankStatementTransactions,
   bankStatements,
   documents,
+  categories,
 } from "@/lib/db/schema";
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 
@@ -18,7 +19,8 @@ export async function getBankTransactionSpending(
   return db
     .select({
       categoryId: bankStatementTransactions.categoryId,
-      total: sql<number>`COALESCE(SUM(ABS(CAST(${bankStatementTransactions.amount} AS NUMERIC))), 0)`,
+      // Net spend: expenses (negative) increase spend, refunds/credits (positive) reduce spend
+      total: sql<number>`COALESCE(SUM(CAST(${bankStatementTransactions.amount} AS NUMERIC) * -1), 0)`,
       count: sql<number>`COUNT(*)`,
     })
     .from(bankStatementTransactions)
@@ -27,13 +29,19 @@ export async function getBankTransactionSpending(
       eq(bankStatementTransactions.bankStatementId, bankStatements.id)
     )
     .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+    .innerJoin(
+      categories,
+      eq(bankStatementTransactions.categoryId, categories.id)
+    )
     .where(
       and(
         eq(documents.userId, userId),
         gte(bankStatementTransactions.transactionDate, start),
         lte(bankStatementTransactions.transactionDate, end),
         sql`${bankStatementTransactions.categoryId} IS NOT NULL`,
-        sql`CAST(${bankStatementTransactions.amount} AS NUMERIC) < 0`,
+        // Exclude Plaid income/transfer categories from spending
+        sql`${categories.description} NOT LIKE 'Plaid: INCOME%'`,
+        sql`${categories.description} NOT LIKE 'Plaid: TRANSFER%'`,
         sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE)`
       )
     )
@@ -51,13 +59,18 @@ export async function getTotalIncome(userId: string, start: Date, end: Date) {
       eq(bankStatementTransactions.bankStatementId, bankStatements.id)
     )
     .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+    .innerJoin(
+      categories,
+      eq(bankStatementTransactions.categoryId, categories.id)
+    )
     .where(
       and(
         eq(documents.userId, userId),
         gte(bankStatementTransactions.transactionDate, start),
         lte(bankStatementTransactions.transactionDate, end),
         sql`CAST(${bankStatementTransactions.amount} AS NUMERIC) > 0`,
-        // Exclude installment plan credits (not real income)
+        // Only count Plaid INCOME categories as income
+        sql`${categories.description} LIKE 'Plaid: INCOME%'`,
         sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE)`
       )
     );
@@ -124,10 +137,8 @@ export async function getCategoryBankTransactionsForMonth(
         eq(bankStatementTransactions.categoryId, categoryId),
         gte(bankStatementTransactions.transactionDate, start),
         lte(bankStatementTransactions.transactionDate, end),
-        sql`CAST(${bankStatementTransactions.amount} AS NUMERIC) < 0`,
         sql`(${bankStatementTransactions.transactionFlags} IS NULL OR (${bankStatementTransactions.transactionFlags}->>'isExcludedFromTotals')::boolean IS NOT TRUE)`
       )
     )
     .orderBy(desc(bankStatementTransactions.transactionDate));
 }
-
