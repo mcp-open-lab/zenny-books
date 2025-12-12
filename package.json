@@ -24,6 +24,7 @@
     "wipe:db": "dotenv -e .env.local -- tsx scripts/reset-documents.ts",
     "wipe:files": "dotenv -e .env.local -- tsx scripts/delete-uploadthing-files.ts",
     "test": "vitest",
+    "test:integration": "vitest --run --include '**/*.integration.ts'",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
