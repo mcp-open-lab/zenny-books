@@ -9,6 +9,12 @@ const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
 const PLAID_ENV = (process.env.PLAID_ENV || "sandbox") as keyof typeof PlaidEnvironments;
 
+// Log environment for debugging (only in non-production to avoid noise)
+if (process.env.NODE_ENV !== "production") {
+  console.log("[Plaid Client] Environment:", PLAID_ENV);
+  console.log("[Plaid Client] PLAID_ENV from env:", process.env.PLAID_ENV || "not set (defaulting to sandbox)");
+}
+
 if (!PLAID_CLIENT_ID) {
   console.warn("PLAID_CLIENT_ID is not set");
 }
