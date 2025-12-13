@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import {
   createUserCategory,
   deleteUserCategory,
-} from "@/app/actions/financial-categories";
+} from "@/lib/modules/categories/actions";
 import type { categories } from "@/lib/db/schema";
 
 type Category = typeof categories.$inferSelect;

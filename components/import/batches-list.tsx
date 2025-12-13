@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { listBatchesAction } from "@/app/actions/import-batch";
-import { getBatchProgressAction } from "@/app/actions/import-batch";
+import {
+  listBatchesAction,
+  getBatchProgressAction,
+} from "@/lib/modules/import/actions";
 import {
   Table,
   TableBody,

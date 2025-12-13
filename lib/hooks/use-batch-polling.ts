@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getBatchItems,
   getBatchProgressAction,
-} from "@/app/actions/import-batch";
+} from "@/lib/modules/import/actions";
 import type {
   BatchStatusSummary,
   BatchItemStatus,

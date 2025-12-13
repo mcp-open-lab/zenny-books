@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
 const isUploadThingRoute = createRouteMatcher(["/api/uploadthing(.*)"]);
 const isInngestRoute = createRouteMatcher(["/api/inngest(.*)"]);
 const isPlaidWebhookRoute = createRouteMatcher(["/api/plaid/webhook(.*)"]);
+const isBillingRoute = createRouteMatcher(["/app/settings/billing(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   // Don't bypass UploadThing routes - let them handle auth in their own middleware
@@ -37,6 +38,20 @@ export default clerkMiddleware(async (auth, request) => {
     const { userId, redirectToSignIn } = await auth();
     if (!userId) {
       return redirectToSignIn();
+    }
+
+    // Coarse beta gate (avoids rendering the billing UI for non-allowlisted users).
+    if (isBillingRoute(request)) {
+      const allowlist = (process.env.BILLING_BETA_USER_IDS || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (allowlist.length > 0 && !allowlist.includes(userId)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/app/settings";
+        return NextResponse.redirect(url);
+      }
     }
   }
 });

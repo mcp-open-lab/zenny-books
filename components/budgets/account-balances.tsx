@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, Landmark, CreditCard, Wallet, PiggyBank, Link } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAccountBalances, type AccountBalance } from "@/app/actions/plaid";
+import { getAccountBalances, type AccountBalance } from "@/lib/modules/plaid/actions";
 
 interface AccountBalancesProps {
   currency?: string;

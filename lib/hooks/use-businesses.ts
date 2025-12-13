@@ -4,7 +4,7 @@ import {
   createBusiness,
   updateBusiness,
   deleteBusiness,
-} from "@/app/actions/businesses";
+} from "@/lib/modules/businesses/actions";
 import type { businesses } from "@/lib/db/schema";
 
 type Business = typeof businesses.$inferSelect;

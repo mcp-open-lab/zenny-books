@@ -1,11 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Timeline } from "@/components/timeline";
-import { getUserSettings } from "@/app/actions/user-settings";
+import { getUserSettings } from "@/lib/modules/user-settings/actions";
 import { PageContainer } from "@/components/layouts/page-container";
 import { getTimelineItems } from "@/lib/api/timeline";
-import { getUserCategories } from "@/app/actions/financial-categories";
-import { getTimelineMerchants, getTimelineBusinesses } from "@/app/actions/timeline";
+import { getUserCategories } from "@/lib/modules/categories/actions";
+import { getTimelineMerchants, getTimelineBusinesses } from "@/lib/modules/timeline/actions";
 
 export default async function Dashboard() {
   const { userId } = await auth();

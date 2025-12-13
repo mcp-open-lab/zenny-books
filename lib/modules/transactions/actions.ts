@@ -1,21 +1,303 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
+
+import { createAuthenticatedAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
 import {
-  receipts,
   bankStatementTransactions,
   bankStatements,
-  documents,
-  categories,
   businesses,
+  categories,
   categoryRules,
+  documents,
+  receipts,
 } from "@/lib/db/schema";
-import { eq, sql, inArray, and } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
-import { devLogger } from "@/lib/dev-logger";
-import { z } from "zod";
-import { SIMILARITY_THRESHOLD } from "@/lib/constants";
-import { createAuthenticatedAction } from "@/lib/safe-action";
+import { EditReceiptSchema } from "@/lib/schemas";
+import { PAYMENT_METHODS, SIMILARITY_THRESHOLD } from "@/lib/constants";
+
+export type TransactionType = "receipt" | "bank_transaction";
+
+export interface UpdateTransactionParams {
+  id: string;
+  type: TransactionType;
+  categoryId: string;
+  businessId: string | null;
+  merchantName?: string;
+}
+
+async function getCategoryName(categoryId: string): Promise<string | null> {
+  const result = await db
+    .select({ name: categories.name })
+    .from(categories)
+    .where(eq(categories.id, categoryId))
+    .limit(1);
+  return result[0]?.name ?? null;
+}
+
+async function updateReceiptTransaction(
+  userId: string,
+  params: UpdateTransactionParams
+): Promise<void> {
+  const categoryName = await getCategoryName(params.categoryId);
+
+  await db
+    .update(receipts)
+    .set({
+      categoryId: params.categoryId,
+      category: categoryName,
+      businessId: params.businessId,
+      merchantName: params.merchantName ?? undefined,
+      status: "approved",
+      updatedAt: new Date(),
+    })
+    .where(and(eq(receipts.id, params.id), eq(receipts.userId, userId)));
+}
+
+async function updateBankStatementTransaction(
+  userId: string,
+  params: UpdateTransactionParams
+): Promise<void> {
+  // Verify ownership through document chain
+  const transaction = await db
+    .select({ id: bankStatementTransactions.id })
+    .from(bankStatementTransactions)
+    .innerJoin(
+      bankStatements,
+      eq(bankStatementTransactions.bankStatementId, bankStatements.id)
+    )
+    .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+    .where(
+      and(
+        eq(bankStatementTransactions.id, params.id),
+        eq(documents.userId, userId)
+      )
+    )
+    .limit(1);
+
+  if (!transaction || transaction.length === 0) {
+    throw new Error("Transaction not found or unauthorized");
+  }
+
+  const categoryName = await getCategoryName(params.categoryId);
+
+  await db
+    .update(bankStatementTransactions)
+    .set({
+      categoryId: params.categoryId,
+      category: categoryName,
+      businessId: params.businessId,
+      merchantName: params.merchantName ?? undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(bankStatementTransactions.id, params.id));
+}
+
+export const updateTransaction = createAuthenticatedAction(
+  "updateTransaction",
+  async (
+    userId,
+    params: UpdateTransactionParams
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (params.type === "receipt") {
+        await updateReceiptTransaction(userId, params);
+      } else {
+        await updateBankStatementTransaction(userId, params);
+      }
+
+      revalidatePath("/app");
+      revalidatePath("/app/review");
+      revalidatePath("/app/budgets");
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to update",
+      };
+    }
+  }
+);
+
+export const bulkUpdateTransactions = createAuthenticatedAction(
+  "bulkUpdateTransactions",
+  async (
+    userId,
+    updates: UpdateTransactionParams[]
+  ): Promise<{ success: boolean; updatedCount: number; error?: string }> => {
+    let updatedCount = 0;
+
+    try {
+      for (const params of updates) {
+        try {
+          if (params.type === "receipt") {
+            await updateReceiptTransaction(userId, params);
+          } else {
+            await updateBankStatementTransaction(userId, params);
+          }
+          updatedCount++;
+        } catch {
+          // Best effort: keep going for other rows
+        }
+      }
+
+      revalidatePath("/app");
+      revalidatePath("/app/review");
+      revalidatePath("/app/budgets");
+
+      return { success: true, updatedCount };
+    } catch (error) {
+      return {
+        success: false,
+        updatedCount,
+        error: error instanceof Error ? error.message : "Bulk update failed",
+      };
+    }
+  }
+);
+
+// Optional full-detail updates (kept here so forms can update more than category/business).
+export const updateReceipt = createAuthenticatedAction(
+  "updateReceiptDetails",
+  async (
+    userId,
+    data: unknown
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const validated = EditReceiptSchema.parse(data);
+
+      let categoryName: string | null = null;
+      if (validated.categoryId) {
+        categoryName = await getCategoryName(validated.categoryId);
+      }
+
+      const updateData: Partial<typeof receipts.$inferInsert> = {
+        merchantName: validated.merchantName ?? null,
+        categoryId: validated.categoryId ?? null,
+        category: categoryName,
+        businessId: validated.businessId ?? null,
+        description: validated.description ?? null,
+        paymentMethod: validated.paymentMethod ?? null,
+        status: validated.status ?? "needs_review",
+        updatedAt: new Date(),
+      };
+
+      updateData.date = validated.date ? new Date(validated.date) : null;
+      if (validated.totalAmount !== undefined) {
+        updateData.totalAmount = validated.totalAmount || null;
+      }
+      if (validated.taxAmount !== undefined) {
+        updateData.taxAmount = validated.taxAmount || null;
+      }
+      if (validated.tipAmount !== undefined) {
+        updateData.tipAmount = validated.tipAmount || null;
+      }
+      if (validated.discountAmount !== undefined) {
+        updateData.discountAmount = validated.discountAmount || null;
+      }
+
+      await db
+        .update(receipts)
+        .set(updateData)
+        .where(and(eq(receipts.id, validated.id), eq(receipts.userId, userId)));
+
+      revalidatePath("/app");
+      revalidatePath(`/app/receipts/${validated.id}`);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to update receipt",
+      };
+    }
+  }
+);
+
+const UpdateBankTransactionSchema = z.object({
+  id: z.string(),
+  merchantName: z.string().optional(),
+  categoryId: z.string().optional(),
+  businessId: z.string().optional().nullable(),
+  paymentMethod: z.enum(PAYMENT_METHODS).optional(),
+  notes: z.string().optional(),
+});
+
+export const updateBankTransaction = createAuthenticatedAction(
+  "updateBankTransactionDetails",
+  async (
+    userId,
+    data: unknown
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const validated = UpdateBankTransactionSchema.parse(data);
+
+      // Verify ownership through document chain
+      const transaction = await db
+        .select({ id: bankStatementTransactions.id })
+        .from(bankStatementTransactions)
+        .innerJoin(
+          bankStatements,
+          eq(bankStatementTransactions.bankStatementId, bankStatements.id)
+        )
+        .innerJoin(documents, eq(bankStatements.documentId, documents.id))
+        .where(
+          and(
+            eq(bankStatementTransactions.id, validated.id),
+            eq(documents.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (!transaction || transaction.length === 0) {
+        return {
+          success: false,
+          error: "Transaction not found or unauthorized",
+        };
+      }
+
+      let categoryName: string | null = null;
+      if (validated.categoryId) {
+        categoryName = await getCategoryName(validated.categoryId);
+      }
+
+      await db
+        .update(bankStatementTransactions)
+        .set({
+          merchantName: validated.merchantName || null,
+          categoryId: validated.categoryId || null,
+          category: categoryName,
+          businessId:
+            validated.businessId !== undefined
+              ? validated.businessId
+              : undefined,
+          paymentMethod: validated.paymentMethod || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(bankStatementTransactions.id, validated.id));
+
+      revalidatePath("/app");
+      revalidatePath(`/app/transactions/${validated.id}`);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update transaction",
+      };
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Similar transactions + rule creation (moved from app/actions/transactions.ts)
+// ---------------------------------------------------------------------------
 
 export interface SimilarTransaction {
   id: string;
@@ -30,10 +312,10 @@ export interface SimilarTransaction {
 }
 
 function buildRuleExclusionConditions(
-  merchantNameColumn: any,
+  merchantNameColumn: unknown,
   rules: Array<{ matchType: string; field: string; value: string }>
-): any[] {
-  const conditions: any[] = [];
+): unknown[] {
+  const conditions: unknown[] = [];
 
   for (const rule of rules) {
     if (rule.field !== "merchantName") continue;
@@ -95,7 +377,9 @@ export const getSimilarTransactions = createAuthenticatedAction(
         value: categoryRules.value,
       })
       .from(categoryRules)
-      .where(and(eq(categoryRules.userId, userId), eq(categoryRules.isEnabled, true)));
+      .where(
+        and(eq(categoryRules.userId, userId), eq(categoryRules.isEnabled, true))
+      );
 
     const ruleExclusionConditions = buildRuleExclusionConditions(
       receipts.merchantName,
@@ -125,8 +409,8 @@ export const getSimilarTransactions = createAuthenticatedAction(
           receipts.merchantName
         }, ${merchantName}) > ${SIMILARITY_THRESHOLD}
         ${
-          ruleExclusionConditions.length > 0
-            ? sql`AND ${sql.join(ruleExclusionConditions, sql` AND `)}`
+          (ruleExclusionConditions as unknown[]).length > 0
+            ? sql`AND ${sql.join(ruleExclusionConditions as any[], sql` AND `)}`
             : sql``
         }
       ORDER BY sim_score DESC, ${receipts.date} DESC
@@ -158,8 +442,11 @@ export const getSimilarTransactions = createAuthenticatedAction(
           bankStatementTransactions.merchantName
         }, ${merchantName}) > ${SIMILARITY_THRESHOLD}
         ${
-          bankTxRuleExclusionConditions.length > 0
-            ? sql`AND ${sql.join(bankTxRuleExclusionConditions, sql` AND `)}`
+          (bankTxRuleExclusionConditions as unknown[]).length > 0
+            ? sql`AND ${sql.join(
+                bankTxRuleExclusionConditions as any[],
+                sql` AND `
+              )}`
             : sql``
         }
       ORDER BY sim_score DESC, ${bankStatementTransactions.transactionDate} DESC
@@ -181,7 +468,6 @@ export const getSimilarTransactions = createAuthenticatedAction(
     const allCategoryIds = allResults
       .map((t) => t.categoryId)
       .filter(Boolean) as string[];
-
     const allBusinessIds = allResults
       .map((t) => t.businessId)
       .filter(Boolean) as string[];
@@ -220,15 +506,12 @@ export const getSimilarTransactions = createAuthenticatedAction(
       type: tx.type,
     }));
 
-    const filteredTransactions =
-      excludeTransactionId && excludeEntityType
-        ? similarTransactions.filter(
-            (tx) =>
-              !(tx.id === excludeTransactionId && tx.type === excludeEntityType)
-          )
-        : similarTransactions;
-
-    return filteredTransactions;
+    return excludeTransactionId && excludeEntityType
+      ? similarTransactions.filter(
+          (tx) =>
+            !(tx.id === excludeTransactionId && tx.type === excludeEntityType)
+        )
+      : similarTransactions;
   }
 );
 
@@ -378,7 +661,9 @@ export const getSimilarTransactionStats = createAuthenticatedAction(
         value: categoryRules.value,
       })
       .from(categoryRules)
-      .where(and(eq(categoryRules.userId, userId), eq(categoryRules.isEnabled, true)));
+      .where(
+        and(eq(categoryRules.userId, userId), eq(categoryRules.isEnabled, true))
+      );
 
     const ruleExclusionConditions = buildRuleExclusionConditions(
       receipts.merchantName,
@@ -406,8 +691,11 @@ export const getSimilarTransactionStats = createAuthenticatedAction(
               : sql``
           }
           ${
-            ruleExclusionConditions.length > 0
-              ? sql`AND ${sql.join(ruleExclusionConditions, sql` AND `)}`
+            (ruleExclusionConditions as unknown[]).length > 0
+              ? sql`AND ${sql.join(
+                  ruleExclusionConditions as any[],
+                  sql` AND `
+                )}`
               : sql``
           }
         
@@ -434,8 +722,11 @@ export const getSimilarTransactionStats = createAuthenticatedAction(
               : sql``
           }
           ${
-            bankTxRuleExclusionConditions.length > 0
-              ? sql`AND ${sql.join(bankTxRuleExclusionConditions, sql` AND `)}`
+            (bankTxRuleExclusionConditions as unknown[]).length > 0
+              ? sql`AND ${sql.join(
+                  bankTxRuleExclusionConditions as any[],
+                  sql` AND `
+                )}`
               : sql``
           }
       )

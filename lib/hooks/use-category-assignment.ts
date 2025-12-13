@@ -2,9 +2,9 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
-import type { TransactionType } from "@/lib/transactions/update";
-import { updateTransaction } from "@/lib/transactions/update";
-import { createRuleFromTransaction } from "@/app/actions/transactions";
+import type { TransactionType } from "@/lib/modules/transactions/actions";
+import { updateTransaction } from "@/lib/modules/transactions/actions";
+import { createRuleFromTransaction } from "@/lib/modules/transactions/actions";
 
 export type CategoryAssignmentResult = { success: boolean; error?: string };
 

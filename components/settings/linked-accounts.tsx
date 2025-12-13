@@ -20,7 +20,7 @@ import {
   unlinkAccount,
   syncAccount,
   handleReconnectSuccess,
-} from "@/app/actions/plaid";
+} from "@/lib/modules/plaid/actions";
 import {
   Building2,
   CreditCard,

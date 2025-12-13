@@ -28,7 +28,7 @@ import {
   deleteCategoryRule,
   setCategoryRuleEnabled,
   upsertCategoryRule,
-} from "@/app/actions/financial-categories";
+} from "@/lib/modules/categories/actions";
 import type { categories, categoryRules } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 

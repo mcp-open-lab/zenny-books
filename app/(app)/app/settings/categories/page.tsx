@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUserCategories } from "@/app/actions/financial-categories";
+import { getUserCategories } from "@/lib/modules/categories/actions";
 import { PageContainer } from "@/components/layouts/page-container";
 import { CategoriesManager } from "./_components/categories-manager";
 

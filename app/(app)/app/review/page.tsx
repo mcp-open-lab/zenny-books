@@ -2,9 +2,9 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/layouts/page-container";
 import { ReviewQueueList } from "@/components/review-queue/review-queue-list";
-import { getReviewQueueItems } from "@/app/actions/review-queue";
-import { getUserCategories } from "@/app/actions/financial-categories";
-import { getUserBusinesses } from "@/app/actions/businesses";
+import { getReviewQueueItems } from "@/lib/modules/review/actions";
+import { getUserCategories } from "@/lib/modules/categories/actions";
+import { getUserBusinesses } from "@/lib/modules/businesses/actions";
 
 export const dynamic = "force-dynamic";
 

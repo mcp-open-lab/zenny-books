@@ -5,7 +5,7 @@ import {
   getFailedItems,
   retryBatchItem,
   retryAllFailedItems,
-} from "@/app/actions/import-batch-items";
+} from "@/lib/modules/import/actions";
 import { db } from "@/lib/db";
 import { importBatchItems, importBatches } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";

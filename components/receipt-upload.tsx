@@ -2,7 +2,7 @@
 
 import { generateUploadButton } from "@uploadthing/react";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
-import { scanReceipt } from "@/app/actions/scan-receipt";
+import { scanReceipt } from "@/lib/modules/receipts/actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 

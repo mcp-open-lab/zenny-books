@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { getCategoryTransactions, type CategoryTransaction } from "@/app/actions/budgets";
-import type { BudgetStatus } from "@/app/actions/budgets";
+import {
+  getCategoryTransactions,
+  type CategoryTransaction,
+} from "@/lib/modules/budgets/actions";
+import type { BudgetStatus } from "@/lib/modules/budgets/actions";
 import { BUDGET_STATUS_CONFIG } from "@/lib/budgets/constants";
 import { formatBudgetCurrency } from "@/lib/budgets/utils";
 import { TransactionList } from "./transaction-list";

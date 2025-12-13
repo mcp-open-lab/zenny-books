@@ -6,8 +6,8 @@ import {
   getSimilarTransactions,
   getSimilarTransactionStats,
   type SimilarTransaction,
-} from "@/app/actions/transactions";
-import { bulkUpdateMerchantCategory } from "@/app/actions/financial-categories";
+} from "@/lib/modules/transactions/actions";
+import { bulkUpdateMerchantCategory } from "@/lib/modules/categories/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";

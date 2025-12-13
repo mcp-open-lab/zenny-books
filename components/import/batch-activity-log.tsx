@@ -6,8 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   getBatchActivityLogs,
   type BatchActivityLog,
-} from "@/app/actions/batch-activity";
-import { getBatchProgressAction } from "@/app/actions/import-batch";
+} from "@/lib/modules/import/batch-activity-actions";
+import { getBatchProgressAction } from "@/lib/modules/import/actions";
 import { formatDistanceToNow } from "date-fns";
 import { Activity, Loader2, Brain } from "lucide-react";
 

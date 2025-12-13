@@ -21,7 +21,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Receipt, CreditCard, TrendingDown, Calendar, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { bulkUpdateMerchantCategory } from "@/app/actions/financial-categories";
+import { bulkUpdateMerchantCategory } from "@/lib/modules/categories/actions";
 import type { categories as categoriesSchema, businesses as businessesSchema } from "@/lib/db/schema";
 
 type Category = typeof categoriesSchema.$inferSelect;

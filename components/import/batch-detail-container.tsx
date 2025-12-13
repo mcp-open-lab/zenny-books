@@ -8,7 +8,7 @@ import type {
   BatchStatusSummary,
   BatchItemStatus,
 } from "@/lib/import/batch-types";
-import type { BatchActivityLog as BatchActivityLogType } from "@/app/actions/batch-activity";
+import type { BatchActivityLog as BatchActivityLogType } from "@/lib/modules/import/batch-activity-actions";
 
 interface BatchDetailContainerProps {
   initialBatch: BatchStatusSummary;

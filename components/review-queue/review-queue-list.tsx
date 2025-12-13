@@ -21,8 +21,8 @@ import {
 import { toast } from "sonner";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { useRowSelection, BulkActionsBar } from "@/components/ui/data-table";
-import { bulkUpdateTransactions } from "@/lib/transactions/update";
-import type { ReviewQueueItem as ReviewQueueItemType } from "@/app/actions/review-queue";
+import { bulkUpdateTransactions } from "@/lib/modules/transactions/actions";
+import type { ReviewQueueItem as ReviewQueueItemType } from "@/lib/modules/review/actions";
 import type {
   categories as categoriesSchema,
   businesses as businessesSchema,

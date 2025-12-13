@@ -12,8 +12,8 @@ import {
   TransactionAmount,
   RowActions,
 } from "@/components/ui/data-table";
-import { updateTransaction } from "@/lib/transactions/update";
-import type { CategoryTransaction } from "@/app/actions/budgets";
+import { updateTransaction } from "@/lib/modules/transactions/actions";
+import type { CategoryTransaction } from "@/lib/modules/budgets/actions";
 import type {
   categories as categoriesSchema,
   businesses as businessesSchema,
@@ -63,7 +63,11 @@ export function TransactionList({
 
   if (!editable) {
     return (
-      <div className={isMobile ? "space-y-2" : "space-y-1 max-h-64 overflow-y-auto"}>
+      <div
+        className={
+          isMobile ? "space-y-2" : "space-y-1 max-h-64 overflow-y-auto"
+        }
+      >
         {transactions.map((tx) => (
           <ViewOnlyTransactionRow
             key={tx.id}
@@ -77,7 +81,9 @@ export function TransactionList({
   }
 
   return (
-    <div className={isMobile ? "space-y-2" : "space-y-1 max-h-64 overflow-y-auto"}>
+    <div
+      className={isMobile ? "space-y-2" : "space-y-1 max-h-64 overflow-y-auto"}
+    >
       {transactions.map((tx) => (
         <EditableTransactionRow
           key={tx.id}
@@ -118,7 +124,10 @@ function ViewOnlyTransactionRow({
         </div>
         {transaction.date && (
           <div className="text-muted-foreground text-[10px] mt-0.5">
-            {format(new Date(transaction.date), isMobile ? "MMM d" : "MMM d, yyyy")}
+            {format(
+              new Date(transaction.date),
+              isMobile ? "MMM d" : "MMM d, yyyy"
+            )}
           </div>
         )}
       </div>

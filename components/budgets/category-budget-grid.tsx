@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CategoryBudgetRow } from "./category-budget-row";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Plus } from "lucide-react";
-import type { CategoryBudgetItem } from "@/app/actions/budgets";
+import type { CategoryBudgetItem } from "@/lib/modules/budgets/actions";
 import type {
   categories as categoriesSchema,
   businesses as businessesSchema,

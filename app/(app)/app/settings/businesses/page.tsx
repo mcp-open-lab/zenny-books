@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUserBusinesses } from "@/app/actions/businesses";
+import { getUserBusinesses } from "@/lib/modules/businesses/actions";
 import { PageContainer } from "@/components/layouts/page-container";
 import { BusinessesManager } from "./_components/businesses-manager";
 

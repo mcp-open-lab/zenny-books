@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner";
 import { future_genUploader } from "uploadthing/client-future";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
-import { batchImport } from "@/app/actions/batch-import";
+import { batchImport } from "@/lib/modules/import/actions";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Settings2 } from "lucide-react";
 import { CurrencySelect } from "@/components/ui/currency-select";
@@ -106,7 +106,9 @@ export function ImportUploadZone({
   useEffect(() => {
     async function fetchBusinesses() {
       try {
-        const { getUserBusinesses } = await import("@/app/actions/businesses");
+        const { getUserBusinesses } = await import(
+          "@/lib/modules/businesses/actions"
+        );
         const userBusinesses = await getUserBusinesses();
         setBusinesses(userBusinesses);
       } catch (error) {

@@ -8,7 +8,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import type { BudgetInsights, BudgetPaceStatus } from "@/app/actions/budgets";
+import type { BudgetInsights, BudgetPaceStatus } from "@/lib/modules/budgets/actions";
 
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat("en-US", {

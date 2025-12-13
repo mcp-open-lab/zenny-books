@@ -12,7 +12,10 @@ import { ReceiptProcessor } from "@/lib/import/processors/receipt-processor";
 import { calculateFileHash } from "@/lib/utils/file-hash";
 import { getFileFormatFromUrl, getMimeTypeFromUrl } from "@/lib/constants";
 import { ActivityLogger } from "@/lib/import/activity-logger";
-import { getUserSettings, getUserSettingsByUserId } from "@/app/actions/user-settings";
+import {
+  getUserSettings,
+  getUserSettingsByUserId,
+} from "@/lib/modules/user-settings/actions";
 import { logError, logInfo } from "@/lib/observability/log";
 import { DuplicateFileError } from "@/lib/errors";
 import { assertUserScope } from "@/lib/db/helpers";

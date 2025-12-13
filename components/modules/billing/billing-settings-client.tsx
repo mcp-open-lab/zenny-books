@@ -4,7 +4,10 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { createBillingPortalSession, createModuleCheckoutSession } from "@/app/actions/billing";
+import {
+  createBillingPortalSession,
+  createModuleCheckoutSession,
+} from "@/lib/modules/billing/actions";
 import type { ModuleSlug, UsageMetric } from "@/lib/modules/types";
 
 type ModuleRow = {

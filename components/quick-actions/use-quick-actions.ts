@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { scanReceipt } from "@/app/actions/scan-receipt";
+import { scanReceipt } from "@/lib/modules/receipts/actions";
 import { future_genUploader } from "uploadthing/client-future";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
 

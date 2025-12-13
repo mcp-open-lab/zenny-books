@@ -1,14 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/layouts/page-container";
-import { hasModuleAccess } from "@/lib/modules/feature-gate";
 import {
   getBudgetOverview,
   getLatestTransactionMonth,
-} from "@/app/actions/budgets";
-import { getUserSettings } from "@/app/actions/user-settings";
-import { getUserCategories } from "@/app/actions/financial-categories";
-import { getUserBusinesses } from "@/app/actions/businesses";
+} from "@/lib/modules/budgets/actions";
+import { getUserSettings } from "@/lib/modules/user-settings/actions";
+import { getUserCategories } from "@/lib/modules/categories/actions";
+import { getUserBusinesses } from "@/lib/modules/businesses/actions";
 import { BudgetPageClient } from "@/components/budgets/budget-page-client";
 
 interface BudgetsPageProps {
@@ -16,27 +13,6 @@ interface BudgetsPageProps {
 }
 
 export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
-  const { userId } = await auth();
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const canUseBudgets = await hasModuleAccess(userId, "budgets");
-  if (!canUseBudgets) {
-    return (
-      <PageContainer size="standard">
-        <div className="rounded-md border bg-muted/30 p-4">
-          <h2 className="text-base font-semibold">
-            Budgeting is a paid module
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Upgrade to enable budgets and spending insights.
-          </p>
-        </div>
-      </PageContainer>
-    );
-  }
-
   const params = await searchParams;
 
   // Default to latest month with transactions, or current month if none

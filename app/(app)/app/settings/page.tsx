@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUserSettings } from "@/app/actions/user-settings";
+import { getUserSettings } from "@/lib/modules/user-settings/actions";
 import { SettingsFormV2 } from "@/components/settings-form-v2";
 import { PageContainer } from "@/components/layouts/page-container";
 import { LinkedAccounts } from "@/components/settings/linked-accounts";

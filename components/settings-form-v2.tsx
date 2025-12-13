@@ -12,7 +12,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { saveUserSettings } from "@/app/actions/user-settings";
+import { saveUserSettings } from "@/lib/modules/user-settings/actions";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SettingsSchema, type SettingsFormValues } from "@/lib/schemas";

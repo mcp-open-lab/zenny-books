@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { saveUserSettings } from "@/app/actions/user-settings";
+import { saveUserSettings } from "@/lib/modules/user-settings/actions";
 import { devLogger } from "@/lib/dev-logger";
 import { logger } from "@/lib/logger";
 import { useForm } from "react-hook-form";

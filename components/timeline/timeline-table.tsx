@@ -24,9 +24,7 @@ import {
   RowActions,
   BulkActionsBar,
 } from "@/components/ui/data-table";
-import {
-  bulkUpdateTransactions,
-} from "@/lib/transactions/update";
+import { bulkUpdateTransactions } from "@/lib/modules/transactions/actions";
 import { useCategoryAssignment } from "@/lib/hooks/use-category-assignment";
 import { CategoryAssigner } from "@/components/categorization/category-assigner";
 import type { TimelineItem } from "@/lib/api/timeline";
@@ -51,7 +49,12 @@ interface TimelineTableProps {
   businesses: Business[];
   onItemUpdated?: (
     id: string,
-    patch: Partial<Pick<TimelineItem, "categoryId" | "category" | "businessId" | "businessName">>
+    patch: Partial<
+      Pick<
+        TimelineItem,
+        "categoryId" | "category" | "businessId" | "businessName"
+      >
+    >
   ) => void;
 }
 
@@ -64,7 +67,7 @@ export function TimelineTable({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const assignment = useCategoryAssignment({ initialApplyToFuture: true });
-  
+
   const {
     selectedIds,
     toggleItem,
@@ -210,8 +213,8 @@ export function TimelineTable({
               const editing = isEditing(item.id);
               const href =
                 item.type === "transaction"
-                ? `/app/transactions/${item.id}`
-                : `/app/receipts/${item.id}`;
+                  ? `/app/transactions/${item.id}`
+                  : `/app/receipts/${item.id}`;
 
               return (
                 <Fragment key={item.id}>
@@ -344,7 +347,10 @@ export function TimelineTable({
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="personal" className="text-xs">
+                                  <SelectItem
+                                    value="personal"
+                                    className="text-xs"
+                                  >
                                     Personal
                                   </SelectItem>
                                   {businesses.map((b) => (
@@ -360,7 +366,8 @@ export function TimelineTable({
                               </Select>
                               {businesses.length === 0 && (
                                 <div className="text-[11px] text-muted-foreground">
-                                  Create a business in Settings to assign transactions.
+                                  Create a business in Settings to assign
+                                  transactions.
                                 </div>
                               )}
                             </div>

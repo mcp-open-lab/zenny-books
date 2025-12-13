@@ -4,8 +4,8 @@ import {
   getUserCategories,
   getUserRules,
   getMerchantStatistics,
-} from "@/app/actions/financial-categories";
-import { getUserBusinesses } from "@/app/actions/businesses";
+} from "@/lib/modules/categories/actions";
+import { getUserBusinesses } from "@/lib/modules/businesses/actions";
 import { PageContainer } from "@/components/layouts/page-container";
 import { RulesManager } from "./_components/rules-manager";
 

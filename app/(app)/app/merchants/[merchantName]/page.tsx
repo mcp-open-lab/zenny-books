@@ -1,8 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
-import { getMerchantTransactions } from "@/app/actions/financial-categories";
-import { getUserCategories } from "@/app/actions/financial-categories";
-import { getUserBusinesses } from "@/app/actions/businesses";
+import {
+  getMerchantTransactions,
+  getUserCategories,
+} from "@/lib/modules/categories/actions";
+import { getUserBusinesses } from "@/lib/modules/businesses/actions";
 import { PageContainer } from "@/components/layouts/page-container";
 import { MerchantDetailView } from "@/components/merchants/merchant-detail-view";
 

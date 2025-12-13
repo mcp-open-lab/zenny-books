@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { BudgetInsights } from "@/app/actions/budgets";
+import type { BudgetInsights } from "@/lib/modules/budgets/actions";
 import { InsightsPanel } from "./insights-panel";
 
 interface SavingsOverviewProps {

@@ -9,7 +9,7 @@ import { SavingsOverview } from "./savings-overview";
 import {
   setBudgetAmount,
   type BudgetOverview,
-} from "@/app/actions/budgets";
+} from "@/lib/modules/budgets/actions";
 import type {
   categories as categoriesSchema,
   businesses as businessesSchema,

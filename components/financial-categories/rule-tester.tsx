@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { testRuleMatch } from "@/app/actions/financial-categories";
+import { testRuleMatch } from "@/lib/modules/categories/actions";
 import type { CategorizationResult } from "@/lib/categorization/types";
 
 export function RuleTester() {

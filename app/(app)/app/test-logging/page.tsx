@@ -13,7 +13,7 @@ import {
   testLoggingAction,
   testErrorAction,
   testPublicAction,
-} from "@/app/(app)/test-logging/actions";
+} from "@/app/(app)/app/test-logging/actions";
 
 export default function TestLoggingPage() {
   const [status, setStatus] = useState<string>("");

@@ -15,7 +15,7 @@ import {
 import { CategoryAssigner } from "@/components/categorization/category-assigner";
 import { useCategoryAssignment } from "@/lib/hooks/use-category-assignment";
 import { Check } from "lucide-react";
-import type { ReviewQueueItem as ReviewQueueItemType } from "@/app/actions/review-queue";
+import type { ReviewQueueItem as ReviewQueueItemType } from "@/lib/modules/review/actions";
 import type {
   categories as categoriesSchema,
   businesses as businessesSchema,

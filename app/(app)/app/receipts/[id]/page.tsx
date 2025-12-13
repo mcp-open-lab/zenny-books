@@ -5,9 +5,9 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { PageContainer } from "@/components/layouts/page-container";
 import { ReceiptDetailView } from "@/components/receipts/receipt-detail-view";
-import { getUserSettings } from "@/app/actions/user-settings";
-import { getUserCategories } from "@/app/actions/financial-categories";
-import { getUserBusinesses } from "@/app/actions/businesses";
+import { getUserSettings } from "@/lib/modules/user-settings/actions";
+import { getUserCategories } from "@/lib/modules/categories/actions";
+import { getUserBusinesses } from "@/lib/modules/businesses/actions";
 
 export default async function ReceiptDetailPage({
   params,

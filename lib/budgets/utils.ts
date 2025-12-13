@@ -1,4 +1,4 @@
-import type { BudgetStatus } from "@/app/actions/budgets";
+import type { BudgetStatus } from "@/lib/modules/budgets/actions";
 
 export function getMonthDateRange(month: string): { start: Date; end: Date } {
   const [year, monthNum] = month.split("-").map(Number);

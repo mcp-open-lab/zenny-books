@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getBatchItems } from "@/app/actions/import-batch";
-import { getBatchProgressAction } from "@/app/actions/import-batch";
-import { retryBatchItem, retryAllFailedItems } from "@/app/actions/import-batch-items";
+import {
+  getBatchItems,
+  getBatchProgressAction,
+  retryBatchItem,
+  retryAllFailedItems,
+} from "@/lib/modules/import/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

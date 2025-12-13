@@ -17,7 +17,11 @@ import { groupItemsByMonth } from "@/lib/utils/timeline";
 import { RECEIPT_STATUSES } from "@/lib/consts";
 import Link from "next/link";
 import type { TimelineItem, TimelineFilters } from "@/lib/api/timeline";
-import { fetchTimelineItems, getTimelineMerchants, getTimelineBusinesses } from "@/app/actions/timeline";
+import {
+  fetchTimelineItems,
+  getTimelineMerchants,
+  getTimelineBusinesses,
+} from "@/lib/modules/timeline/actions";
 import type { categories as categoriesSchema, businesses as businessesSchema } from "@/lib/db/schema";
 import { TimelineTable } from "./timeline/timeline-table";
 

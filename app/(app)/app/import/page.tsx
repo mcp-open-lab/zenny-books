@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/layouts/page-container";
 import { ImportTabs } from "@/components/import/import-tabs";
 import { listBatches } from "@/lib/import/batch-tracker";
-import { getUserSettings } from "@/app/actions/user-settings";
+import { getUserSettings } from "@/lib/modules/user-settings/actions";
 
 export default async function ImportPage(props: {
   searchParams: Promise<{ tab?: string }>;

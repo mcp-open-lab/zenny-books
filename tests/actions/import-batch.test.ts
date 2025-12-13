@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createImportBatch, updateBatchStatus, getBatchStatus, completeBatch } from "@/app/actions/import-batch";
+import {
+  createImportBatch,
+  updateBatchStatus,
+  getBatchStatus,
+  completeBatch,
+} from "@/lib/modules/import/actions";
 import { db } from "@/lib/db";
 import { importBatches } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";

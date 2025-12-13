@@ -6,7 +6,7 @@ import {
   getBatchStatusSummary,
   getBatchItemsStatus,
 } from "@/lib/import/batch-tracker";
-import { getBatchActivityLogs } from "@/app/actions/batch-activity";
+import { getBatchActivityLogs } from "@/lib/modules/import/batch-activity-actions";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
