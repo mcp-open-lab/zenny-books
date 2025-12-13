@@ -7,73 +7,109 @@ import { QuickActionsMenu } from "./menu";
 import { DocTypeSelectorDialog, InstallDialog } from "./dialogs";
 
 export function QuickActions() {
-  const hook = useQuickActions();
+  const {
+    // Hidden input refs (callback refs)
+    setCameraInputEl,
+    setFileInputEl,
+
+    // State
+    isOpen,
+    setIsOpen,
+    isUploading,
+    isFullscreen,
+    isFullscreenSupported,
+    isStandalone,
+    platform,
+    deferredPrompt,
+    showDocTypeSelector,
+    setShowDocTypeSelector,
+    pendingFiles,
+    setPendingFiles,
+    selectedDocType,
+    setSelectedDocType,
+    showInstallDialog,
+    setShowInstallDialog,
+
+    // Handlers
+    handleCameraCapture,
+    handleFileChange,
+    handleCameraClick,
+    handleFileUploadClick,
+    toggleFullscreen,
+    handleAddToHome,
+    handleDocTypeConfirm,
+
+    // Router (passed through for menu navigation)
+    router,
+  } = useQuickActions();
 
   return (
     <>
       {/* Hidden file inputs */}
       <input
-        ref={hook.cameraInputRef}
+        ref={setCameraInputEl}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={hook.handleCameraCapture}
-        disabled={hook.isUploading}
+        onChange={handleCameraCapture}
+        disabled={isUploading}
       />
       <input
-        ref={hook.fileInputRef}
+        ref={setFileInputEl}
         type="file"
         accept={ALL_UPLOAD_EXTENSIONS}
         className="hidden"
-        onChange={hook.handleFileChange}
-        disabled={hook.isUploading}
+        onChange={handleFileChange}
+        disabled={isUploading}
       />
 
       {/* Quick Actions Menu - Hidden on desktop (md screens and above) */}
       <div className="fixed bottom-20 right-4 z-50 quick-actions-menu md:hidden">
         {/* Fan-out menu */}
-        {hook.isOpen ? <QuickActionsMenu
-            isUploading={hook.isUploading}
-            isFullscreen={hook.isFullscreen}
-            isFullscreenSupported={hook.isFullscreenSupported}
-            isStandalone={hook.isStandalone}
-            platform={hook.platform}
-            deferredPrompt={hook.deferredPrompt}
-            setIsOpen={hook.setIsOpen}
-            handleCameraClick={hook.handleCameraClick}
-            handleFileUploadClick={hook.handleFileUploadClick}
-            toggleFullscreen={hook.toggleFullscreen}
-            handleAddToHome={hook.handleAddToHome}
-            router={hook.router}
-          /> : null}
+        {isOpen ? (
+          <QuickActionsMenu
+            isUploading={isUploading}
+            isFullscreen={isFullscreen}
+            isFullscreenSupported={isFullscreenSupported}
+            isStandalone={isStandalone}
+            platform={platform}
+            deferredPrompt={deferredPrompt}
+            setIsOpen={setIsOpen}
+            handleCameraClick={handleCameraClick}
+            handleFileUploadClick={handleFileUploadClick}
+            toggleFullscreen={toggleFullscreen}
+            handleAddToHome={handleAddToHome}
+            router={router}
+          />
+        ) : null}
 
         {/* Main FAB Button */}
         <FAB
-          isOpen={hook.isOpen}
-          isUploading={hook.isUploading}
-          onClick={() => hook.setIsOpen(!hook.isOpen)}
+          isOpen={isOpen}
+          isUploading={isUploading}
+          onClick={() => setIsOpen(!isOpen)}
         />
       </div>
 
       {/* Document Type Selector Dialog */}
       <DocTypeSelectorDialog
-        open={hook.showDocTypeSelector}
-        onOpenChange={hook.setShowDocTypeSelector}
-        selectedDocType={hook.selectedDocType}
-        setSelectedDocType={hook.setSelectedDocType}
-        onConfirm={hook.handleDocTypeConfirm}
+        open={showDocTypeSelector}
+        onOpenChange={setShowDocTypeSelector}
+        selectedDocType={selectedDocType}
+        setSelectedDocType={setSelectedDocType}
+        onConfirm={handleDocTypeConfirm}
         onCancel={() => {
-          hook.setShowDocTypeSelector(false);
-          hook.setPendingFiles(null);
+          setShowDocTypeSelector(false);
+          setPendingFiles(null);
         }}
-        disabled={hook.isUploading || !hook.pendingFiles}
+        disabled={isUploading || !pendingFiles}
       />
 
       {/* Install on iOS Dialog */}
       <InstallDialog
-        open={hook.showInstallDialog}
-        onOpenChange={hook.setShowInstallDialog}
+        open={showInstallDialog}
+        onOpenChange={setShowInstallDialog}
       />
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { scanReceipt } from "@/lib/modules/receipts/actions";
@@ -102,6 +102,12 @@ export function useQuickActions() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const setFileInputEl = useCallback((el: HTMLInputElement | null) => {
+    fileInputRef.current = el;
+  }, []);
+  const setCameraInputEl = useCallback((el: HTMLInputElement | null) => {
+    cameraInputRef.current = el;
+  }, []);
 
   // Add to Home Screen logic
   useEffect(() => {
@@ -385,9 +391,9 @@ export function useQuickActions() {
     setShowInstallDialog,
     isStandalone,
     platform,
-    // Refs
-    fileInputRef,
-    cameraInputRef,
+    // Callback refs for hidden inputs (avoid ref access during render)
+    setFileInputEl,
+    setCameraInputEl,
     // Handlers
     toggleFullscreen,
     handleFileSelect,
