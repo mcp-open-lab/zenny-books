@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/app", "/api/"],
+        disallow: ["/app", "/api/", "/sign-in", "/sign-up"],
       },
     ],
     sitemap: "https://zennybooks.com/sitemap.xml",
