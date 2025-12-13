@@ -22,8 +22,8 @@ npm run test:coverage
 
 ### Test Structure
 
-- `tests/actions/` - Server action tests
-- `tests/lib/` - Utility/library tests
+- `tests/modules/` - Module-aligned tests (mirrors `lib/modules/*`)
+- `tests/lib/` - Cross-cutting library tests (not tied to a single module)
 - `tests/setup.ts` - Test setup and mocks
 
 ### Writing Tests
@@ -32,7 +32,7 @@ Example test structure:
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { yourAction } from "@/app/actions/your-action";
+import { yourAction } from "@/lib/modules/<domain>/actions";
 
 // Mock dependencies
 vi.mock("@/lib/db", () => ({
@@ -105,12 +105,14 @@ test.describe("Feature Name", () => {
 ## Current Test Status
 
 ### ✅ Setup Complete
+
 - Vitest configured
 - Playwright configured
 - Test structure created
 - Mock setup in place
 
 ### 📝 TODO: Implement Tests
+
 - Unit tests for batch actions
 - Unit tests for batch tracker utilities
 - Unit tests for safe-action wrapper
@@ -124,4 +126,3 @@ test.describe("Feature Name", () => {
 3. **Cover Auth Scenarios**: Test both authenticated and unauthenticated flows
 4. **Use E2E for Critical Flows**: Validate full user journeys
 5. **Keep Tests Fast**: Use mocks instead of real database/auth in unit tests
-
