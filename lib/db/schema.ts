@@ -267,7 +267,9 @@ export const receipts = pgTable(
     // Classification
     date: timestamp("date"),
     category: text("category"), // Denormalized for display/fallback
-    categoryId: text("category_id"), // FK to categories
+    categoryId: text("category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }), // FK to categories
     businessId: text("business_id"), // FK to businesses (null = personal transaction)
     description: text("description"),
     businessPurpose: text("business_purpose"), // Why this expense (for tax deductions)
@@ -345,7 +347,9 @@ export const bankStatementTransactions = pgTable(
 
     // Classification
     category: text("category"), // Denormalized for display/fallback
-    categoryId: text("category_id"), // FK to categories
+    categoryId: text("category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }), // FK to categories
     businessId: text("business_id"), // FK to businesses (null = personal transaction)
     isBusinessExpense: text("is_business_expense"), // 'true' | 'false' (deprecated, use businessId)
     businessPurpose: text("business_purpose"),
@@ -471,6 +475,7 @@ export const categories = pgTable("categories", {
   description: text("description"), // Optional description for user categories
   icon: text("icon"), // Optional icon identifier
   color: text("color"), // Optional hex color for UI
+  deletedAt: timestamp("deleted_at"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -480,7 +485,9 @@ export const categoryRules = pgTable("category_rules", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => createId()),
-  categoryId: text("category_id").notNull(), // FK to categories
+  categoryId: text("category_id")
+    .notNull()
+    .references(() => categories.id, { onDelete: "cascade" }), // FK to categories
   userId: text("user_id").notNull(), // FK to users
   businessId: text("business_id"), // Optional FK to businesses - for business-specific rules
   matchType: text("match_type").notNull(), // 'exact' | 'contains' | 'regex'
@@ -498,7 +505,9 @@ export const categoryBudgets = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
     userId: text("user_id").notNull(),
-    categoryId: text("category_id").notNull(), // FK to categories
+    categoryId: text("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }), // FK to categories
     month: text("month").notNull(), // Format: "2025-01"
     budgeted: decimal("budgeted", { precision: 10, scale: 2 }).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),

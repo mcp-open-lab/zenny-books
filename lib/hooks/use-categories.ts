@@ -67,13 +67,30 @@ export function useCategories({ categories }: UseCategoriesProps) {
   };
 
   const handleDeleteCategory = (categoryId: string, categoryName: string) => {
-    if (!confirm(`Delete "${categoryName}"? This cannot be undone.`)) {
+    if (
+      !confirm(
+        `Delete "${categoryName}"? Any transactions using it will be moved to Review for re-categorization.`
+      )
+    ) {
       return;
     }
 
     startTransition(async () => {
       try {
-        await deleteUserCategory({ categoryId });
+        try {
+          await deleteUserCategory({ categoryId });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "";
+          if (message.includes("confirmDetach=true")) {
+            const ok = confirm(
+              `This category is used by existing transactions. Deleting will move those transactions to Review.\n\nDelete anyway?`
+            );
+            if (!ok) return;
+            await deleteUserCategory({ categoryId, confirmDetach: true });
+          } else {
+            throw error;
+          }
+        }
         toast.success("Category deleted");
         window.location.reload();
       } catch (error) {

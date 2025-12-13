@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { categories, userSettings } from "@/lib/db/schema";
-import { eq, or, and } from "drizzle-orm";
+import { eq, or, and, sql } from "drizzle-orm";
 import { devLogger } from "@/lib/dev-logger";
 
 type Category = typeof categories.$inferSelect;
@@ -50,7 +50,9 @@ export class CategoryRepository {
       // System categories that match user's scope
       if (userPreference === "both") {
         // Show all system categories
-        conditions.push(eq(categories.type, "system"));
+        conditions.push(
+          and(eq(categories.type, "system"), sql`${categories.deletedAt} IS NULL`)
+        );
       } else {
         // Show only categories that match user's preference OR are marked as 'both'
         conditions.push(
@@ -59,7 +61,8 @@ export class CategoryRepository {
             or(
               eq(categories.usageScope, userPreference),
               eq(categories.usageScope, "both")
-            )
+            ),
+            sql`${categories.deletedAt} IS NULL`
           )
         );
       }
@@ -67,7 +70,11 @@ export class CategoryRepository {
       // Include user's custom categories if requested
       if (options?.includeUserCategories !== false) {
         conditions.push(
-          and(eq(categories.type, "user"), eq(categories.userId, userId))
+          and(
+            eq(categories.type, "user"),
+            eq(categories.userId, userId),
+            sql`${categories.deletedAt} IS NULL`
+          )
         );
       }
 
@@ -124,7 +131,7 @@ export class CategoryRepository {
       const result = await db
         .select()
         .from(categories)
-        .where(eq(categories.id, categoryId))
+        .where(and(eq(categories.id, categoryId), sql`${categories.deletedAt} IS NULL`))
         .limit(1);
 
       return result[0] || null;

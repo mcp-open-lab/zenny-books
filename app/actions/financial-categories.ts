@@ -33,12 +33,14 @@ export const getUserCategories = createAuthenticatedAction(
           // Plaid system categories
           and(
             eq(categories.type, "system"),
-            sql`${categories.description} LIKE 'Plaid:%'`
+            sql`${categories.description} LIKE 'Plaid:%'`,
+            sql`${categories.deletedAt} IS NULL`
           ),
           // User-created categories
           and(
             eq(categories.type, "user"),
-            eq(categories.userId, userId)
+            eq(categories.userId, userId),
+            sql`${categories.deletedAt} IS NULL`
           )
         )
       );
@@ -60,7 +62,12 @@ export const createUserCategory = createAuthenticatedAction(
     const existingCategories = await db
       .select()
       .from(categories)
-      .where(eq(categories.name, validated.name));
+      .where(
+        and(
+          sql`LOWER(${categories.name}) = LOWER(${validated.name})`,
+          sql`${categories.deletedAt} IS NULL`
+        )
+      );
 
     const isDuplicate = existingCategories.some(
       (cat) => cat.type === "system" || cat.userId === userId
@@ -90,6 +97,7 @@ export const createUserCategory = createAuthenticatedAction(
 
 const DeleteCategorySchema = z.object({
   categoryId: z.string(),
+  confirmDetach: z.boolean().optional(),
 });
 
 export const deleteUserCategory = createAuthenticatedAction(
@@ -111,7 +119,54 @@ export const deleteUserCategory = createAuthenticatedAction(
       throw new Error("Category not found or unauthorized");
     }
 
-    await db.delete(categories).where(eq(categories.id, validated.categoryId));
+    if (category[0].deletedAt) {
+      throw new Error("Category is already deleted");
+    }
+
+    // Pre-delete impact check (protect users from accidentally orphaning lots of data)
+    const [receiptCountRow] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(receipts)
+      .where(and(eq(receipts.userId, userId), eq(receipts.categoryId, validated.categoryId)));
+
+    // Bank tx ownership is enforced via documents elsewhere; for impact we only count by categoryId
+    const [bankTxCountRow] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(bankStatementTransactions)
+      .where(eq(bankStatementTransactions.categoryId, validated.categoryId));
+
+    const receiptCount = Number(receiptCountRow?.count ?? 0);
+    const bankTxCount = Number(bankTxCountRow?.count ?? 0);
+
+    if ((receiptCount > 0 || bankTxCount > 0) && !validated.confirmDetach) {
+      throw new Error(
+        `Category is used by ${receiptCount} receipt(s) and ${bankTxCount} bank transaction(s). ` +
+          `Deleting will move them to Review. Re-try delete with confirmDetach=true.`
+      );
+    }
+
+    // Soft-delete: mark deleted + detach existing transactions so they show up in review queue
+    await db.transaction(async (tx) => {
+      const now = new Date();
+
+      // Detach receipts and flag for review
+      await tx
+        .update(receipts)
+        .set({ categoryId: null, category: null, status: "needs_review", updatedAt: now })
+        .where(and(eq(receipts.userId, userId), eq(receipts.categoryId, validated.categoryId)));
+
+      // Detach bank transactions (ownership enforced by join via documents isn't available here)
+      // We'll detach by categoryId; downstream UI is already scoped by userId via documents join.
+      await tx
+        .update(bankStatementTransactions)
+        .set({ categoryId: null, category: null, updatedAt: now })
+        .where(eq(bankStatementTransactions.categoryId, validated.categoryId));
+
+      await tx
+        .update(categories)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(and(eq(categories.id, validated.categoryId), eq(categories.userId, userId)));
+    });
 
     revalidatePath("/app/settings/categories");
     return { success: true };
