@@ -25,6 +25,7 @@ import {
   Receipt,
   AlertCircle,
   Database,
+  SlidersHorizontal,
 } from "lucide-react";
 
 const mainItems = [
@@ -54,6 +55,12 @@ const dataItems = [
     href: "/app/review",
     icon: AlertCircle,
     description: "Categorize & organize",
+  },
+  {
+    label: "Rules",
+    href: "/app/settings/rules",
+    icon: SlidersHorizontal,
+    description: "Auto-categorization rules",
   },
   {
     label: "Import",
@@ -190,7 +197,9 @@ export function DesktopNav() {
                   href="/app/settings"
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    pathname?.startsWith("/app/settings") && "bg-accent"
+                    pathname?.startsWith("/app/settings") &&
+                      !pathname?.startsWith("/app/settings/rules") &&
+                      "bg-accent"
                   )}
                 >
                   <Settings className="h-4 w-4 mr-2" />

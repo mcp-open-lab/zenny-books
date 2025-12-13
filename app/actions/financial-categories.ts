@@ -257,41 +257,122 @@ const CreateRuleSchema = z.object({
   matchType: z.enum(MATCH_TYPES),
   field: z.enum(RULE_FIELDS),
   value: z.string().min(1, "Pattern is required"),
+  businessId: z.string().optional().nullable(),
+  displayName: z.string().optional().nullable(),
+  isEnabled: z.boolean().optional(),
+  source: z.string().optional().nullable(),
+  createdFrom: z.string().optional().nullable(),
 });
+
+async function assertCategoryUsableByUser(userId: string, categoryId: string) {
+  const category = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, categoryId))
+    .limit(1);
+
+  if (category.length === 0) {
+    throw new Error("Category not found");
+  }
+
+  if (category[0].type === "user" && category[0].userId !== userId) {
+    throw new Error("Unauthorized to use this category");
+  }
+
+  if (category[0].deletedAt) {
+    throw new Error("Category not found");
+  }
+}
+
+async function upsertRuleInternal(
+  userId: string,
+  validated: z.infer<typeof CreateRuleSchema>
+) {
+  await assertCategoryUsableByUser(userId, validated.categoryId);
+
+  const normalizedValue = validated.value.trim();
+  const normalizedField = validated.field;
+  const normalizedMatchType = validated.matchType;
+
+  const existing = await db
+    .select()
+    .from(categoryRules)
+    .where(
+      and(
+        eq(categoryRules.userId, userId),
+        eq(categoryRules.field, normalizedField),
+        eq(categoryRules.matchType, normalizedMatchType),
+        sql`LOWER(${categoryRules.value}) = LOWER(${normalizedValue})`
+      )
+    )
+    .limit(1);
+
+  const now = new Date();
+  const isEnabled = validated.isEnabled ?? true;
+
+  if (existing[0]) {
+    await db
+      .update(categoryRules)
+      .set({
+        categoryId: validated.categoryId,
+        businessId:
+          validated.businessId !== undefined ? validated.businessId : null,
+        value: normalizedValue,
+        displayName:
+          validated.displayName !== undefined
+            ? validated.displayName?.trim() || null
+            : undefined,
+        isEnabled,
+        source:
+          validated.source !== undefined ? validated.source?.trim() || null : null,
+        createdFrom:
+          validated.createdFrom !== undefined
+            ? validated.createdFrom?.trim() || null
+            : null,
+        updatedAt: now,
+      })
+      .where(and(eq(categoryRules.id, existing[0].id), eq(categoryRules.userId, userId)));
+
+    return { ruleId: existing[0].id, updated: true };
+  }
+
+  const ruleId = createId();
+  await db.insert(categoryRules).values({
+    id: ruleId,
+    categoryId: validated.categoryId,
+    userId,
+    businessId: validated.businessId || null,
+    matchType: validated.matchType,
+    field: validated.field,
+    value: normalizedValue,
+    displayName: validated.displayName?.trim() || null,
+    isEnabled,
+    source: validated.source?.trim() || null,
+    createdFrom: validated.createdFrom?.trim() || null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return { ruleId, updated: false };
+}
+
+export const upsertCategoryRule = createAuthenticatedAction(
+  "upsertCategoryRule",
+  async (userId, data: z.infer<typeof CreateRuleSchema>) => {
+    const validated = CreateRuleSchema.parse(data);
+    const result = await upsertRuleInternal(userId, validated);
+    revalidatePath("/app/settings/rules");
+    return { success: true, ...result };
+  }
+);
 
 export const createCategoryRule = createAuthenticatedAction(
   "createCategoryRule",
   async (userId, data: z.infer<typeof CreateRuleSchema>) => {
     const validated = CreateRuleSchema.parse(data);
-
-    const category = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.id, validated.categoryId))
-      .limit(1);
-
-    if (category.length === 0) {
-      throw new Error("Category not found");
-    }
-
-    if (category[0].type === "user" && category[0].userId !== userId) {
-      throw new Error("Unauthorized to create rules for this category");
-    }
-
-    const newRule = await db
-      .insert(categoryRules)
-      .values({
-        id: createId(),
-        categoryId: validated.categoryId,
-        userId,
-        matchType: validated.matchType,
-        field: validated.field,
-        value: validated.value,
-      })
-      .returning();
-
-    revalidatePath("/app/settings/categories");
-    return newRule[0];
+    const { ruleId, updated } = await upsertRuleInternal(userId, validated);
+    revalidatePath("/app/settings/rules");
+    return { success: true, ruleId, updated };
   }
 );
 
@@ -319,19 +400,7 @@ export const updateCategoryRule = createAuthenticatedAction(
       throw new Error("Rule not found or unauthorized");
     }
 
-    const category = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.id, validated.categoryId))
-      .limit(1);
-
-    if (category.length === 0) {
-      throw new Error("Category not found");
-    }
-
-    if (category[0].type === "user" && category[0].userId !== userId) {
-      throw new Error("Unauthorized to use this category");
-    }
+    await assertCategoryUsableByUser(userId, validated.categoryId);
 
     await db
       .update(categoryRules)
@@ -345,7 +414,7 @@ export const updateCategoryRule = createAuthenticatedAction(
       })
       .where(eq(categoryRules.id, validated.ruleId));
 
-    revalidatePath("/app/settings/categories");
+    revalidatePath("/app/settings/rules");
     return { success: true };
   }
 );
@@ -373,8 +442,67 @@ export const deleteCategoryRule = createAuthenticatedAction(
       .delete(categoryRules)
       .where(eq(categoryRules.id, validated.ruleId));
 
-    revalidatePath("/app/settings/categories");
+    revalidatePath("/app/settings/rules");
     return { success: true };
+  }
+);
+
+const SetRuleEnabledSchema = z.object({
+  ruleId: z.string(),
+  isEnabled: z.boolean(),
+});
+
+export const setCategoryRuleEnabled = createAuthenticatedAction(
+  "setCategoryRuleEnabled",
+  async (userId, data: z.infer<typeof SetRuleEnabledSchema>) => {
+    const validated = SetRuleEnabledSchema.parse(data);
+
+    const rule = await db
+      .select()
+      .from(categoryRules)
+      .where(eq(categoryRules.id, validated.ruleId))
+      .limit(1);
+
+    if (rule.length === 0 || rule[0].userId !== userId) {
+      throw new Error("Rule not found or unauthorized");
+    }
+
+    await db
+      .update(categoryRules)
+      .set({ isEnabled: validated.isEnabled, updatedAt: new Date() })
+      .where(and(eq(categoryRules.id, validated.ruleId), eq(categoryRules.userId, userId)));
+
+    revalidatePath("/app/settings/rules");
+    return { success: true };
+  }
+);
+
+const TestRuleMatchSchema = z.object({
+  merchantName: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+});
+
+export const testRuleMatch = createAuthenticatedAction(
+  "testRuleMatch",
+  async (userId, input: z.infer<typeof TestRuleMatchSchema>) => {
+    const validated = TestRuleMatchSchema.parse(input);
+
+    const { RuleMatcher } = await import(
+      "@/lib/categorization/strategies/rule-matcher"
+    );
+
+    const matcher = new RuleMatcher();
+    const result = await matcher.categorize(
+      {
+        merchantName: validated.merchantName ?? undefined,
+        description: validated.description ?? undefined,
+        amount: undefined,
+        statementType: undefined,
+      },
+      { userId }
+    );
+
+    return result;
   }
 );
 
@@ -409,7 +537,8 @@ export const getMerchantStatistics = createAuthenticatedAction(
         and(
           eq(categoryRules.userId, userId),
           eq(categoryRules.field, "merchantName"),
-          eq(categoryRules.matchType, "exact")
+          eq(categoryRules.matchType, "exact"),
+          eq(categoryRules.isEnabled, true)
         )
       );
 
@@ -441,60 +570,28 @@ const CreateMerchantRuleSchema = z.object({
   categoryId: z.string(),
   displayName: z.string().optional(),
   businessId: z.string().optional(),
+  isEnabled: z.boolean().optional(),
+  source: z.string().optional(),
+  createdFrom: z.string().optional(),
 });
 
 export const createMerchantRule = createAuthenticatedAction(
   "createMerchantRule",
   async (userId, data: z.infer<typeof CreateMerchantRuleSchema>) => {
     const validated = CreateMerchantRuleSchema.parse(data);
-
-    const category = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.id, validated.categoryId))
-      .limit(1);
-
-    if (category.length === 0) {
-      throw new Error("Category not found");
-    }
-
-    if (category[0].type === "user" && category[0].userId !== userId) {
-      throw new Error("Unauthorized to create rules for this category");
-    }
-
-    const existingRule = await db
-      .select()
-      .from(categoryRules)
-      .where(
-        and(
-          eq(categoryRules.userId, userId),
-          eq(categoryRules.field, "merchantName"),
-          eq(categoryRules.matchType, "exact"),
-          eq(categoryRules.value, validated.merchantName)
-        )
-      )
-      .limit(1);
-
-    if (existingRule.length > 0) {
-      throw new Error("A rule already exists for this merchant");
-    }
-
-    const newRule = await db
-      .insert(categoryRules)
-      .values({
-        id: createId(),
-        categoryId: validated.categoryId,
-        userId,
-        businessId: validated.businessId || null,
-        matchType: "exact",
-        field: "merchantName",
-        value: validated.merchantName,
-        displayName: validated.displayName || null,
-      })
-      .returning();
-
-    revalidatePath("/app/settings/categories");
-    return newRule[0];
+    const { ruleId, updated } = await upsertRuleInternal(userId, {
+      categoryId: validated.categoryId,
+      matchType: "exact",
+      field: "merchantName",
+      value: validated.merchantName,
+      businessId: validated.businessId ?? null,
+      displayName: validated.displayName ?? null,
+      isEnabled: validated.isEnabled ?? true,
+      source: validated.source ?? "settings",
+      createdFrom: validated.createdFrom ?? null,
+    });
+    revalidatePath("/app/settings/rules");
+    return { success: true, ruleId, updated };
   }
 );
 

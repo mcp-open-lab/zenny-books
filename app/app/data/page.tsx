@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/layouts/page-container";
 import Link from "next/link";
-import { AlertCircle, ArrowDownToLine, ArrowUpToLine } from "lucide-react";
+import { AlertCircle, ArrowDownToLine, ArrowUpToLine, SlidersHorizontal } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const dataOptions = [
@@ -11,6 +11,12 @@ const dataOptions = [
     icon: AlertCircle,
     title: "Review",
     description: "Categorize and organize transactions that need attention",
+  },
+  {
+    href: "/app/settings/rules",
+    icon: SlidersHorizontal,
+    title: "Rules",
+    description: "Manage auto-categorization rules for future imports",
   },
   {
     href: "/app/import",

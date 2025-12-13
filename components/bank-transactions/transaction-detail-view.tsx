@@ -6,6 +6,8 @@ import type { bankStatementTransactions, categories, businesses as businessesSch
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import type { TransactionFlags } from "@/lib/constants/transaction-flags";
+import { TransactionSource } from "@/components/ui/transaction-source";
 
 type Category = typeof categories.$inferSelect;
 type Business = typeof businessesSchema.$inferSelect;
@@ -24,6 +26,7 @@ type BankTransaction = {
   categoryId: string | null;
   businessId: string | null;
   paymentMethod: string | null;
+  transactionFlags?: TransactionFlags | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -35,6 +38,12 @@ type UserSettings = {
 
 type BankTransactionDetailViewProps = {
   transaction: BankTransaction;
+  accountInfo?: {
+    institutionName: string | null;
+    accountName: string | null;
+    accountMask: string | null;
+    accountType: string | null;
+  } | null;
   categories: Category[];
   businesses: Business[];
   userSettings?: UserSettings | null;
@@ -42,6 +51,7 @@ type BankTransactionDetailViewProps = {
 
 export function BankTransactionDetailView({
   transaction,
+  accountInfo,
   categories,
   businesses,
   userSettings,
@@ -49,6 +59,8 @@ export function BankTransactionDetailView({
   const amount = parseFloat(transaction.amount);
   const isIncome = amount >= 0;
   const transactionType = isIncome ? "income" : "expense";
+  const isPlaidImported =
+    (transaction.transactionFlags?.isPlaidImported ?? false) === true;
 
   return (
     <div className="grid md:grid-cols-3 gap-6">
@@ -109,14 +121,25 @@ export function BankTransactionDetailView({
             </div>
           )}
 
-          {transaction.paymentMethod && (
+          {isPlaidImported ? (
+            <div>
+              <p className="text-sm text-muted-foreground">Source</p>
+              <div className="mt-1">
+                <TransactionSource
+                  isPlaidImported={true}
+                  accountInfo={accountInfo ?? null}
+                  disabled={true}
+                />
+              </div>
+            </div>
+          ) : transaction.paymentMethod ? (
             <div>
               <p className="text-sm text-muted-foreground">Payment Method</p>
               <Badge variant="outline" className="mt-1 capitalize">
                 {transaction.paymentMethod}
               </Badge>
             </div>
-          )}
+          ) : null}
         </div>
       </Card>
 
@@ -127,6 +150,8 @@ export function BankTransactionDetailView({
         </h2>
         <BankTransactionForm
           transaction={transaction}
+          isPlaidImported={isPlaidImported}
+          accountInfo={accountInfo ?? null}
           categories={categories}
           businesses={businesses}
           currency={transaction.currency || "USD"}

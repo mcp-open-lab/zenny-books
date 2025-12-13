@@ -19,6 +19,7 @@ export interface CategorizationResult {
   confidence: number; // 0.0 to 1.0
   method: CategorizationMethod;
   suggestedCategory?: string; // For new categories suggested by AI
+  matchedRuleId?: string | null; // For UI/debugging when method === 'rule'
 }
 
 export interface CategorizationOptions {

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { categories, categoryRules } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { devLogger } from "@/lib/dev-logger";
 import type {
   CategorizationStrategy,
@@ -31,7 +31,9 @@ export class RuleMatcher implements CategorizationStrategy {
         })
         .from(categoryRules)
         .innerJoin(categories, eq(categoryRules.categoryId, categories.id))
-        .where(eq(categoryRules.userId, context.userId));
+        .where(
+          and(eq(categoryRules.userId, context.userId), eq(categoryRules.isEnabled, true))
+        );
 
       for (const { rule, category } of rules) {
         const fieldValue =
@@ -61,6 +63,7 @@ export class RuleMatcher implements CategorizationStrategy {
             businessId: rule.businessId ?? null,
             confidence: 1.0,
             method: "rule",
+            matchedRuleId: rule.id,
           };
         }
       }

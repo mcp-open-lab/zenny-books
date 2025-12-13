@@ -27,6 +27,7 @@ import {
 import { SimilarTransactionsPanel } from "@/components/transactions/similar-transactions-panel";
 import { CategoryAssigner } from "@/components/categorization/category-assigner";
 import { useCategoryAssignment } from "@/lib/hooks/use-category-assignment";
+import { TransactionSource } from "@/components/ui/transaction-source";
 
 import type { categories, businesses as businessesSchema } from "@/lib/db/schema";
 
@@ -54,6 +55,13 @@ type BankTransaction = {
 
 type BankTransactionFormProps = {
   transaction: BankTransaction;
+  isPlaidImported: boolean;
+  accountInfo?: {
+    institutionName: string | null;
+    accountName: string | null;
+    accountMask: string | null;
+    accountType: string | null;
+  } | null;
   categories: Category[];
   businesses: Business[];
   currency?: string;
@@ -66,6 +74,8 @@ type BankTransactionFormProps = {
 
 export function BankTransactionForm({
   transaction,
+  isPlaidImported,
+  accountInfo,
   categories,
   businesses,
   currency = "USD",
@@ -210,23 +220,18 @@ export function BankTransactionForm({
           name="paymentMethod"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Payment Method</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                value={field.value ?? ""}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="check">Check</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormLabel>Transaction Source</FormLabel>
+              <FormControl>
+                <TransactionSource
+                  isPlaidImported={isPlaidImported}
+                  accountInfo={accountInfo ?? null}
+                  paymentMethod={field.value ?? null}
+                  onPaymentMethodChange={
+                    isPlaidImported ? undefined : (v) => field.onChange(v)
+                  }
+                  disabled={isPending}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

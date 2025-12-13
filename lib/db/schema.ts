@@ -6,6 +6,7 @@ import {
   integer,
   index,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -494,6 +495,9 @@ export const categoryRules = pgTable("category_rules", {
   field: text("field").notNull(), // 'merchantName' | 'description'
   value: text("value").notNull(), // The pattern to match
   displayName: text("display_name"), // Optional user-friendly name (especially for merchantName rules)
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  source: text("source"), // 'timeline' | 'review_queue' | 'similar_transactions' | 'settings' | 'import'
+  createdFrom: text("created_from"), // transaction id or context
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

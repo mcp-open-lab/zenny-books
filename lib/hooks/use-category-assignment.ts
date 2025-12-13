@@ -73,6 +73,8 @@ export function useCategoryAssignment(options?: {
             businessId: effectiveBusinessId ?? null,
             matchType: "contains",
             displayName: merchantName,
+            source: "assignment",
+            createdFrom: input.id,
           });
 
           if (!ruleResult?.success) {

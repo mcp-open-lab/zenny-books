@@ -95,7 +95,7 @@ export const getSimilarTransactions = createAuthenticatedAction(
         value: categoryRules.value,
       })
       .from(categoryRules)
-      .where(eq(categoryRules.userId, userId));
+      .where(and(eq(categoryRules.userId, userId), eq(categoryRules.isEnabled, true)));
 
     const ruleExclusionConditions = buildRuleExclusionConditions(
       receipts.merchantName,
@@ -238,6 +238,8 @@ const CreateRuleFromTransactionSchema = z.object({
   businessId: z.string().optional().nullable(),
   displayName: z.string().optional(),
   matchType: z.enum(["exact", "contains"] as const).default("contains"),
+  source: z.string().optional(),
+  createdFrom: z.string().optional().nullable(),
 });
 
 export const createRuleFromTransaction = createAuthenticatedAction(
@@ -298,6 +300,9 @@ export const createRuleFromTransaction = createAuthenticatedAction(
             displayName:
               validatedInput.displayName?.trim() ||
               validatedInput.merchantName.trim(),
+            isEnabled: true,
+            source: validatedInput.source?.trim() || "assignment",
+            createdFrom: validatedInput.createdFrom?.trim() || null,
             updatedAt: new Date(),
           })
           .where(
@@ -322,6 +327,9 @@ export const createRuleFromTransaction = createAuthenticatedAction(
         displayName:
           validatedInput.displayName?.trim() ||
           validatedInput.merchantName.trim(),
+        isEnabled: true,
+        source: validatedInput.source?.trim() || "assignment",
+        createdFrom: validatedInput.createdFrom?.trim() || null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -370,7 +378,7 @@ export const getSimilarTransactionStats = createAuthenticatedAction(
         value: categoryRules.value,
       })
       .from(categoryRules)
-      .where(eq(categoryRules.userId, userId));
+      .where(and(eq(categoryRules.userId, userId), eq(categoryRules.isEnabled, true)));
 
     const ruleExclusionConditions = buildRuleExclusionConditions(
       receipts.merchantName,

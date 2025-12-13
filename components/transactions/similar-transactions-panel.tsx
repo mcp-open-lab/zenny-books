@@ -129,6 +129,8 @@ export function SimilarTransactionsPanel({
           businessId: null,
           matchType: "contains",
           displayName: normalizedMerchantName,
+          source: "similar_transactions",
+          createdFrom: transactionId ?? null,
         });
 
         toast.success("Updated similar transactions", {

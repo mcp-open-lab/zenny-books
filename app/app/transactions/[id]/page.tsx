@@ -3,6 +3,7 @@ import {
   bankStatementTransactions,
   bankStatements,
   documents,
+  linkedBankAccounts,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
@@ -12,6 +13,7 @@ import { BankTransactionDetailView } from "@/components/bank-transactions/transa
 import { getUserSettings } from "@/app/actions/user-settings";
 import { getUserCategories } from "@/app/actions/financial-categories";
 import { getUserBusinesses } from "@/app/actions/businesses";
+import type { TransactionFlags } from "@/lib/constants/transaction-flags";
 
 export default async function BankTransactionDetailPage({
   params,
@@ -40,6 +42,7 @@ export default async function BankTransactionDetailPage({
       categoryId: bankStatementTransactions.categoryId,
       businessId: bankStatementTransactions.businessId,
       paymentMethod: bankStatementTransactions.paymentMethod,
+      transactionFlags: bankStatementTransactions.transactionFlags,
       createdAt: bankStatementTransactions.createdAt,
       updatedAt: bankStatementTransactions.updatedAt,
     })
@@ -64,10 +67,41 @@ export default async function BankTransactionDetailPage({
     getUserBusinesses(),
   ]);
 
+  const flags = (transaction[0]?.transactionFlags ?? null) as
+    | TransactionFlags
+    | null;
+
+  let accountInfo: {
+    institutionName: string | null;
+    accountName: string | null;
+    accountMask: string | null;
+    accountType: string | null;
+  } | null = null;
+
+  if (flags?.isPlaidImported && flags?.plaidAccountId) {
+    const accountRows = await db
+      .select({
+        institutionName: linkedBankAccounts.institutionName,
+        accountName: linkedBankAccounts.accountName,
+        accountMask: linkedBankAccounts.accountMask,
+        accountType: linkedBankAccounts.accountType,
+      })
+      .from(linkedBankAccounts)
+      .where(
+        and(
+          eq(linkedBankAccounts.userId, userId),
+          eq(linkedBankAccounts.plaidAccountId, flags.plaidAccountId)
+        )
+      )
+      .limit(1);
+    accountInfo = accountRows[0] ?? null;
+  }
+
   return (
     <PageContainer size="standard">
       <BankTransactionDetailView
-        transaction={transaction[0]}
+        transaction={{ ...transaction[0], transactionFlags: flags }}
+        accountInfo={accountInfo}
         categories={categories}
         businesses={businesses}
         userSettings={userSettings}
