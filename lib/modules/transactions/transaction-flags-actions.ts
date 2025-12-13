@@ -8,7 +8,7 @@ import {
   bankStatements,
   documents,
 } from "@/lib/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { TransactionFlags } from "@/lib/constants/transaction-flags";
 import {
   findDuplicateBankTransactions,
@@ -24,7 +24,6 @@ import {
   findMatchingTransfers,
 } from "@/lib/transactions/transfer-detector";
 import {
-  detectInstallmentPlanCreditTransaction,
   markAsInstallmentPlanCredit as markAsInstallmentPlanCreditService,
 } from "@/lib/transactions/installment-plan-detector";
 
@@ -201,10 +200,7 @@ export const detectTransfer = createAuthenticatedAction(
     const { description, amount, date, transactionId } = input;
 
     // Check description patterns for transfers
-    const creditCardResult = detectCreditCardPaymentTransaction(
-      description,
-      amount
-    );
+    const creditCardResult = detectCreditCardPaymentTransaction(description);
     if (creditCardResult.isTransfer) {
       return { success: true, data: creditCardResult };
     }

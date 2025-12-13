@@ -166,11 +166,9 @@ export function BillingSettingsClient({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <div className="text-sm font-medium">{m.name}</div>
-                      {entitled && (
-                        <span className="text-xs text-muted-foreground">
+                      {entitled ? <span className="text-xs text-muted-foreground">
                           Enabled
-                        </span>
-                      )}
+                        </span> : null}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {m.description}

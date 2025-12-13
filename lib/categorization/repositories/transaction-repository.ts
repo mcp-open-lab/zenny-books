@@ -6,7 +6,7 @@ import {
   documents,
   categories,
 } from "@/lib/db/schema";
-import { eq, and, isNotNull, desc, sql, or, inArray } from "drizzle-orm";
+import { eq, and, isNotNull, desc, sql, inArray } from "drizzle-orm";
 import { devLogger } from "@/lib/dev-logger";
 
 /**
@@ -142,7 +142,7 @@ export class TransactionRepository {
    */
   private async findBankTransactionHistory(
     merchantName: string,
-    userId: string
+    _userId: string
   ): Promise<TransactionHistory | null> {
     const pastTransactions = await db
       .select({

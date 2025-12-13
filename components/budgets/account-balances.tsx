@@ -101,9 +101,7 @@ export function AccountBalances({ currency = "USD" }: AccountBalancesProps) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
-        {error && (
-          <div className="text-sm text-destructive mb-2">{error}</div>
-        )}
+        {error ? <div className="text-sm text-destructive mb-2">{error}</div> : null}
 
         {/* Individual Accounts */}
         {balances.map((account) => {
@@ -122,11 +120,9 @@ export function AccountBalances({ currency = "USD" }: AccountBalancesProps) {
                 <div>
                   <div className="font-medium text-sm">
                     {account.accountName}
-                    {account.accountMask && (
-                      <span className="text-muted-foreground ml-1">
+                    {account.accountMask ? <span className="text-muted-foreground ml-1">
                         ••{account.accountMask}
-                      </span>
-                    )}
+                      </span> : null}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {account.institutionName}

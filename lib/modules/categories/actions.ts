@@ -12,7 +12,6 @@ import { revalidatePath } from "next/cache";
 import { createId } from "@paralleldrive/cuid2";
 import { z } from "zod";
 import { createAuthenticatedAction } from "@/lib/safe-action";
-import { devLogger } from "@/lib/dev-logger";
 import { TransactionRepository } from "@/lib/categorization/repositories/transaction-repository";
 import {
   TRANSACTION_TYPES,

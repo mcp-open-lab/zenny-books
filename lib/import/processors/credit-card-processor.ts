@@ -96,7 +96,7 @@ export class CreditCardProcessor extends BaseStatementProcessor {
     tx: NormalizedTransaction,
     description: string
   ): Promise<number> {
-    const upperDesc = description.toUpperCase();
+    const _upperDesc = description.toUpperCase();
 
     // Import keyword detection
     const { detectPaymentKeywords, detectRefundKeywords } = await import(

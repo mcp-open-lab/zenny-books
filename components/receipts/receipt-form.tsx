@@ -107,9 +107,7 @@ export function ReceiptForm({
             <FormItem>
               <FormLabel>
                 Merchant
-                {requiredFields.merchantName && (
-                  <span className="text-destructive ml-1">*</span>
-                )}
+                {requiredFields.merchantName ? <span className="text-destructive ml-1">*</span> : null}
               </FormLabel>
               <FormControl>
                 <Input {...field} value={field.value || ""} />
@@ -126,9 +124,7 @@ export function ReceiptForm({
             <FormItem>
               <FormLabel>
                 Date
-                {requiredFields.date && (
-                  <span className="text-destructive ml-1">*</span>
-                )}
+                {requiredFields.date ? <span className="text-destructive ml-1">*</span> : null}
               </FormLabel>
               <FormControl>
                 <Input type="date" {...field} value={field.value || ""} />
@@ -145,9 +141,7 @@ export function ReceiptForm({
             <FormItem>
               <FormLabel>
                 Total Amount
-                {requiredFields.totalAmount && (
-                  <span className="text-destructive ml-1">*</span>
-                )}
+                {requiredFields.totalAmount ? <span className="text-destructive ml-1">*</span> : null}
               </FormLabel>
               <FormControl>
                 <Input
@@ -169,9 +163,7 @@ export function ReceiptForm({
             <FormItem>
               <FormLabel>
                 Tax Amount
-                {requiredFields.taxAmount && (
-                  <span className="text-destructive ml-1">*</span>
-                )}
+                {requiredFields.taxAmount ? <span className="text-destructive ml-1">*</span> : null}
               </FormLabel>
               <FormControl>
                 <Input
@@ -195,9 +187,7 @@ export function ReceiptForm({
               <FormItem>
                 <FormLabel>
                   Description
-                  {requiredFields.description && (
-                    <span className="text-destructive ml-1">*</span>
-                  )}
+                  {requiredFields.description ? <span className="text-destructive ml-1">*</span> : null}
                 </FormLabel>
                 <FormControl>
                   <Input
@@ -220,9 +210,7 @@ export function ReceiptForm({
               <FormItem>
                 <FormLabel>
                   Payment Method
-                  {requiredFields.paymentMethod && (
-                    <span className="text-destructive ml-1">*</span>
-                  )}
+                  {requiredFields.paymentMethod ? <span className="text-destructive ml-1">*</span> : null}
                 </FormLabel>
                 <Select
                   onValueChange={field.onChange}
@@ -254,9 +242,7 @@ export function ReceiptForm({
               <FormItem>
                 <FormLabel>
                   Tip Amount
-                  {requiredFields.tipAmount && (
-                    <span className="text-destructive ml-1">*</span>
-                  )}
+                  {requiredFields.tipAmount ? <span className="text-destructive ml-1">*</span> : null}
                 </FormLabel>
                 <FormControl>
                   <Input
@@ -281,9 +267,7 @@ export function ReceiptForm({
               <FormItem>
                 <FormLabel>
                   Discount Amount
-                  {requiredFields.discountAmount && (
-                    <span className="text-destructive ml-1">*</span>
-                  )}
+                  {requiredFields.discountAmount ? <span className="text-destructive ml-1">*</span> : null}
                 </FormLabel>
                 <FormControl>
                   <Input
@@ -307,9 +291,7 @@ export function ReceiptForm({
             <FormItem>
               <FormLabel>
                 Category
-                {requiredFields.category && (
-                  <span className="text-destructive ml-1">*</span>
-                )}
+                {requiredFields.category ? <span className="text-destructive ml-1">*</span> : null}
               </FormLabel>
               <FormControl>
                 <CategoryAssigner
@@ -341,9 +323,7 @@ export function ReceiptForm({
               <FormItem>
                 <FormLabel>
                   Business
-                  {requiredFields.businessId && (
-                    <span className="text-destructive ml-1">*</span>
-                  )}
+                  {requiredFields.businessId ? <span className="text-destructive ml-1">*</span> : null}
                 </FormLabel>
                 <Select
                   onValueChange={(v) =>
@@ -407,16 +387,14 @@ export function ReceiptForm({
         />
 
         <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
-          {!isPage && onOpenChange && (
-            <Button
+          {!isPage && onOpenChange ? <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               className="w-full sm:w-auto"
             >
               Cancel
-            </Button>
-          )}
+            </Button> : null}
           <Button
             type="submit"
             disabled={isPending}

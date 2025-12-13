@@ -129,9 +129,7 @@ export function BatchActivityLog({
             <Activity className="h-5 w-5" />
             <CardTitle>Activity Log</CardTitle>
           </div>
-          {isLoading && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
         </div>
         <p className="text-sm text-muted-foreground">Real-time AI processing</p>
       </CardHeader>
@@ -166,12 +164,10 @@ export function BatchActivityLog({
                           addSuffix: true,
                         })}
                       </span>
-                      {log.duration && (
-                        <>
+                      {log.duration ? <>
                           <span>•</span>
                           <span>{formatDuration(log.duration)}</span>
-                        </>
-                      )}
+                        </> : null}
                     </div>
                   </div>
                   {isAiActivity(log.activityType) && (

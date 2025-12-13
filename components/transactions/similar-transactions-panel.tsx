@@ -183,11 +183,9 @@ export function SimilarTransactionsPanel({
 
       <CardContent className="space-y-4">
         {/* Summary (read-only) */}
-        {hasMerchantName && stats && (stats.mostCommonCategory || stats.mostCommonBusiness) && (
-          <div className="p-4 bg-muted rounded-lg space-y-2">
+        {hasMerchantName && stats && (stats.mostCommonCategory || stats.mostCommonBusiness) ? <div className="p-4 bg-muted rounded-lg space-y-2">
             <p className="text-sm font-medium">Most Common</p>
-            {stats.mostCommonCategory && (
-              <div className="flex items-center justify-between">
+            {stats.mostCommonCategory ? <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Category:</span>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{stats.mostCommonCategory.name}</Badge>
@@ -195,10 +193,8 @@ export function SimilarTransactionsPanel({
                     ({stats.mostCommonCategory.count} time{stats.mostCommonCategory.count === 1 ? "" : "s"})
                   </span>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div> : null}
+          </div> : null}
 
         {/* Only control: change all to a new category */}
         <div className="space-y-2">
@@ -229,8 +225,7 @@ export function SimilarTransactionsPanel({
         </div>
 
         {/* Recent History (read-only, no links/buttons) */}
-        {hasMerchantName && (
-          <div className="space-y-2">
+        {hasMerchantName ? <div className="space-y-2">
             <p className="text-sm font-medium">Recent History</p>
             {transactions.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -258,11 +253,9 @@ export function SimilarTransactionsPanel({
                             <p className="text-xs text-muted-foreground">
                               {formatDistanceToNow(new Date(tx.date), { addSuffix: true })}
                             </p>
-                            {tx.categoryName && (
-                              <Badge variant="secondary" className="text-xs">
+                            {tx.categoryName ? <Badge variant="secondary" className="text-xs">
                                 {tx.categoryName}
-                              </Badge>
-                            )}
+                              </Badge> : null}
                           </div>
                         </div>
                       </div>
@@ -274,8 +267,7 @@ export function SimilarTransactionsPanel({
                 ))}
               </div>
             )}
-          </div>
-        )}
+          </div> : null}
       </CardContent>
     </Card>
   );

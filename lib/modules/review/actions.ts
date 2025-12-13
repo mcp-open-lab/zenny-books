@@ -6,10 +6,9 @@ import {
   bankStatementTransactions,
   bankStatements,
   documents,
-  categories,
   businesses,
 } from "@/lib/db/schema";
-import { sql, eq, inArray } from "drizzle-orm";
+import { sql, inArray } from "drizzle-orm";
 import { createAuthenticatedAction } from "@/lib/safe-action";
 
 export type ReviewQueueItem = {

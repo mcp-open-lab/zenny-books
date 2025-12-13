@@ -39,8 +39,7 @@ export function ReceiptImageViewer({
         </p>
       </div>
 
-      {imageExpanded && (
-        <div
+      {imageExpanded ? <div
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setImageExpanded(false);
@@ -68,8 +67,7 @@ export function ReceiptImageViewer({
           >
             <X className="h-6 w-6" />
           </button>
-        </div>
-      )}
+        </div> : null}
     </>
   );
 }

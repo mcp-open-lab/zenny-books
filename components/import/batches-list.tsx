@@ -258,11 +258,9 @@ export function BatchesList({
                         <div className="font-medium">
                           {batch.importType.replace("_", " ")}
                         </div>
-                        {batch.sourceFormat && (
-                          <div className="text-xs text-muted-foreground">
+                        {batch.sourceFormat ? <div className="text-xs text-muted-foreground">
                             {batch.sourceFormat.toUpperCase()}
-                          </div>
-                        )}
+                          </div> : null}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -306,14 +304,12 @@ export function BatchesList({
                           addSuffix: true,
                         })}
                       </div>
-                      {batch.completedAt && (
-                        <div className="text-xs text-muted-foreground">
+                      {batch.completedAt ? <div className="text-xs text-muted-foreground">
                           Completed{" "}
                           {formatDistanceToNow(batch.completedAt, {
                             addSuffix: true,
                           })}
-                        </div>
-                      )}
+                        </div> : null}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -321,8 +317,7 @@ export function BatchesList({
             </Table>
           </div>
 
-          {hasMore && (
-            <div className="flex justify-center">
+          {hasMore ? <div className="flex justify-center">
               <Button variant="outline" onClick={loadMore} disabled={loading}>
                 {loading ? (
                   <>
@@ -333,8 +328,7 @@ export function BatchesList({
                   "Load More"
                 )}
               </Button>
-            </div>
-          )}
+            </div> : null}
         </>
       )}
     </div>

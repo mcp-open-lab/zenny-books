@@ -155,11 +155,9 @@ export function ReviewQueueItem({
         >
           {item.merchantName || "Unknown"}
         </Link>
-        {item.description && (
-          <p className="text-xs text-muted-foreground truncate">
+        {item.description ? <p className="text-xs text-muted-foreground truncate">
             {item.description}
-          </p>
-        )}
+          </p> : null}
       </TableCell>
 
       <TableCell className="py-2 text-right">
@@ -219,8 +217,7 @@ export function ReviewQueueItem({
 
       <TableCell className="py-2 text-right">
         <div className="flex items-center justify-end gap-1">
-          {!isEditing && categoryId && (
-            <Button
+          {!isEditing && categoryId ? <Button
               size="icon"
               variant="ghost"
               className="h-7 w-7"
@@ -229,8 +226,7 @@ export function ReviewQueueItem({
               title="Quick approve"
             >
               <Check className="h-4 w-4 text-green-600" />
-            </Button>
-          )}
+            </Button> : null}
           <RowActions
             isEditing={isEditing}
             onEdit={() => setIsEditing(true)}
@@ -243,7 +239,7 @@ export function ReviewQueueItem({
               setApplyToFuture(true);
             }}
             isPending={isPending}
-            canSave={!!categoryId}
+            canSave={Boolean(categoryId)}
             size="sm"
           />
         </div>

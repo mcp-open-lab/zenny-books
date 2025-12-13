@@ -170,13 +170,13 @@ export class GeminiSchemaTransformer implements SchemaTransformer {
 
     // Remove metadata fields that Gemini rejects
     const {
-      $ref,
+      $ref: _ref,
       definitions: _definitions,
-      $schema,
-      additionalProperties,
-      anyOf,
-      oneOf,
-      allOf,
+      $schema: _schema,
+      additionalProperties: _additionalProperties,
+      anyOf: _anyOf,
+      oneOf: _oneOf,
+      allOf: _allOf,
       ...cleaned
     } = schema;
 

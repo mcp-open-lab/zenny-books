@@ -39,7 +39,7 @@ const DATE_WINDOW_DAYS = 2; // Look within 2 days
 /**
  * Check if two amounts are exact matches (within small tolerance)
  */
-function amountsExactMatch(amount1: string, amount2: string): boolean {
+function _amountsExactMatch(amount1: string, amount2: string): boolean {
   const a1 = Math.abs(parseFloat(amount1) || 0);
   const a2 = Math.abs(parseFloat(amount2) || 0);
 
@@ -50,8 +50,7 @@ function amountsExactMatch(amount1: string, amount2: string): boolean {
  * Detect if a transaction is likely a credit card payment
  */
 export function detectCreditCardPaymentTransaction(
-  description: string | null,
-  amount: string | null
+  description: string | null
 ): TransferDetectionResult {
   if (!description) {
     return {
@@ -291,10 +290,7 @@ export async function autoDetectInternalTransfers(userId: string): Promise<{
 
   for (const row of transactions.rows as any[]) {
     // Check description patterns for transfers
-    const creditCardResult = detectCreditCardPaymentTransaction(
-      row.description,
-      row.amount
-    );
+    const creditCardResult = detectCreditCardPaymentTransaction(row.description);
     const transferResult = detectInternalTransferByDescription(row.description);
 
     if (creditCardResult.isTransfer) {

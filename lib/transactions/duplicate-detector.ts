@@ -10,7 +10,7 @@ import {
   bankStatements,
   documents,
 } from "@/lib/db/schema";
-import { sql, and, gte, lte, eq } from "drizzle-orm";
+import { sql, and, eq } from "drizzle-orm";
 import { SIMILARITY_THRESHOLD } from "@/lib/constants";
 import type { TransactionFlags } from "@/lib/constants/transaction-flags";
 

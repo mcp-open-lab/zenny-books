@@ -3,8 +3,6 @@
  * Abstract class for processing single-document OCR (receipts, invoices, etc.)
  */
 
-import type { createId } from "@paralleldrive/cuid2";
-
 export interface ProcessedDocument {
   // Document metadata
   documentId: string;
@@ -172,7 +170,7 @@ export abstract class BaseDocumentProcessor {
         categoryName: result.categoryName || result.suggestedCategory || null,
         businessId: result.businessId || null,
       };
-    } catch (error) {
+    } catch (_error) {
       // Categorization is optional - don't fail the whole process
       return { categoryId: null, categoryName: null, businessId: null };
     }

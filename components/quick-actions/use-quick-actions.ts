@@ -149,17 +149,15 @@ export function useQuickActions() {
         (document.documentElement as any).mozRequestFullScreen ||
         (document.documentElement as any).msRequestFullscreen);
 
-    setIsFullscreenSupported(!!hasFullscreenSupport);
+    setIsFullscreenSupported(Boolean(hasFullscreenSupport));
 
     if (hasFullscreenSupport) {
       const checkFullscreen = () => {
         setIsFullscreen(
-          !!(
-            document.fullscreenElement ||
+          Boolean(document.fullscreenElement ||
             (document as any).webkitFullscreenElement ||
             (document as any).mozFullScreenElement ||
-            (document as any).msFullscreenElement
-          )
+            (document as any).msFullscreenElement)
         );
       };
 

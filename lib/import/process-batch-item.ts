@@ -4,8 +4,8 @@
  */
 
 import { db } from "@/lib/db";
-import { importBatchItems, documents } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { importBatchItems } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { processBankStatement } from "@/lib/import/process-bank-statement";
 import type {
   ImportJobPayload,
@@ -53,7 +53,8 @@ export async function processBatchItem(
         batchItemId,
         documentId: existingItem[0].documentId || undefined,
         isDuplicate: existingItem[0].status === "duplicate",
-        duplicateOfDocumentId: existingItem[0].duplicateOfDocumentId || undefined,
+        duplicateOfDocumentId:
+          existingItem[0].duplicateOfDocumentId || undefined,
       };
     }
 
@@ -171,7 +172,7 @@ export async function processBatchItem(
     };
   } catch (error) {
     let errorMessage = "Unknown error";
-    
+
     if (error instanceof Error) {
       errorMessage = error.message;
     } else if (typeof error === "string") {

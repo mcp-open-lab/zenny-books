@@ -99,11 +99,9 @@ export default function TestLoggingPage() {
             </p>
           </div>
 
-          {status && (
-            <div className="mt-4 p-3 bg-muted rounded-md">
+          {status ? <div className="mt-4 p-3 bg-muted rounded-md">
               <p className="text-sm">{status}</p>
-            </div>
-          )}
+            </div> : null}
 
           <div className="mt-6 p-4 bg-muted rounded-md">
             <h3 className="font-semibold mb-2">What to Check:</h3>

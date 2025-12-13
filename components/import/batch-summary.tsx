@@ -165,8 +165,7 @@ export function BatchSummary({ batchId, onClose }: BatchSummaryProps) {
 
   return (
     <div className="space-y-4">
-      {progress && (
-        <Card>
+      {progress ? <Card>
           <CardHeader>
             <CardTitle>Batch Summary</CardTitle>
             <CardDescription>
@@ -202,8 +201,7 @@ export function BatchSummary({ batchId, onClose }: BatchSummaryProps) {
               </div>
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card> : null}
 
       {failedItems.length > 0 && (
         <Card>
@@ -252,11 +250,9 @@ export function BatchSummary({ batchId, onClose }: BatchSummaryProps) {
                             </Badge>
                           )}
                         </div>
-                        {item.errorMessage && (
-                          <div className="text-sm text-muted-foreground mt-1">
+                        {item.errorMessage ? <div className="text-sm text-muted-foreground mt-1">
                             {item.errorMessage}
-                          </div>
-                        )}
+                          </div> : null}
                       </div>
                       <Button
                         onClick={() => handleRetryItem(item.id)}
@@ -337,13 +333,11 @@ export function BatchSummary({ batchId, onClose }: BatchSummaryProps) {
         </Card>
       )}
 
-      {onClose && (
-        <div className="flex justify-end">
+      {onClose ? <div className="flex justify-end">
           <Button onClick={onClose} variant="outline">
             Close
           </Button>
-        </div>
-      )}
+        </div> : null}
     </div>
   );
 }

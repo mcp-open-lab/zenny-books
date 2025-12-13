@@ -131,20 +131,17 @@ export function EditReceiptDialog({
             Edit details for the selected financial item.
           </DialogDescription>
         </DialogHeader>
-        {receipt && (
-          <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
+        {receipt ? <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
             <div
               className={`grid ${
                 receipt.imageUrl ? "md:grid-cols-2" : "grid-cols-1"
               } gap-4 md:gap-6`}
             >
-              {receipt.imageUrl && (
-                <ReceiptImageViewer
+              {receipt.imageUrl ? <ReceiptImageViewer
                   imageUrl={receipt.imageUrl}
                   merchantName={receipt.merchantName}
                   fileName={receipt.fileName}
-                />
-              )}
+                /> : null}
               <div className={receipt.imageUrl ? "order-1 md:order-2" : ""}>
                 <ReceiptForm
                   key={formKey}
@@ -158,8 +155,7 @@ export function EditReceiptDialog({
                 />
               </div>
             </div>
-          </div>
-        )}
+          </div> : null}
       </DialogContent>
     </Dialog>
   );

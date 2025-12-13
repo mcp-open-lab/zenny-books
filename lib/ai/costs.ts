@@ -3,8 +3,6 @@
  * Pricing per 1M tokens (as of 2025-11-23)
  */
 
-import type { LLMProvider } from "./types";
-
 // Pricing per 1M tokens (USD)
 export const MODEL_PRICING = {
   "gpt-4o-mini": {

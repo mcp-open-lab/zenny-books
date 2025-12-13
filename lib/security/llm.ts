@@ -13,7 +13,7 @@ export function enforceJsonOutput<T>(
   let parsed: unknown;
   try {
     parsed = JSON.parse(rawText);
-  } catch (error) {
+  } catch (_error) {
     throw new ValidationError(
       "LLM did not return valid JSON",
       "Invalid AI response"

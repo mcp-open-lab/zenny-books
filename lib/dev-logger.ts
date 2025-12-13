@@ -107,7 +107,7 @@ class DevLogger {
 
       try {
         return encode(entry);
-      } catch (error) {
+      } catch (_error) {
         // Fallback to JSON if TOON encoding fails
         return JSON.stringify(entry, null, 2);
       }

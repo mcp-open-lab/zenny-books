@@ -194,8 +194,7 @@ function CalendarDayButton({
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&
-        !modifiers.range_end &&
-        !modifiers.range_middle
+        !modifiers.range_end ? !modifiers.range_middle : null
       }
       data-range-start={modifiers.range_start}
       data-range-end={modifiers.range_end}

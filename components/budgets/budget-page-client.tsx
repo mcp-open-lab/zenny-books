@@ -154,11 +154,9 @@ export function BudgetPageClient({
         />
       </div>
 
-      {isPending && (
-        <div className="fixed bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm shadow-lg">
+      {isPending ? <div className="fixed bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm shadow-lg">
           Saving...
-        </div>
-      )}
+        </div> : null}
     </div>
   );
 }

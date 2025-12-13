@@ -130,7 +130,7 @@ export function createPublicAction<TArgs extends any[], TResult>(
         try {
           const authResult = await auth();
           userId = authResult.userId || undefined;
-        } catch (e) {
+        } catch (_e) {
           // Ignore auth errors for logging context
         }
       }

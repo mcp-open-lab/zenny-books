@@ -122,14 +122,12 @@ function ViewOnlyTransactionRow({
         <div className="font-medium truncate group-hover:text-primary">
           {transaction.merchantName || transaction.description || "Unknown"}
         </div>
-        {transaction.date && (
-          <div className="text-muted-foreground text-[10px] mt-0.5">
+        {transaction.date ? <div className="text-muted-foreground text-[10px] mt-0.5">
             {format(
               new Date(transaction.date),
               isMobile ? "MMM d" : "MMM d, yyyy"
             )}
-          </div>
-        )}
+          </div> : null}
       </div>
       <div className={`text-right flex-shrink-0 ${isMobile ? "ml-2" : "ml-4"}`}>
         <div className="font-medium text-red-600">
@@ -205,14 +203,12 @@ function EditableTransactionRow({
             <div className="font-medium truncate">
               {transaction.merchantName || transaction.description || "Unknown"}
             </div>
-            {transaction.date && (
-              <div className="text-muted-foreground text-[10px] mt-0.5">
+            {transaction.date ? <div className="text-muted-foreground text-[10px] mt-0.5">
                 {format(
                   new Date(transaction.date),
                   isMobile ? "MMM d" : "MMM d, yyyy"
                 )}
-              </div>
-            )}
+              </div> : null}
           </div>
           <TransactionAmount
             amount={-transaction.amount}
@@ -249,7 +245,7 @@ function EditableTransactionRow({
             onSave={handleSave}
             onCancel={() => setIsEditing(false)}
             isPending={isPending}
-            canSave={!!categoryId}
+            canSave={Boolean(categoryId)}
             size="sm"
           />
         </div>
@@ -263,14 +259,12 @@ function EditableTransactionRow({
         <div className="font-medium truncate group-hover:text-primary">
           {transaction.merchantName || transaction.description || "Unknown"}
         </div>
-        {transaction.date && (
-          <div className="text-muted-foreground text-[10px] mt-0.5">
+        {transaction.date ? <div className="text-muted-foreground text-[10px] mt-0.5">
             {format(
               new Date(transaction.date),
               isMobile ? "MMM d" : "MMM d, yyyy"
             )}
-          </div>
-        )}
+          </div> : null}
       </Link>
       <div className={`flex items-center gap-2 ${isMobile ? "ml-2" : "ml-4"}`}>
         <div className="font-medium text-red-600">

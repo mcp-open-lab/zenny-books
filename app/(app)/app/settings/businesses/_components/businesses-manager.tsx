@@ -146,8 +146,7 @@ export function BusinessesManager({ businesses }: BusinessesManagerProps) {
                   Update business or contract details
                 </DialogDescription>
               </DialogHeader>
-              {hook.editingBusiness && (
-                <div className="space-y-4 py-4">
+              {hook.editingBusiness ? <div className="space-y-4 py-4">
                   <div>
                     <label className="text-sm font-medium">Name</label>
                     <Input
@@ -202,8 +201,7 @@ export function BusinessesManager({ businesses }: BusinessesManagerProps) {
                       onChange={(e) => hook.setNewBusinessAddress(e.target.value)}
                     />
                   </div>
-                </div>
-              )}
+                </div> : null}
               <DialogFooter>
                 <Button
                   variant="outline"
@@ -249,17 +247,13 @@ export function BusinessesManager({ businesses }: BusinessesManagerProps) {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{business.name}</span>
-                          {business.taxId && (
-                            <Badge variant="outline" className="text-xs">
+                          {business.taxId ? <Badge variant="outline" className="text-xs">
                               {business.taxId}
-                            </Badge>
-                          )}
+                            </Badge> : null}
                         </div>
-                        {business.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
+                        {business.description ? <p className="text-sm text-muted-foreground mt-1">
                             {business.description}
-                          </p>
-                        )}
+                          </p> : null}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -305,17 +299,13 @@ export function BusinessesManager({ businesses }: BusinessesManagerProps) {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{contract.name}</span>
-                          {contract.taxId && (
-                            <Badge variant="outline" className="text-xs">
+                          {contract.taxId ? <Badge variant="outline" className="text-xs">
                               {contract.taxId}
-                            </Badge>
-                          )}
+                            </Badge> : null}
                         </div>
-                        {contract.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
+                        {contract.description ? <p className="text-sm text-muted-foreground mt-1">
                             {contract.description}
-                          </p>
-                        )}
+                          </p> : null}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

@@ -131,8 +131,7 @@ export default function OnboardingPage() {
               )}
             />
 
-            {country && (
-              <FormField
+            {country ? <FormField
                 control={form.control}
                 name="province"
                 render={({ field }) => (
@@ -157,8 +156,7 @@ export default function OnboardingPage() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
-            )}
+              /> : null}
 
             <Button type="submit" disabled={isPending} className="w-full">
               {isPending ? "Saving..." : "Get Started"}

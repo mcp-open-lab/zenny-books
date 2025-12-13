@@ -191,8 +191,7 @@ export function CategoryBudgetRow({
       </div>
 
       {/* Mobile Transactions */}
-      {isExpanded && transactionCount > 0 && (
-        <div className="md:hidden mt-3 pt-3 border-t">
+      {isExpanded && transactionCount > 0 ? <div className="md:hidden mt-3 pt-3 border-t">
           <TransactionList
             transactions={transactions}
             isLoading={isLoadingTransactions}
@@ -203,8 +202,7 @@ export function CategoryBudgetRow({
             businesses={businesses}
             onTransactionUpdated={() => router.refresh()}
           />
-        </div>
-      )}
+        </div> : null}
 
       {/* Desktop Layout */}
       <div className="hidden md:grid md:grid-cols-[1fr,100px,100px,100px] gap-2 items-center">
@@ -264,8 +262,7 @@ export function CategoryBudgetRow({
       )}
 
       {/* Desktop Transactions */}
-      {isExpanded && transactionCount > 0 && (
-        <div className="hidden md:block mt-3 pt-3 border-t">
+      {isExpanded && transactionCount > 0 ? <div className="hidden md:block mt-3 pt-3 border-t">
           <div className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
             Transactions
           </div>
@@ -279,8 +276,7 @@ export function CategoryBudgetRow({
             businesses={businesses}
             onTransactionUpdated={() => router.refresh()}
           />
-        </div>
-      )}
+        </div> : null}
     </div>
   );
 }
@@ -318,16 +314,14 @@ function CategoryLabel({ name, color, count, isExpanded, onToggle }: CategoryLab
     >
       <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden="true" />
       <span className="text-sm truncate">{name}</span>
-      {hasTransactions && (
-        <>
+      {hasTransactions ? <>
           <span className="text-xs text-muted-foreground flex-shrink-0">({count})</span>
           {isExpanded ? (
             <ChevronUp className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           ) : (
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           )}
-        </>
-      )}
+        </> : null}
     </button>
   );
 }
@@ -382,18 +376,14 @@ function ProgressBar({ show, percent, barClass, className }: ProgressBarProps) {
           className={cn("h-full transition-all duration-300", barClass)}
           style={{ width: `${displayPercent}%` }}
         />
-        {isOverBudget && (
-          <div
+        {isOverBudget ? <div
             className={cn("h-full absolute top-0 right-0 bg-red-500/20 transition-all duration-300")}
             style={{ width: `${Math.min(percent - 100, 100)}%` }}
-          />
-        )}
+          /> : null}
       </div>
-      {isOverBudget && (
-        <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+      {isOverBudget ? <div className="text-xs text-red-600 dark:text-red-400 font-medium">
           {percent.toFixed(0)}% of budget
-        </div>
-      )}
+        </div> : null}
     </div>
   );
 }

@@ -89,7 +89,6 @@ export function useCategoryAssignment(options?: {
         resolve({ success: true });
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return promise;
     },
     [applyToFuture, businessId, categoryId]

@@ -46,7 +46,7 @@ export class BankAccountProcessor extends BaseStatementProcessor {
       );
 
       // Calculate amount based on statement format
-      const amount = await this.calculateAmount(tx, fullDescription);
+      const amount = await this.calculateAmount(tx);
 
       // Detect payment method
       const paymentMethod = await this.detectPaymentMethod(fullDescription);
@@ -90,8 +90,7 @@ export class BankAccountProcessor extends BaseStatementProcessor {
    *    - Standard: Negative = expense, Positive = income
    */
   private async calculateAmount(
-    tx: NormalizedTransaction,
-    description: string
+    tx: NormalizedTransaction
   ): Promise<number> {
     // Priority 1: Separate Debit/Credit columns (most reliable)
     if (tx.debit !== null && tx.debit !== undefined) {

@@ -27,8 +27,7 @@ export function PageHeader({ title, backHref, useHistoryBack }: PageHeaderProps)
 
   return (
     <div className="flex items-center gap-4 mb-6">
-      {(shouldUseHistoryBack || backHref) && (
-        <>
+      {(shouldUseHistoryBack || backHref) ? <>
           {shouldUseHistoryBack ? (
             <Button variant="ghost" size="icon" onClick={handleBack}>
               <ArrowLeft className="h-4 w-4" />
@@ -40,8 +39,7 @@ export function PageHeader({ title, backHref, useHistoryBack }: PageHeaderProps)
             </Link>
           </Button>
           )}
-        </>
-        )}
+        </> : null}
       <h1 className="text-2xl font-bold">{title}</h1>
     </div>
   );

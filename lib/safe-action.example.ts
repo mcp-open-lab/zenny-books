@@ -17,7 +17,7 @@ import { createAuthenticatedAction, createPublicAction } from "@/lib/safe-action
 // Example 1: Simple authenticated action
 export const getReceipts = createAuthenticatedAction(
   "getReceipts",
-  async (userId, filters: { category?: string; limit?: number }) => {
+  async (_userId, _filters: { category?: string; limit?: number }) => {
     // userId is automatically available - no auth() call needed!
     // return db.select().from(receipts).where(eq(receipts.userId, userId));
     return [{ id: "1", merchantName: "Starbucks" }];
@@ -27,7 +27,7 @@ export const getReceipts = createAuthenticatedAction(
 // Example 2: Action with no additional parameters
 export const getUserSettings = createAuthenticatedAction(
   "getUserSettings",
-  async (userId) => {
+  async (_userId) => {
     // return db.select().from(userSettings).where(eq(userSettings.userId, userId));
     return { theme: "dark", currency: "USD" };
   }
@@ -36,7 +36,7 @@ export const getUserSettings = createAuthenticatedAction(
 // Example 3: Action with multiple parameters
 export const updateReceipt = createAuthenticatedAction(
   "updateReceipt",
-  async (userId, receiptId: string, data: { merchantName: string }) => {
+  async (_userId, _receiptId: string, _data: { merchantName: string }) => {
     // return db.update(receipts)
     //   .set(data)
     //   .where(and(eq(receipts.id, receiptId), eq(receipts.userId, userId)));
@@ -47,7 +47,7 @@ export const updateReceipt = createAuthenticatedAction(
 // Example 4: Bulk operations
 export const bulkUpdate = createAuthenticatedAction(
   "bulkUpdate",
-  async (userId, receiptIds: string[], updates: Record<string, unknown>) => {
+  async (_userId, receiptIds: string[], _updates: Record<string, unknown>) => {
     // Your bulk update logic using userId for ownership checks
     return { updated: receiptIds.length };
   }

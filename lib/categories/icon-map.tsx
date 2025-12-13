@@ -48,7 +48,6 @@ import {
   Building2,
   Users,
   BookOpen,
-  GraduationCap as Cap,
   Book,
   Shield,
   Banknote,

@@ -87,8 +87,7 @@ export function QuickActionsMenu({
       </Button>
 
       {/* Fullscreen */}
-      {isFullscreenSupported && (
-        <Button
+      {isFullscreenSupported ? <Button
           onClick={() => {
             setIsOpen(false);
             toggleFullscreen();
@@ -107,21 +106,18 @@ export function QuickActionsMenu({
               <span>Fullscreen</span>
             </>
           )}
-        </Button>
-      )}
+        </Button> : null}
 
       {/* Add to Home Screen */}
       {!isStandalone &&
-        ((platform === "android" && deferredPrompt) || platform === "ios") && (
-          <Button
+        ((platform === "android" && deferredPrompt) || platform === "ios") ? <Button
             onClick={handleAddToHome}
             variant="secondary"
             className="w-full justify-start gap-2 shadow-md"
           >
             <Smartphone className="h-4 w-4" />
             <span>Add to Home</span>
-          </Button>
-        )}
+          </Button> : null}
     </div>
   );
 }

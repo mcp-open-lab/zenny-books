@@ -313,7 +313,7 @@ export function LinkedAccounts() {
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {account.accountName || account.accountSubtype || "Account"}
-                            {account.accountMask && ` ••••${account.accountMask}`}
+                            {account.accountMask ? ` ••••${account.accountMask}` : null}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Last synced: {formatRelativeTime(account.lastSyncedAt)}
@@ -377,7 +377,7 @@ export function LinkedAccounts() {
 
               <Button
                 onClick={initializePlaidLink}
-                disabled={!!linkToken}
+                disabled={Boolean(linkToken)}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -389,14 +389,14 @@ export function LinkedAccounts() {
       </Card>
 
       {/* Unlink Confirmation Dialog */}
-      <AlertDialog open={!!accountToUnlink} onOpenChange={() => setAccountToUnlink(null)}>
+      <AlertDialog open={Boolean(accountToUnlink)} onOpenChange={() => setAccountToUnlink(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Unlink Bank Account?</AlertDialogTitle>
             <AlertDialogDescription>
               This will disconnect{" "}
               <strong>
-                {accountToUnlink?.institutionName} {accountToUnlink?.accountMask && `(••••${accountToUnlink.accountMask})`}
+                {accountToUnlink?.institutionName} {accountToUnlink?.accountMask ? `(••••${accountToUnlink.accountMask})` : null}
               </strong>{" "}
               from your account. Previously imported transactions will remain, but new transactions
               will no longer sync automatically.

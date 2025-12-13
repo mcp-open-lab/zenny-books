@@ -293,26 +293,20 @@ export function MerchantDetailView({
                       <span className="font-medium truncate">
                         {txn.merchantName}
                       </span>
-                      {txn.categoryName && (
-                        <Badge variant="outline" className="text-xs">
+                      {txn.categoryName ? <Badge variant="outline" className="text-xs">
                           {txn.categoryName}
-                        </Badge>
-                      )}
+                        </Badge> : null}
                     </div>
-                    {txn.description && (
-                      <p className="text-sm text-muted-foreground truncate mt-0.5">
+                    {txn.description ? <p className="text-sm text-muted-foreground truncate mt-0.5">
                         {txn.description}
-                      </p>
-                    )}
+                      </p> : null}
                   </div>
 
                   <div className="flex items-center gap-4 flex-shrink-0">
-                    {txn.date && (
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    {txn.date ? <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         {format(new Date(txn.date), "MMM d, yyyy")}
-                      </div>
-                    )}
+                      </div> : null}
 
                     <div className="flex items-center gap-1.5 text-base font-semibold">
                       <TrendingDown className="h-4 w-4 text-red-600" />

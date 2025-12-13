@@ -433,7 +433,7 @@ export function RulesList({
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 space-y-2">
                       <RulePills
-                        enabled={!!rule.isEnabled}
+                        enabled={Boolean(rule.isEnabled)}
                         ruleLabel={describeRule(rule)}
                         categoryName={category.name}
                         businessName={businessName || "Personal"}
@@ -456,11 +456,9 @@ export function RulesList({
                                 {primaryLine || "Untitled rule"}
                               </div>
 
-                              {hasDistinctTitle && (
-                                <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap break-words line-clamp-2">
+                              {hasDistinctTitle ? <div className="text-xs text-muted-foreground font-mono whitespace-pre-wrap break-words line-clamp-2">
                                   {pattern}
-                                </div>
-                              )}
+                                </div> : null}
                             </>
                           );
                         })()}
@@ -474,7 +472,7 @@ export function RulesList({
 
                     <div className="flex items-center gap-2 shrink-0">
                       <Switch
-                        checked={!!rule.isEnabled}
+                        checked={Boolean(rule.isEnabled)}
                         onCheckedChange={(v) => {
                           startTransition(async () => {
                             try {

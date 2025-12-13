@@ -96,30 +96,24 @@ export function BankTransactionDetailView({
 
           {transaction.postedDate &&
             transaction.postedDate.getTime() !==
-              transaction.transactionDate?.getTime() && (
-              <div>
+              transaction.transactionDate?.getTime() ? <div>
                 <p className="text-sm text-muted-foreground">Posted Date</p>
                 <p className="text-base font-medium mt-1">
                   {format(new Date(transaction.postedDate), "MMM d, yyyy")}
                 </p>
-              </div>
-            )}
+              </div> : null}
 
-          {transaction.referenceNumber && (
-            <div>
+          {transaction.referenceNumber ? <div>
               <p className="text-sm text-muted-foreground">Reference Number</p>
               <p className="text-sm font-mono mt-1 break-all">
                 {transaction.referenceNumber}
               </p>
-            </div>
-          )}
+            </div> : null}
 
-          {transaction.description && (
-            <div>
+          {transaction.description ? <div>
               <p className="text-sm text-muted-foreground">Description</p>
               <p className="text-base mt-1">{transaction.description}</p>
-            </div>
-          )}
+            </div> : null}
 
           {isPlaidImported ? (
             <div>

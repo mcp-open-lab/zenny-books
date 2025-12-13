@@ -1,11 +1,10 @@
 import { z } from "zod";
-import { DEFAULT_REQUIRED_FIELDS, type DefaultValues } from "@/lib/consts";
+import { DEFAULT_REQUIRED_FIELDS } from "@/lib/consts";
 import {
   RECEIPT_STATUSES,
   USAGE_TYPES,
   COUNTRIES,
   PAYMENT_METHODS,
-  CURRENCIES,
 } from "@/lib/constants";
 
 // Create dynamic schema based on required fields

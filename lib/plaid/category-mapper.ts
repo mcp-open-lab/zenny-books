@@ -5,7 +5,7 @@
 
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
-import { eq, like, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 // Cache for category mappings (refreshed on server restart)
 let categoryCache: Map<string, string> | null = null;

@@ -79,15 +79,13 @@ export function ReceiptDetailView({
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      {receipt.imageUrl && (
-        <Card className="p-6">
+      {receipt.imageUrl ? <Card className="p-6">
           <ReceiptImageViewer
             imageUrl={receipt.imageUrl}
             merchantName={receipt.merchantName}
             fileName={receipt.fileName}
           />
-        </Card>
-      )}
+        </Card> : null}
       <Card className={`p-6 ${!receipt.imageUrl ? "md:col-span-2 max-w-2xl mx-auto w-full" : ""}`}>
         <h2 className="text-lg font-semibold mb-4">Receipt Information</h2>
         <ReceiptForm

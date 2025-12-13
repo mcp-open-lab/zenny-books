@@ -42,7 +42,7 @@ export function TransactionAmount({
         className
       )}
     >
-      {showSign && (isIncome ? "+" : "-")}
+      {showSign ? isIncome ? "+" : "-" : null}
       {formatted.replace(/^-/, "")}
     </span>
   );

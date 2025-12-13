@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   getBatchItems,
   getBatchProgressAction,
@@ -23,7 +23,6 @@ export function useBatchPolling({
 }: UseBatchPollingProps) {
   const [batch, setBatch] = useState<BatchStatusSummary>(initialBatch);
   const [items, setItems] = useState<BatchItemStatus[]>(initialItems);
-  const [isPolling, setIsPolling] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -59,23 +58,24 @@ export function useBatchPolling({
     }
   }, [batch.batchId]);
 
-  useEffect(() => {
-    const shouldPoll =
+  const isPolling = useMemo(
+    () =>
       batch.status === "processing" ||
       batch.status === "pending" ||
       items.some(
         (item) => item.status === "processing" || item.status === "pending"
-      );
+      ),
+    [batch.status, items]
+  );
 
-    setIsPolling(shouldPoll);
-
-    if (!shouldPoll) {
+  useEffect(() => {
+    if (!isPolling) {
       return;
     }
 
     const intervalId = setInterval(refresh, pollInterval);
     return () => clearInterval(intervalId);
-  }, [batch.status, items, pollInterval, refresh]);
+  }, [isPolling, pollInterval, refresh]);
 
   return {
     batch,

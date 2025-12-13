@@ -124,8 +124,7 @@ export function CategoryBudgetGrid({
             )}
           </Button>
 
-          {showInactive && (
-            <div className="mt-2 space-y-2 opacity-70">
+          {showInactive ? <div className="mt-2 space-y-2 opacity-70">
               {inactiveCategories.map((category) => (
                 <CategoryBudgetRow
                   key={category.categoryId}
@@ -138,8 +137,7 @@ export function CategoryBudgetGrid({
                   compact
                 />
               ))}
-            </div>
-          )}
+            </div> : null}
         </div>
       )}
     </div>

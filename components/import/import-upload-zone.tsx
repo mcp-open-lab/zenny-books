@@ -390,8 +390,7 @@ export function ImportUploadZone({
         </CardContent>
       </Card>
 
-      {batchCreated && (
-        <Card className="border-green-200 bg-green-50 dark:bg-green-950">
+      {batchCreated ? <Card className="border-green-200 bg-green-50 dark:bg-green-950">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
@@ -415,8 +414,7 @@ export function ImportUploadZone({
               </div>
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card> : null}
 
       {files.length > 0 && !batchCreated && (
         <Card>

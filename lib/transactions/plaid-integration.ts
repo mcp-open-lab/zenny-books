@@ -5,7 +5,7 @@
 
 import { db } from "@/lib/db";
 import { receipts, bankStatementTransactions, bankStatements, documents } from "@/lib/db/schema";
-import { sql, and, eq, or } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import type { TransactionFlags } from "@/lib/constants/transaction-flags";
 
 export interface PlaidTransaction {
@@ -120,7 +120,7 @@ export async function importPlaidTransactions(
       } else {
         result.errors++;
       }
-    } catch (error) {
+    } catch (_error) {
       result.errors++;
     }
   }

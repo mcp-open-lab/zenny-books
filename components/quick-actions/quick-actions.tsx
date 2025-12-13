@@ -33,8 +33,7 @@ export function QuickActions() {
       {/* Quick Actions Menu - Hidden on desktop (md screens and above) */}
       <div className="fixed bottom-20 right-4 z-50 quick-actions-menu md:hidden">
         {/* Fan-out menu */}
-        {hook.isOpen && (
-          <QuickActionsMenu
+        {hook.isOpen ? <QuickActionsMenu
             isUploading={hook.isUploading}
             isFullscreen={hook.isFullscreen}
             isFullscreenSupported={hook.isFullscreenSupported}
@@ -47,8 +46,7 @@ export function QuickActions() {
             toggleFullscreen={hook.toggleFullscreen}
             handleAddToHome={hook.handleAddToHome}
             router={hook.router}
-          />
-        )}
+          /> : null}
 
         {/* Main FAB Button */}
         <FAB

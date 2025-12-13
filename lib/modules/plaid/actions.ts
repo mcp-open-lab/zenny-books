@@ -2,7 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { linkedBankAccounts, documents, bankStatements } from "@/lib/db/schema";
+import { linkedBankAccounts } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import {

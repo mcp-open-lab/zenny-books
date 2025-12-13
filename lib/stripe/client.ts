@@ -3,7 +3,7 @@ import Stripe from "stripe";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
 export function isStripeConfigured(): boolean {
-  return !!STRIPE_SECRET_KEY;
+  return Boolean(STRIPE_SECRET_KEY);
 }
 
 export const stripe = STRIPE_SECRET_KEY

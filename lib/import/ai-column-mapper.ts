@@ -109,7 +109,7 @@ User's Financial Context:
 - Expense Categories: ${expenseCategories.join(", ")}
 
 Use these categories when mapping the "category" field if present in the data.`;
-    } catch (error) {
+    } catch (_error) {
       // Silently fail if we can't get categories - not critical for mapping
     }
   }
@@ -178,7 +178,7 @@ CRITICAL INSTRUCTION: NO STATEMENT TYPE SELECTED - ANALYZE PATTERNS
     devLogger.debug("AI column mapping response received", {
       success: result.success,
       provider: result.provider,
-      hasData: !!result.data,
+      hasData: Boolean(result.data),
       error: result.error,
     });
 

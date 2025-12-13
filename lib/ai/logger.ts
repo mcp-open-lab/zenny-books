@@ -92,11 +92,7 @@ export async function logLLMInteraction(
 /**
  * Get usage stats for a user (for billing/limits)
  */
-export async function getUserUsageStats(
-  userId: string,
-  startDate?: Date,
-  endDate?: Date
-) {
+export async function getUserUsageStats() {
   // This will be implemented when needed for usage limits
   // For now, returning a placeholder
   return {

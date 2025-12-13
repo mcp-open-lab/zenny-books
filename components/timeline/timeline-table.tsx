@@ -284,8 +284,7 @@ export function TimelineTable({
                     </TableCell>
                   </TableRow>
 
-                  {editing && (
-                    <TableRow key={`${item.id}-edit`}>
+                  {editing ? <TableRow key={`${item.id}-edit`}>
                       <TableCell colSpan={7} className="px-3 py-3 bg-muted/10">
                         <div className="rounded-lg border bg-background p-4">
                           <div className="flex items-center justify-between gap-3 mb-3">
@@ -374,8 +373,7 @@ export function TimelineTable({
                           </div>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  )}
+                    </TableRow> : null}
                 </Fragment>
               );
             })}

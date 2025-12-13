@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import { userSettings, businesses } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { devLogger } from "@/lib/dev-logger";
-import { CategoryFilterService } from "./category-filter";
 import { CategoryStrategyManager } from "./strategy-manager";
 import { RuleMatcher, HistoryMatcher, AiMatcher } from "./strategies";
 import { TransactionRepository, CategoryRepository } from "./repositories";

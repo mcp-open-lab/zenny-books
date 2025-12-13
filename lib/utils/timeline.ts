@@ -9,8 +9,7 @@ export type TimelineGroup = {
 export type SortBy = "receipt_date" | "created_at";
 
 export function groupItemsByMonth(
-  items: TimelineItem[],
-  sortBy: SortBy = "receipt_date"
+  items: TimelineItem[]
 ): TimelineGroup[] {
   const groups = items.reduce((acc, item) => {
     // TimelineItem already normalized 'date' to be the transaction date

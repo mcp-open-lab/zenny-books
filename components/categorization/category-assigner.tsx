@@ -40,8 +40,9 @@ export function CategoryAssigner({
 }) {
   const canShowRuleToggle =
     showApplyToFuture &&
-    !!onApplyToFutureChange &&
-    !!merchantName &&
+    Boolean(onApplyToFutureChange) &&
+    merchantName !== null &&
+    merchantName !== undefined &&
     merchantName.trim().length > 0;
 
   return (
@@ -57,18 +58,16 @@ export function CategoryAssigner({
         disabled={disabled}
       />
 
-      {canShowRuleToggle && (
-        <label className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+      {canShowRuleToggle ? <label className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
           <span className="truncate">
             Apply to future transactions from “{merchantName}”
           </span>
           <Switch
-            checked={!!applyToFuture}
+            checked={Boolean(applyToFuture)}
             onCheckedChange={onApplyToFutureChange}
             disabled={disabled}
           />
-        </label>
-      )}
+        </label> : null}
     </div>
   );
 }

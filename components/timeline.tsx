@@ -197,11 +197,9 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="relative shrink-0">
               <SlidersHorizontal className="h-4 w-4" />
-              {hasActiveFilters && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+              {hasActiveFilters ? <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
                   !
-                </span>
-              )}
+                </span> : null}
             </Button>
           </SheetTrigger>
           <SheetContent
@@ -383,14 +381,12 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
       </div>
 
       {/* Active Filter Badges */}
-      {hasActiveFilters && (
-        <div className="mb-4 flex flex-wrap gap-2">
+      {hasActiveFilters ? <div className="mb-4 flex flex-wrap gap-2">
           {/* Badges would go here, but for simplicity skipping detailed badges logic since reset covers it */}
           <Button variant="ghost" size="sm" onClick={resetFilters} className="h-6 text-xs">
             Clear all filters <X className="ml-1 h-3 w-3" />
           </Button>
-        </div>
-      )}
+        </div> : null}
 
       {/* Timeline View */}
       <div className="space-y-8 pb-24">
@@ -435,12 +431,10 @@ export function Timeline({ initialItems, userSettings, categories, merchants, bu
                                 })
                               : "No Date"}
                           </span>
-                          {item.category && (
-                            <>
+                          {item.category ? <>
                               <span>•</span>
                               <span className="truncate">{item.category}</span>
-                            </>
-                          )}
+                            </> : null}
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-2">

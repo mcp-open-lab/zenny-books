@@ -8,7 +8,7 @@
 
 import { db } from "@/lib/db";
 import { documents, receipts, importBatchItems } from "@/lib/db/schema";
-import { eq, and, or, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export type DuplicateMatchType =
   | "exact_image"

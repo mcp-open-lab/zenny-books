@@ -198,8 +198,7 @@ export function SettingsFormV2({ initialSettings }: SettingsFormProps) {
               )}
             />
 
-            {country && (
-              <FormField
+            {country ? <FormField
                 control={form.control}
                 name="province"
                 render={({ field }) => (
@@ -234,8 +233,7 @@ export function SettingsFormV2({ initialSettings }: SettingsFormProps) {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
-            )}
+              /> : null}
 
             <FormField
               control={form.control}

@@ -273,11 +273,11 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     }
 
     devLogger.info("Receipt extraction completed", {
-      hasMerchantName: !!result.data.merchantName,
+      hasMerchantName: Boolean(result.data.merchantName),
       merchantName: result.data.merchantName || null,
-      hasDate: !!result.data.date,
+      hasDate: Boolean(result.data.date),
       date: result.data.date || null,
-      hasTotalAmount: !!result.data.totalAmount,
+      hasTotalAmount: Boolean(result.data.totalAmount),
       totalAmount: result.data.totalAmount || null,
       provider: result.provider,
     });
