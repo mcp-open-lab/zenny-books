@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { formatBudgetCurrency } from "@/lib/budget/utils";
+import { formatBudgetCurrency } from "@/lib/budgets/utils";
 import {
   EditableCategoryCell,
   EditableBusinessCell,

@@ -15,7 +15,7 @@ import { ActivityLogger } from "@/lib/import/activity-logger";
 import { getUserSettings, getUserSettingsByUserId } from "@/app/actions/user-settings";
 import { logError, logInfo } from "@/lib/observability/log";
 import { DuplicateFileError } from "@/lib/errors";
-import { withDbTimeout, assertUserScope } from "@/lib/db/helpers";
+import { assertUserScope } from "@/lib/db/helpers";
 
 export type ProcessReceiptResult = {
   documentId: string;
@@ -62,18 +62,16 @@ export async function processReceipt({
     let displayFileName = fileName;
 
     if (!displayFileName && batchId) {
-      const existingItem = await withDbTimeout(
-        db
-          .select({ fileName: importBatchItems.fileName })
-          .from(importBatchItems)
-          .where(
-            and(
-              eq(importBatchItems.batchId, batchId),
-              eq(importBatchItems.fileUrl, imageUrl)
-            )
+      const existingItem = await db
+        .select({ fileName: importBatchItems.fileName })
+        .from(importBatchItems)
+        .where(
+          and(
+            eq(importBatchItems.batchId, batchId),
+            eq(importBatchItems.fileUrl, imageUrl)
           )
-          .limit(1)
-      );
+        )
+        .limit(1);
 
       if (existingItem.length > 0 && existingItem[0].fileName) {
         displayFileName = existingItem[0].fileName;
@@ -86,15 +84,13 @@ export async function processReceipt({
 
     // Check duplicate by hash
     const fileHash = await calculateFileHash(imageUrl);
-    const existingDocument = await withDbTimeout(
-      db
-        .select()
-        .from(documents)
-        .where(
-          and(eq(documents.userId, finalUserId), eq(documents.fileHash, fileHash))
-        )
-        .limit(1)
-    );
+    const existingDocument = await db
+      .select()
+      .from(documents)
+      .where(
+        and(eq(documents.userId, finalUserId), eq(documents.fileHash, fileHash))
+      )
+      .limit(1);
 
     if (existingDocument.length > 0) {
       throw new DuplicateFileError(
@@ -118,63 +114,55 @@ export async function processReceipt({
     const fileFormat = getFileFormatFromUrl(imageUrl);
     const mimeType = getMimeTypeFromUrl(imageUrl);
 
-    const [document] = await withDbTimeout(
-      db
-        .insert(documents)
-        .values({
-          userId: finalUserId,
-          documentType: "receipt",
-          fileFormat,
-          fileName: displayFileName,
-          fileUrl: imageUrl,
-          mimeType,
-          fileHash,
-          status: "extracted",
-          extractionMethod: "ai_gemini",
-          extractedAt: new Date(),
-          importBatchId: batchId || null,
-        })
-        .returning()
-    );
+    const [document] = await db
+      .insert(documents)
+      .values({
+        userId: finalUserId,
+        documentType: "receipt",
+        fileFormat,
+        fileName: displayFileName,
+        fileUrl: imageUrl,
+        mimeType,
+        fileHash,
+        status: "extracted",
+        extractionMethod: "ai_gemini",
+        extractedAt: new Date(),
+        importBatchId: batchId || null,
+      })
+      .returning();
 
     if (batchId) {
-      const existingItem = await withDbTimeout(
-        db
-          .select()
-          .from(importBatchItems)
-          .where(
-            and(
-              eq(importBatchItems.batchId, batchId),
-              eq(importBatchItems.fileUrl, imageUrl)
-            )
+      const existingItem = await db
+        .select()
+        .from(importBatchItems)
+        .where(
+          and(
+            eq(importBatchItems.batchId, batchId),
+            eq(importBatchItems.fileUrl, imageUrl)
           )
-          .limit(1)
-      );
+        )
+        .limit(1);
 
       if (existingItem.length > 0) {
-        const [updated] = await withDbTimeout(
-          db
-            .update(importBatchItems)
-            .set({ documentId: document.id, status: "processing" })
-            .where(eq(importBatchItems.id, existingItem[0].id))
-            .returning()
-        );
+        const [updated] = await db
+          .update(importBatchItems)
+          .set({ documentId: document.id, status: "processing" })
+          .where(eq(importBatchItems.id, existingItem[0].id))
+          .returning();
         batchItem = updated;
       } else {
-        const [newItem] = await withDbTimeout(
-          db
-            .insert(importBatchItems)
-            .values({
-              batchId,
-              documentId: document.id,
-              fileName: displayFileName,
-              fileUrl: imageUrl,
-              status: "processing",
-              order: 0,
-              retryCount: 0,
-            })
-            .returning()
-        );
+        const [newItem] = await db
+          .insert(importBatchItems)
+          .values({
+            batchId,
+            documentId: document.id,
+            fileName: displayFileName,
+            fileUrl: imageUrl,
+            status: "processing",
+            order: 0,
+            retryCount: 0,
+          })
+          .returning();
         batchItem = newItem;
       }
     }
@@ -188,44 +176,40 @@ export async function processReceipt({
         ? String(defaultValues.isBusinessExpense)
         : null;
 
-    await withDbTimeout(
-      db.insert(receipts).values({
-        documentId: document.id,
-        userId: finalUserId,
-        imageUrl,
-        merchantName: extractedData.merchantName,
-        date: extractedData.date,
-        totalAmount: extractedData.totalAmount?.toString() || null,
-        subtotal: extractedData.subtotal?.toString() || null,
-        taxAmount: extractedData.taxAmount?.toString() || null,
-        gstAmount: extractedData.gstAmount?.toString() || null,
-        hstAmount: extractedData.hstAmount?.toString() || null,
-        pstAmount: extractedData.pstAmount?.toString() || null,
-        salesTaxAmount: extractedData.salesTaxAmount?.toString() || null,
-        tipAmount: extractedData.tipAmount?.toString() || null,
-        discountAmount: null,
-        category: extractedData.category,
-        categoryId: extractedData.categoryId,
-        businessId: extractedData.businessId || null,
-        description: extractedData.description,
-        paymentMethod,
-        businessPurpose,
-        isBusinessExpense,
-        country,
-        province: extractedData.province,
-        currency,
-        status: "needs_review",
-      })
-    );
+    await db.insert(receipts).values({
+      documentId: document.id,
+      userId: finalUserId,
+      imageUrl,
+      merchantName: extractedData.merchantName,
+      date: extractedData.date,
+      totalAmount: extractedData.totalAmount?.toString() || null,
+      subtotal: extractedData.subtotal?.toString() || null,
+      taxAmount: extractedData.taxAmount?.toString() || null,
+      gstAmount: extractedData.gstAmount?.toString() || null,
+      hstAmount: extractedData.hstAmount?.toString() || null,
+      pstAmount: extractedData.pstAmount?.toString() || null,
+      salesTaxAmount: extractedData.salesTaxAmount?.toString() || null,
+      tipAmount: extractedData.tipAmount?.toString() || null,
+      discountAmount: null,
+      category: extractedData.category,
+      categoryId: extractedData.categoryId,
+      businessId: extractedData.businessId || null,
+      description: extractedData.description,
+      paymentMethod,
+      businessPurpose,
+      isBusinessExpense,
+      country,
+      province: extractedData.province,
+      currency,
+      status: "needs_review",
+    });
 
     if (batchId && batchItem) {
       const totalDuration = Date.now() - startTime;
-      await withDbTimeout(
-        db
-          .update(importBatchItems)
-          .set({ status: "completed" })
-          .where(eq(importBatchItems.id, batchItem.id))
-      );
+      await db
+        .update(importBatchItems)
+        .set({ status: "completed" })
+        .where(eq(importBatchItems.id, batchItem.id));
       await ActivityLogger.itemCompleted(
         batchId,
         batchItem.id,
@@ -248,23 +232,19 @@ export async function processReceipt({
       try {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        await withDbTimeout(
-          db
-            .update(importBatchItems)
-            .set({
-              status: "failed",
-              errorMessage,
-            })
-            .where(eq(importBatchItems.id, batchItem.id))
-        );
+        await db
+          .update(importBatchItems)
+          .set({
+            status: "failed",
+            errorMessage,
+          })
+          .where(eq(importBatchItems.id, batchItem.id));
 
-        const item = await withDbTimeout(
-          db
-            .select({ fileName: importBatchItems.fileName })
-            .from(importBatchItems)
-            .where(eq(importBatchItems.id, batchItem.id))
-            .limit(1)
-        );
+        const item = await db
+          .select({ fileName: importBatchItems.fileName })
+          .from(importBatchItems)
+          .where(eq(importBatchItems.id, batchItem.id))
+          .limit(1);
         const errorFileName =
           item[0]?.fileName || getFileName(imageUrl) || "receipt.jpg";
 

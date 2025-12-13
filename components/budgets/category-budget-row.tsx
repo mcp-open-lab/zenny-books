@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { getCategoryTransactions, type CategoryTransaction } from "@/app/actions/budgets";
 import type { BudgetStatus } from "@/app/actions/budgets";
-import { BUDGET_STATUS_CONFIG } from "@/lib/budget/constants";
-import { formatBudgetCurrency } from "@/lib/budget/utils";
+import { BUDGET_STATUS_CONFIG } from "@/lib/budgets/constants";
+import { formatBudgetCurrency } from "@/lib/budgets/utils";
 import { TransactionList } from "./transaction-list";
 import { getCategoryIcon } from "@/lib/categories/icon-map";
 import type {

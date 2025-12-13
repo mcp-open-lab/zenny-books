@@ -3,6 +3,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { BudgetInsights } from "@/app/actions/budgets";
+import { InsightsPanel } from "./insights-panel";
 
 interface SavingsOverviewProps {
   income: number;
@@ -11,6 +13,7 @@ interface SavingsOverviewProps {
   budgeted: number;
   available: number;
   currency?: string;
+  insights?: BudgetInsights;
 }
 
 export function SavingsOverview({
@@ -20,6 +23,7 @@ export function SavingsOverview({
   budgeted,
   available,
   currency = "USD",
+  insights,
 }: SavingsOverviewProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -32,14 +36,17 @@ export function SavingsOverview({
 
   const saved = income - spent;
   const isPositiveSavings = saved >= 0;
+  // If spent is negative, it means refunds exceeded expenses (net spending is negative)
+  const netSpending = spent < 0 ? Math.abs(spent) : spent;
+  const hasNetRefunds = spent < 0;
 
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="space-y-4">
-          {/* Key Metrics Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Income */}
+          {/* Key Metrics - Left/Right Aligned */}
+          <div className="flex items-start justify-between gap-4">
+            {/* Income - Left */}
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <TrendingUp className="h-3.5 w-3.5 text-green-600" />
@@ -50,14 +57,21 @@ export function SavingsOverview({
               </div>
             </div>
 
-            {/* Spent */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-                Spent
+            {/* Spent / Net Spending - Right */}
+            <div className="space-y-1 text-right">
+              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                {hasNetRefunds ? (
+                  <TrendingUp className="h-3.5 w-3.5 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                )}
+                {hasNetRefunds ? "Net Refunds" : "Spent"}
               </div>
-              <div className="text-xl font-semibold">
-                {formatCurrency(spent)}
+              <div className={cn(
+                "text-xl font-semibold",
+                hasNetRefunds ? "text-green-600" : ""
+              )}>
+                {formatCurrency(netSpending)}
               </div>
             </div>
           </div>
@@ -106,6 +120,8 @@ export function SavingsOverview({
               </span>
             </div>
           )}
+
+          <InsightsPanel insights={insights} currency={currency} />
 
         </div>
       </CardContent>

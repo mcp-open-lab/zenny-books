@@ -117,6 +117,7 @@ export function BudgetPageClient({
           budgeted={data.totalBudgeted}
           available={data.totalAvailable}
           currency={currency}
+          insights={data.insights}
         />
       </div>
 
@@ -129,6 +130,7 @@ export function BudgetPageClient({
           budgeted={data.totalBudgeted}
           available={data.totalAvailable}
           currency={currency}
+          insights={data.insights}
         />
         <CategoryBudgetGrid
           categories={data.categories}

@@ -6,14 +6,17 @@ import { categoryBudgets, categories } from "@/lib/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { revalidatePath } from "next/cache";
-import { getMonthDateRange, getBudgetStatus } from "@/lib/budget/utils";
-import { EXCLUDED_BUDGET_CATEGORIES } from "@/lib/budget/constants";
+import { getMonthDateRange, getBudgetStatus } from "@/lib/budgets/utils";
+import { EXCLUDED_BUDGET_CATEGORIES } from "@/lib/budgets/constants";
 import {
   getBankTransactionSpending,
   getTotalIncome,
   getCategoryReceiptsForMonth,
   getCategoryBankTransactionsForMonth,
-} from "@/lib/budget/queries";
+  getPreviousMonthTotals,
+  getSpendingInsights,
+  getUncategorizedCount,
+} from "@/lib/budgets/queries";
 
 export type BudgetStatus = "under" | "caution" | "over" | "unbudgeted";
 
@@ -36,6 +39,7 @@ export interface BudgetOverview {
   totalAvailable: number;
   readyToAssign: number;
   totalIncome: number;
+  insights?: BudgetInsights;
 }
 
 export interface CategoryTransaction {
@@ -48,6 +52,30 @@ export interface CategoryTransaction {
   entityType: "receipt" | "bank_transaction";
   categoryId: string | null;
   businessId: string | null;
+}
+
+export type BudgetPaceStatus = "on_track" | "ahead" | "behind";
+
+export interface BudgetInsights {
+  // Comparisons
+  lastMonthSpent: number;
+  lastMonthIncome: number;
+  spendingChangePct: number | null;
+  incomeChangePct: number | null;
+
+  // Spending insights
+  topCategory: { id: string; name: string; amount: number } | null;
+  largestExpense: { merchant: string; amount: number } | null;
+  transactionCount: number;
+  expenseCount: number;
+  avgExpense: number;
+
+  // Budget health
+  daysElapsed: number;
+  daysRemaining: number;
+  spendingPace: BudgetPaceStatus | null;
+  categoriesOverBudget: number;
+  uncategorizedCount: number;
 }
 
 async function getLatestBudgetsForCategories(
@@ -145,8 +173,15 @@ export async function getBudgetOverview(
     // Fetch all data in parallel
     // Note: Only bank transactions count against budget totals
     // Receipts are for record-keeping only (to avoid double-counting)
-    const [userCategories, budgets, txSpending, totalIncome] =
-      await Promise.all([
+    const [
+      userCategories,
+      budgets,
+      txSpending,
+      totalIncome,
+      prevTotals,
+      spendingInsights,
+      uncategorizedCount,
+    ] = await Promise.all([
         db
           .select()
           .from(categories)
@@ -164,6 +199,9 @@ export async function getBudgetOverview(
           ),
         getBankTransactionSpending(userId, start, end),
         getTotalIncome(userId, start, end),
+        getPreviousMonthTotals(userId, targetMonth),
+        getSpendingInsights(userId, start, end),
+        getUncategorizedCount(userId, start, end),
       ]);
 
     // Build budget map with persistence from previous months
@@ -222,6 +260,47 @@ export async function getBudgetOverview(
     const totalBudgeted = categoryItems.reduce((sum, c) => sum + c.budgeted, 0);
     const totalSpent = categoryItems.reduce((sum, c) => sum + c.spent, 0);
 
+    const lastMonthSpent = prevTotals.lastMonthSpent;
+    const lastMonthIncome = prevTotals.lastMonthIncome;
+    const spendingChangePct =
+      lastMonthSpent > 0
+        ? ((totalSpent - lastMonthSpent) / lastMonthSpent) * 100
+        : null;
+    const incomeChangePct =
+      lastMonthIncome > 0
+        ? ((totalIncome - lastMonthIncome) / lastMonthIncome) * 100
+        : null;
+
+    const now = new Date();
+    const isCurrentMonth = targetMonth === now.toISOString().slice(0, 7);
+    const daysInMonth = new Date(
+      start.getFullYear(),
+      start.getMonth() + 1,
+      0
+    ).getDate();
+    const daysElapsed = isCurrentMonth ? Math.max(1, now.getDate()) : daysInMonth;
+    const daysRemaining = isCurrentMonth ? Math.max(0, daysInMonth - now.getDate()) : 0;
+
+    const categoriesOverBudget = categoryItems.filter((c) => c.status === "over")
+      .length;
+
+    const effectiveSpentForPace = Math.max(0, totalSpent);
+    const paceRatio = totalBudgeted > 0 ? effectiveSpentForPace / totalBudgeted : null;
+    const timeRatio = daysInMonth > 0 ? daysElapsed / daysInMonth : null;
+    const spendingPace: BudgetPaceStatus | null =
+      paceRatio === null || timeRatio === null
+        ? null
+        : paceRatio > timeRatio + 0.05
+          ? "behind"
+          : paceRatio < timeRatio - 0.05
+            ? "ahead"
+            : "on_track";
+
+    const avgExpense =
+      spendingInsights.expenseCount > 0
+        ? spendingInsights.expenseTotal / spendingInsights.expenseCount
+        : 0;
+
     return {
       success: true,
       data: {
@@ -232,6 +311,22 @@ export async function getBudgetOverview(
         totalAvailable: totalBudgeted - totalSpent,
         readyToAssign: totalIncome - totalBudgeted,
         totalIncome,
+        insights: {
+          lastMonthSpent,
+          lastMonthIncome,
+          spendingChangePct,
+          incomeChangePct,
+          topCategory: spendingInsights.topCategory,
+          largestExpense: spendingInsights.largestTransaction,
+          transactionCount: spendingInsights.transactionCount,
+          expenseCount: spendingInsights.expenseCount,
+          avgExpense,
+          daysElapsed,
+          daysRemaining,
+          spendingPace,
+          categoriesOverBudget,
+          uncategorizedCount,
+        },
       },
     };
   } catch (error) {
