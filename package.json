@@ -65,6 +65,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@toon-format/toon": "^1.2.0",
     "@uploadthing/react": "^7.3.0",
+    "@vercel/analytics": "^1.6.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
