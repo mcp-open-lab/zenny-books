@@ -97,7 +97,10 @@ export class CategoryEngine {
     const manager = new CategoryStrategyManager(strategies);
 
     // Get available categories and user preferences for AI context
-    const availableCategories = await this.categoryRepository.getCategoriesForAI(userId);
+    // Filter by transactionType if specified (e.g., receipts should only see expense categories)
+    const availableCategories = await this.categoryRepository.getCategoriesForAI(userId, {
+      transactionType: options.transactionType,
+    });
 
     const [userPrefs, userBusinessesData] = await Promise.all([
       db
@@ -136,6 +139,7 @@ export class CategoryEngine {
         availableCategories,
         userPreferences,
         userBusinesses,
+        transactionType: options.transactionType,
       }
     );
 

@@ -27,6 +27,11 @@ CRITICAL: Read the ACTUAL merchant/business name printed on the receipt. Do NOT 
 
 ${requiredSection}${preferredSection}${optionalSection}
 
+DIRECTION DETECTION (if direction field is requested):
+- Set direction to "in" if this is a payment receipt showing money received (e.g., "Payment Received", "Invoice Paid", customer payment receipt)
+- Set direction to "out" if this is an expense receipt showing money spent (e.g., purchase receipt, bill payment, typical store receipt)
+- Default to "out" if uncertain
+
 Return as JSON. Use null if a field is not found. Dates: YYYY-MM-DD format. Amounts: numbers.
 
 JSON schema:
@@ -67,8 +72,14 @@ ${fieldDescriptions.join("\n")}
   private static buildOptionalFields(fields: string[]): string {
     if (fields.length === 0) return "";
 
+    const fieldDescriptions = fields.map((f) => {
+      if (f === "direction")
+        return "- direction: \"in\" if payment received (income), \"out\" if money spent (expense)";
+      return `- ${f}`;
+    });
+
     return `Optional fields:
-${fields.map((f) => `- ${f}`).join("\n")}
+${fieldDescriptions.join("\n")}
 
 `;
   }

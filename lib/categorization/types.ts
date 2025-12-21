@@ -26,5 +26,6 @@ export interface CategorizationOptions {
   userId: string;
   includeAI?: boolean; // Default: true
   minConfidence?: number; // Default: 0.7
+  transactionType?: "income" | "expense"; // Filter categories by transaction type
 }
 

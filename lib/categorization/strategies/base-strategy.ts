@@ -12,6 +12,7 @@ export interface CategorizationContext {
     usageType?: string | null;
   };
   userBusinesses?: Array<{ id: string; name: string }>; // User's businesses for context
+  transactionType?: "income" | "expense"; // Transaction type for filtering/context
 }
 
 /**

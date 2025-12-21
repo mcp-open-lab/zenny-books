@@ -114,7 +114,8 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
       const catResult = await this.categorizeDocument(
         extractedData.merchantName,
         null, // description is user-driven, not used for categorization
-        extractedData.totalAmount?.toString() || "0"
+        extractedData.totalAmount?.toString() || "0",
+        extractedData.direction || "out" // Pass direction for transactionType determination
       );
       categoryId = catResult.categoryId;
       businessId = catResult.businessId;
@@ -168,6 +169,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
       currency: this.currency,
       country: this.country,
       province: extractedData.province || null,
+      direction: extractedData.direction || "out", // Default to "out" (expense) if not detected
       extractionConfidence: CONFIDENCE_DEFAULTS.EXTRACTION,
     };
   }
@@ -197,6 +199,7 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     fields.add("receiptNumber");
     fields.add("paymentMethod");
     fields.add("category");
+    fields.add("direction"); // Detect if receipt is income (in) or expense (out)
     // description is user-driven, not extracted by LLM
 
     return fields;
@@ -329,6 +332,9 @@ export class ReceiptProcessor extends BaseDocumentProcessor {
     }
     if (fieldsToExtract.has("category")) {
       schemaFields.category = z.string().nullable();
+    }
+    if (fieldsToExtract.has("direction")) {
+      schemaFields.direction = z.enum(["in", "out"]).nullable();
     }
     // description is user-driven, not extracted by LLM
 

@@ -36,13 +36,15 @@ export class AiMatcher implements CategorizationStrategy {
           merchantName: input.merchantName,
           description: input.description,
           amount: input.amount,
+          statementType: input.statementType,
         },
         {
-          availableCategories: context.availableCategories,
+          availableCategories: context.availableCategories || [],
           userPreferences: context.userPreferences,
           userBusinesses: context.userBusinesses,
           userId: context.userId,
           transactionId: input.entityId,
+          transactionType: context.transactionType,
         }
       );
 

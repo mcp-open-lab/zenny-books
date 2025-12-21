@@ -1,24 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 
-// Mock the providers before importing the client
-const mockGeminiGenerateObject = vi.fn();
-const mockGeminiGenerateText = vi.fn();
-const mockOpenAIGenerateObject = vi.fn();
-const mockOpenAIGenerateText = vi.fn();
+// Mock the Vercel AI SDK
+const mockGenerateObject = vi.fn();
+const mockGenerateText = vi.fn();
 
-vi.mock("@/lib/ai/providers/gemini", () => ({
-  GeminiProvider: class {
-    generateObject = mockGeminiGenerateObject;
-    generateText = mockGeminiGenerateText;
-  },
+vi.mock("ai", () => ({
+  generateObject: (...args: unknown[]) => mockGenerateObject(...args),
+  generateText: (...args: unknown[]) => mockGenerateText(...args),
 }));
 
-vi.mock("@/lib/ai/providers/openai", () => ({
-  OpenAIProvider: class {
-    generateObject = mockOpenAIGenerateObject;
-    generateText = mockOpenAIGenerateText;
-  },
+vi.mock("@ai-sdk/openai", () => ({
+  openai: (model: string) => ({ provider: "openai", modelId: model }),
+}));
+
+vi.mock("@ai-sdk/google", () => ({
+  google: (model: string) => ({ provider: "google", modelId: model }),
 }));
 
 describe("AI Client Fallback Logic", () => {
@@ -27,10 +24,8 @@ describe("AI Client Fallback Logic", () => {
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv };
-    mockGeminiGenerateObject.mockClear();
-    mockGeminiGenerateText.mockClear();
-    mockOpenAIGenerateObject.mockClear();
-    mockOpenAIGenerateText.mockClear();
+    mockGenerateObject.mockClear();
+    mockGenerateText.mockClear();
   });
 
   afterEach(() => {
@@ -42,79 +37,60 @@ describe("AI Client Fallback Logic", () => {
     it("should use OpenAI when available and successful", async () => {
       process.env.OPENAI_API_KEY = "test-openai-key";
       delete process.env.GOOGLE_AI_API_KEY;
-      
-      mockOpenAIGenerateObject.mockResolvedValue({
-        success: true,
-        data: { test: "value" },
-        tokensUsed: 100,
-        provider: "openai",
+
+      mockGenerateObject.mockResolvedValue({
+        object: { test: "value" },
+        usage: { inputTokens: 50, outputTokens: 50 },
       });
-      mockOpenAIGenerateObject.mockClear();
 
       const { generateObject } = await import("@/lib/ai/client");
       const schema = z.object({ test: z.string() });
       const result = await generateObject("test prompt", schema);
 
       expect(result.success).toBe(true);
-      expect(mockOpenAIGenerateObject).toHaveBeenCalledTimes(1);
+      expect(result.data).toEqual({ test: "value" });
+      expect(result.provider).toBe("openai");
+      expect(mockGenerateObject).toHaveBeenCalledTimes(1);
     });
 
     it("should fallback to Gemini when OpenAI fails", async () => {
       process.env.OPENAI_API_KEY = "test-openai-key";
       process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
-      
-      mockOpenAIGenerateObject.mockResolvedValue({
-        success: false,
-        error: "OpenAI rate limit",
-        provider: "openai",
+
+      let callCount = 0;
+      mockGenerateObject.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error("OpenAI rate limit");
+        }
+        return Promise.resolve({
+          object: { test: "value" },
+          usage: { inputTokens: 25, outputTokens: 25 },
+        });
       });
-      
-      mockGeminiGenerateObject.mockResolvedValue({
-        success: true,
-        data: { test: "value" },
-        tokensUsed: 50,
-        provider: "gemini",
-      });
-      
-      mockOpenAIGenerateObject.mockClear();
-      mockGeminiGenerateObject.mockClear();
 
       const { generateObject } = await import("@/lib/ai/client");
       const schema = z.object({ test: z.string() });
       const result = await generateObject("test prompt", schema);
 
       expect(result.success).toBe(true);
-      expect(mockOpenAIGenerateObject).toHaveBeenCalledTimes(1);
-      expect(mockGeminiGenerateObject).toHaveBeenCalledTimes(1);
+      expect(result.provider).toBe("gemini");
+      expect(mockGenerateObject).toHaveBeenCalledTimes(2);
     });
 
     it("should return error when both providers fail", async () => {
       process.env.OPENAI_API_KEY = "test-openai-key";
       process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
-      
-      mockOpenAIGenerateObject.mockResolvedValue({
-        success: false,
-        error: "OpenAI error",
-        provider: "openai",
-      });
-      
-      mockGeminiGenerateObject.mockResolvedValue({
-        success: false,
-        error: "Gemini error",
-        provider: "gemini",
-      });
-      
-      mockOpenAIGenerateObject.mockClear();
-      mockGeminiGenerateObject.mockClear();
+
+      mockGenerateObject.mockRejectedValue(new Error("Provider error"));
 
       const { generateObject } = await import("@/lib/ai/client");
       const schema = z.object({ test: z.string() });
       const result = await generateObject("test prompt", schema);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Gemini error");
-      expect(mockOpenAIGenerateObject).toHaveBeenCalledTimes(1);
-      expect(mockGeminiGenerateObject).toHaveBeenCalledTimes(1);
+      expect(result.error).toContain("Provider error");
+      expect(mockGenerateObject).toHaveBeenCalledTimes(2);
     });
 
     it("should return error when no providers are configured", async () => {
@@ -134,49 +110,104 @@ describe("AI Client Fallback Logic", () => {
     it("should use Gemini when available and successful", async () => {
       process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
       delete process.env.OPENAI_API_KEY;
-      
-      mockGeminiGenerateText.mockResolvedValue({
-        success: true,
-        data: "test response",
-        tokensUsed: 100,
-        provider: "gemini",
+
+      mockGenerateText.mockResolvedValue({
+        text: "test response",
+        usage: { inputTokens: 50, outputTokens: 50 },
       });
-      mockGeminiGenerateText.mockClear();
 
       const { generateText } = await import("@/lib/ai/client");
       const result = await generateText("test prompt");
 
       expect(result.success).toBe(true);
-      expect(mockGeminiGenerateText).toHaveBeenCalledTimes(1);
+      expect(result.data).toBe("test response");
+      expect(result.provider).toBe("gemini");
+      expect(mockGenerateText).toHaveBeenCalledTimes(1);
     });
 
     it("should fallback to OpenAI when Gemini fails", async () => {
       process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
       process.env.OPENAI_API_KEY = "test-openai-key";
-      
-      mockGeminiGenerateText.mockResolvedValue({
-        success: false,
-        error: "Gemini rate limit",
-        provider: "gemini",
+
+      let callCount = 0;
+      mockGenerateText.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error("Gemini rate limit");
+        }
+        return Promise.resolve({
+          text: "test response",
+          usage: { inputTokens: 25, outputTokens: 25 },
+        });
       });
-      
-      mockOpenAIGenerateText.mockResolvedValue({
-        success: true,
-        data: "test response",
-        tokensUsed: 50,
-        provider: "openai",
-      });
-      
-      mockGeminiGenerateText.mockClear();
-      mockOpenAIGenerateText.mockClear();
 
       const { generateText } = await import("@/lib/ai/client");
       const result = await generateText("test prompt");
 
       expect(result.success).toBe(true);
-      expect(mockGeminiGenerateText).toHaveBeenCalledTimes(1);
-      expect(mockOpenAIGenerateText).toHaveBeenCalledTimes(1);
+      expect(result.provider).toBe("openai");
+      expect(mockGenerateText).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("generateObjectForCategorization", () => {
+    it("should use Gemini as primary for categorization", async () => {
+      process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
+      process.env.OPENAI_API_KEY = "test-openai-key";
+
+      mockGenerateObject.mockResolvedValue({
+        object: { category: "food" },
+        usage: { inputTokens: 25, outputTokens: 25 },
+      });
+
+      const { generateObjectForCategorization } = await import("@/lib/ai/client");
+      const schema = z.object({ category: z.string() });
+      const result = await generateObjectForCategorization("categorize this", schema);
+
+      expect(result.success).toBe(true);
+      expect(result.provider).toBe("gemini");
+      expect(mockGenerateObject).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("generateObjectForExtraction", () => {
+    it("should use GPT-4o-mini as primary for extraction", async () => {
+      process.env.OPENAI_API_KEY = "test-openai-key";
+      delete process.env.GOOGLE_AI_API_KEY;
+
+      mockGenerateObject.mockResolvedValue({
+        object: { amount: 100 },
+        usage: { inputTokens: 50, outputTokens: 50 },
+      });
+
+      const { generateObjectForExtraction } = await import("@/lib/ai/client");
+      const schema = z.object({ amount: z.number() });
+      const result = await generateObjectForExtraction("extract this", schema);
+
+      expect(result.success).toBe(true);
+      expect(result.provider).toBe("openai");
+      expect(result.model).toBe("gpt-4o-mini");
+      expect(mockGenerateObject).toHaveBeenCalledTimes(1);
+    });
+
+    it("should use Gemini for PDF extraction", async () => {
+      process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
+      process.env.OPENAI_API_KEY = "test-openai-key";
+
+      mockGenerateObject.mockResolvedValue({
+        object: { amount: 100 },
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
+
+      const { generateObjectForExtraction } = await import("@/lib/ai/client");
+      const schema = z.object({ amount: z.number() });
+      const result = await generateObjectForExtraction("extract this", schema, {
+        image: { data: "base64data", mimeType: "application/pdf" },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.provider).toBe("gemini");
+      expect(mockGenerateObject).toHaveBeenCalledTimes(1);
     });
   });
 });
-

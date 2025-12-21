@@ -23,6 +23,7 @@ export interface AICategorizeOptions {
     usageType?: string | null;
   };
   userBusinesses?: Array<{ id: string; name: string }>; // User's businesses for classification
+  transactionType?: "income" | "expense"; // Transaction type for prompt context
 }
 
 /**
@@ -32,7 +33,7 @@ export async function aiCategorizeTransaction(
   transaction: TransactionToCategorize,
   options: AICategorizeOptions
 ): Promise<CategorizationResult> {
-  const { availableCategories, userPreferences, userBusinesses } = options;
+  const { availableCategories, userPreferences, userBusinesses, transactionType } = options;
 
   const prompt = CategorizationPrompt.build({
     merchantName: transaction.merchantName ?? null,
@@ -42,6 +43,7 @@ export async function aiCategorizeTransaction(
     userPreferences,
     userBusinesses,
     statementType: transaction.statementType ?? null,
+    transactionType,
   });
 
   try {

@@ -148,7 +148,8 @@ export abstract class BaseDocumentProcessor {
   protected async categorizeDocument(
     merchantName: string | null,
     description: string | null,
-    amount: string
+    amount: string,
+    direction?: "in" | "out" | null
   ): Promise<{
     categoryId: string | null;
     categoryName: string | null;
@@ -160,9 +161,12 @@ export abstract class BaseDocumentProcessor {
 
     try {
       const { CategoryEngine } = await import("@/lib/categorization/engine");
+      // Determine transactionType from direction: "in" = income, "out" = expense
+      // Default to expense if direction not provided (backward compatibility)
+      const transactionType = direction === "in" ? "income" : "expense";
       const result = await CategoryEngine.categorizeWithAI(
         { merchantName, description, amount },
-        { userId: this.userId, includeAI: true, minConfidence: 0.7 }
+        { userId: this.userId, includeAI: true, minConfidence: 0.7, transactionType }
       );
 
       return {

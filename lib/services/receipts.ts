@@ -223,6 +223,7 @@ export async function processReceipt({
       province: extractedData.province,
       currency,
       status: "needs_review",
+      direction: extractedData.direction || "out", // Save direction: "in" for income, "out" for expense
     });
 
     if (!hasPaidAiImport) {

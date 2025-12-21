@@ -2,56 +2,36 @@
 
 ## Overview
 
-This module provides a clean, maintainable architecture for LLM processing workflows with support for multiple providers (OpenAI, Gemini) and structured outputs.
+This module provides LLM processing workflows with support for multiple providers (OpenAI, Gemini) and structured outputs using the Vercel AI SDK.
 
 ## Structure
 
 ```
 lib/ai/
 ├── client.ts              # Orchestrator - handles provider selection & fallback
-├── providers/             # Provider adapters (OpenAI, Gemini)
 ├── prompts/               # Centralized prompt builders
-├── transformers/          # Schema transformation layer
+├── logger.ts              # LLM interaction logging
+├── costs.ts               # Cost calculation
 └── types.ts               # Shared types & interfaces
 ```
 
-## Architecture Principles
+## Architecture
 
-### 1. **Provider Adapter Pattern**
+Uses the Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/google`) for provider-agnostic LLM calls with automatic fallback.
 
-- Each provider (`OpenAIProvider`, `GeminiProvider`) implements `LLMProviderInterface`
-- Providers handle provider-specific API details internally
-- Client orchestrates provider selection and fallback
+### Provider Selection
 
-### 2. **Prompt Management**
-
-- All prompts centralized in `lib/ai/prompts/`
-- Prompt builders are classes with static `build()` methods
-- Prompts are versioned and testable independently
-- Benefits: Easy A/B testing, centralized prompt engineering
-
-### 3. **Schema Transformation**
-
-- Provider-specific schema transformations in `lib/ai/transformers/`
-- `GeminiSchemaTransformer` handles Gemini's JSON Schema limitations
-- `OpenAISchemaTransformer` is pass-through (OpenAI supports full JSON Schema)
-- Benefits: Provider adapters stay simple, easy to add new providers
-
-### 4. **Separation of Concerns**
-
-- **Client**: Provider selection, fallback logic
-- **Providers**: API-specific implementation
-- **Prompts**: Prompt building logic
-- **Transformers**: Schema compatibility
-- **Processors**: Business logic orchestration
+- **`generateObject`**: OpenAI primary (better structured output), Gemini fallback
+- **`generateObjectForCategorization`**: Gemini primary (cost savings), OpenAI fallback
+- **`generateObjectForExtraction`**: GPT-4o-mini primary (cost-effective), GPT-4o fallback, Gemini for PDFs
+- **`generateText`**: Gemini primary (cheaper), OpenAI fallback
 
 ## Usage
 
-### Structured Output (Recommended)
+### Structured Output
 
 ```typescript
 import { generateObject } from "@/lib/ai/client";
-import { ReceiptExtractionPrompt } from "@/lib/ai/prompts";
 import { z } from "zod";
 
 const schema = z.object({
@@ -59,17 +39,13 @@ const schema = z.object({
   totalAmount: z.number(),
 });
 
-const prompt = ReceiptExtractionPrompt.build({
-  requiredFields: ["totalAmount"],
-  preferredFields: ["merchantName"],
-  optionalFields: [],
-  currency: "USD",
-  jsonSchema: zodToJsonSchema(schema),
-});
-
-const result = await generateObject(prompt, schema, {
+const result = await generateObject("Extract data from receipt", schema, {
   image: { data: base64Image, mimeType: "image/jpeg" },
 });
+
+if (result.success) {
+  console.log(result.data); // Typed as { merchantName: string | null; totalAmount: number }
+}
 ```
 
 ### Text Generation
@@ -78,31 +54,70 @@ const result = await generateObject(prompt, schema, {
 import { generateText } from "@/lib/ai/client";
 
 const result = await generateText("Summarize this document...");
+if (result.success) {
+  console.log(result.data); // string
+}
 ```
 
-## Provider Selection
+### Categorization (Gemini Primary)
 
-- **Structured Outputs**: OpenAI primary (better Zod support), Gemini fallback
-- **Text Generation**: Gemini primary (cheaper), OpenAI fallback
-- Automatic fallback on errors
-- Provider selection is transparent to callers
+```typescript
+import { generateObjectForCategorization } from "@/lib/ai/client";
 
-## Adding New Providers
+const result = await generateObjectForCategorization(prompt, schema, {
+  loggingContext: {
+    userId: "user123",
+    promptType: "categorization",
+  },
+});
+```
 
-1. Create provider class implementing `LLMProviderInterface`
-2. Create transformer if needed (or use pass-through)
-3. Update `client.ts` to include new provider
-4. Add provider type to `LLMProvider` union
+### Extraction with Images/PDFs
 
-## Adding New Prompts
+```typescript
+import { generateObjectForExtraction } from "@/lib/ai/client";
 
-1. Create prompt builder class in `lib/ai/prompts/`
-2. Export from `lib/ai/prompts/index.ts`
-3. Use in processors/workflows
+// For images - uses GPT-4o-mini
+const imageResult = await generateObjectForExtraction(prompt, schema, {
+  image: { data: base64Image, mimeType: "image/jpeg" },
+});
 
-## Testing
+// For PDFs - automatically uses Gemini
+const pdfResult = await generateObjectForExtraction(prompt, schema, {
+  image: { data: base64Pdf, mimeType: "application/pdf" },
+});
+```
 
-- Mock providers for unit tests
-- Test prompt builders independently
-- Test transformers with sample schemas
-- Integration tests with real providers (optional)
+## Response Type
+
+All functions return `LLMResponse<T>`:
+
+```typescript
+interface LLMResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  provider: "openai" | "gemini";
+  tokensUsed?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  model?: string;
+  durationMs?: number;
+}
+```
+
+## Logging
+
+LLM interactions are logged to the database when `loggingContext` is provided:
+
+```typescript
+const result = await generateObject(prompt, schema, {
+  loggingContext: {
+    userId: "user123",
+    entityId: "receipt456",
+    entityType: "receipt",
+    promptType: "extraction",
+    inputData: { fileName: "receipt.jpg" },
+  },
+});
+```

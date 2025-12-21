@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { AiProvider, EntityType, PromptType } from "@/lib/constants";
 
 export type LLMProvider = AiProvider;
@@ -8,7 +7,7 @@ export interface LoggingContext {
   entityId?: string | null;
   entityType?: EntityType | null;
   promptType: PromptType;
-  inputData?: any; // For storing in inputJson
+  inputData?: any;
 }
 
 export interface CompletionOptions {
@@ -33,17 +32,3 @@ export interface LLMResponse<T = any> {
   model?: string;
   durationMs?: number;
 }
-
-export interface LLMProviderInterface {
-  generateObject<T>(
-    prompt: string,
-    schema: z.ZodSchema<T>,
-    options?: CompletionOptions
-  ): Promise<LLMResponse<T>>;
-  
-  generateText(
-    prompt: string,
-    options?: CompletionOptions
-  ): Promise<LLMResponse<string>>;
-}
-

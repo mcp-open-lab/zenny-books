@@ -17,6 +17,7 @@ export interface CategorizationConfig {
   };
   userBusinesses?: Array<{ id: string; name: string }>; // User's businesses for classification
   statementType?: "credit_card" | "bank_account" | null;
+  transactionType?: "income" | "expense"; // Explicit transaction type context
 }
 
 export class CategorizationPrompt {
@@ -29,6 +30,7 @@ export class CategorizationPrompt {
       userPreferences,
       userBusinesses,
       statementType,
+      transactionType,
     } = config;
 
     // Use TOON format for categories (30-60% token savings)
@@ -36,6 +38,9 @@ export class CategorizationPrompt {
 
     const userContext = this.buildUserContext(userPreferences, userBusinesses);
     const statementContext = this.buildStatementContext(statementType);
+    const transactionTypeContext = transactionType
+      ? `- Transaction Type: ${transactionType.toUpperCase()}\n  CRITICAL: This is a ${transactionType === "expense" ? "spending/expense" : "income"} transaction. Only select categories that match this type.`
+      : "";
 
     return `You are a financial categorization assistant. Categorize the following transaction into one of the available categories.
 
@@ -43,7 +48,7 @@ Transaction Details:
 - Merchant: ${merchantName || "Unknown"}
 - Description: ${description || "N/A"}
 - Amount: ${amount || "N/A"}
-${statementContext}
+${transactionTypeContext}${statementContext}
 
 Available Categories (TOON format - header row, then values):
 ${categoryTOON}
