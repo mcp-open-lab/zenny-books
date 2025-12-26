@@ -33,7 +33,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@ai-sdk/google": "^2.0.51",
+    "@ai-sdk/google": "^3.0.1",
     "@ai-sdk/openai": "^2.0.88",
     "@clerk/nextjs": "^6.35.2",
     "@hookform/resolvers": "^3.10.0",
@@ -101,7 +101,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
-    "@types/node": "^22.10.2",
+    "@types/node": "^25.0.3",
     "@types/react": "^19.0.6",
     "@types/react-dom": "^19.0.2",
     "@vercel/postgres": "^0.9.0",
