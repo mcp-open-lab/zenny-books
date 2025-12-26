@@ -7,7 +7,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    # Group patch and minor updates together to reduce PR noise
+    # Group patch and minor updates together to reduce PR noise and conflicts
     groups:
       patch-minor-updates:
         patterns:
@@ -16,7 +16,11 @@ updates:
           - "patch"
           - "minor"
     # Open pull requests for version updates
-    open-pull-requests-limit: 10
+    # Keep this low to reduce lockfile conflicts/PR drift.
+    open-pull-requests-limit: 3
+    # Version strategy: increase updates package.json version ranges
+    # This helps Dependabot update both package.json and package-lock.json consistently
+    versioning-strategy: increase
     # Commit message preferences
     commit-message:
       prefix: "chore"
@@ -26,6 +30,8 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+    # Auto-merge configuration (handled by GitHub Actions workflow)
+    # Note: Auto-merge is enabled via GitHub Actions, not here
     # Ignore specific packages if needed (uncomment and add package names)
     # ignore:
     #   - dependency-name: "package-name"
