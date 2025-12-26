@@ -11,7 +11,9 @@ permissions:
 jobs:
   dependabot-auto-merge:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    # Note: `github.actor` can be a maintainer if they push to a Dependabot PR branch.
+    # We key off the PR author instead so auto-merge still works after manual conflict fixes.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     
     steps:
       - name: Fetch Dependabot metadata
